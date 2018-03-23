@@ -18,8 +18,11 @@ class HondaECU(Device):
 		self.baudrate = 10400
 		self.flush()
 		
+	def __cksum(self, data):
+		return -sum(data) % 256
+
 	def send(self, buf, response=True):
-		assert(buf[1]==len(buf))
+		assert(buf[1] == len(buf))
 		msg = ("".join([chr(b) for b in buf]))
 		self.write(msg)
 		time.sleep(.025)
@@ -35,8 +38,10 @@ class HondaECU(Device):
 			data = [id1, 0x07, id2, tid, start, offset]
 		else:
 			data = [id1, 0x05, id2, tid]
-		data += [-sum(data) % 256]
-		return self.send(data)
+		data += [self.__cksum(data)]
+		resp = self.send(data)
+		assert(ord(resp[-1]) == self.__cksum([ord(r) for r in resp[:-1]]))
+		return (resp[3],ord(resp[1])-5,resp[4:-1])
 		
 if __name__ == '__main__':
 	
@@ -48,7 +53,8 @@ if __name__ == '__main__':
 	# Scan tables
 	while True:
 		print("".join("="*160))
-		for i in range(0,255):
+		#for i in range(0,255):
+		for i in [0x00, 0x11, 0x20, 0x61, 0x70, 0xd0, 0xd1]:
 			info = ecu.send_command(0x72, 0x71, i)
-			if len(info) > 5:
-				print([binascii.hexlify(i) for i in info])
+			if info[1] > 0:
+				print(binascii.hexlify(info[0]), info[1], unpack("%dB" % info[1], info[2]))
