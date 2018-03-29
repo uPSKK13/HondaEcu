@@ -19,6 +19,7 @@ if __name__ == '__main__':
 
 	# Initialize communication with ECU
 	ecu = HondaECU()
+	ecu.wakeup()
 
 	"""
 	Scan tables
