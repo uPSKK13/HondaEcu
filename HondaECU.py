@@ -9,34 +9,19 @@ class HondaECU(Device):
 	
 	def __init__(self, *args, **kwargs):
 		super(HondaECU, self).__init__(*args, **kwargs)
-		self.init()
+		self.ftdi_fn.ftdi_set_line_property(8, 1, 0)
+		self.baudrate = 10400
+		self.flush()
 
 	def __cksum(self, data):
 		return -sum(data) % 256
 
-	def init(self):
-		print("===========================")
-		print("Initializing ECU connection")
-		self.ftdi_fn.ftdi_set_bitmode(1, 0x01)
-		self.write('\x00')
-		time.sleep(.050)
-		self.write('\x01')
-		time.sleep(.130)
-		self.ftdi_fn.ftdi_set_bitmode(0, 0x00)
-		self.ftdi_fn.ftdi_set_line_property(8, 1, 0)
-		self.baudrate = 10400
-		self.flush()
-		#self.send([0xfe, 0x04, 0xff, 0xff], False)
-		#self.send([0x72, 0x05, 0x00, 0xf0, 0x99])
-		print("===========================")
-
 	def send(self, buf, response=True):
 		msg = ("".join([chr(b) for b in buf]))
 		self.write(msg)
-		time.sleep(.025)
+		time.sleep(.01)
 		self.read(buf[1]) # READ AND DISCARD CMD ECHO
 		if response:
-			time.sleep(.025)
 			buf = self.read(2)
 			if len(buf) > 0:
 				buf += self.read(ord(buf[1])-2)
