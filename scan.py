@@ -15,7 +15,6 @@ if __name__ == '__main__':
 	pg_temp.add_argument('--temp-factor-f', type=float, default=1.0, help="Fahrenheit factor")
 	pg_temp.add_argument('--temp-factor-c', type=float, default=1.0, help="Celcius factor")
 	args = parser.parse_args()
-	print(args)
 	
 	tables = {
 		0x71: [0x00, 0x11, 0x20, 0x61, 0x70, 0xd0, 0xd1],
@@ -26,11 +25,10 @@ if __name__ == '__main__':
 	# Initialize communication with ECU
 	ecu = HondaECU()
 
-	print("==================================")
+	print("===============================================")
 	print("Initializing ECU communications")
-	ecu.init()
-	print("==================================")
-	print("")
+	ecu.init(debug=args.debug)
+	print("===============================================")
 
 	"""
 	Scan tables
@@ -42,7 +40,6 @@ if __name__ == '__main__':
 		#for i in range(0,256):
 		for i in tables[j]:
 			pdata[j][i] = {}
-			print("==================================")
 			print("~",i,j,"~")
 			if j == 0x72:
 				info = ecu.send_command([0x72], [j, i, 0x00, 0x20], debug=args.debug)
@@ -81,4 +78,5 @@ if __name__ == '__main__':
 						]
 					else:
 						data = unpack(">%dB" % len(info[2][2:]), info[2][2:])
-				print(tabulate(pdata[j][b]))
+                                if pdata[j][b]: print(tabulate(pdata[j][b]))
+			print("===============================================")
