@@ -15,7 +15,7 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
 
-	def init(self, full=True, debug=False):
+	def init(self, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
 		self.dev.write('\x00')
 		time.sleep(.070)
@@ -23,8 +23,7 @@ class HondaECU(object):
 		time.sleep(.130)
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
-		if full:
-			self.send_command([0xfe],[0x72], debug=debug)
+		self.send_command([0xfe],[0x72], debug=True)
 
 	def _cksum(self, data):
 		return -sum(data) % 256
@@ -35,9 +34,10 @@ class HondaECU(object):
 		return ord(b.raw[1]) & 16 == 0
 
 	def send(self, buf):
+		time.sleep(.04)
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
-		time.sleep(.05)
+		time.sleep(.02)
 		self.dev.read(buf[1]) # READ AND DISCARD CMD ECHO
 		buf = self.dev.read(2)
 		if len(buf) > 0:
