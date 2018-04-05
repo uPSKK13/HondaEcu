@@ -52,7 +52,7 @@ class HondaECU(object):
 		msg += [self._cksum(msg)]
 		assert(msg[ml] == len(msg))
 		if debug:
-			sys.stderr.write(">   %s\n" % repr([msgsize, "".join([chr(b) for b in msg])]))
+			sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
 			sys.stderr.write("->  %s\n" % repr(["%02x" % m for m in msg]))
 		resp = self.send(msg)
 		ret = None
@@ -60,8 +60,9 @@ class HondaECU(object):
 			assert(ord(resp[-1]) == self._cksum([ord(r) for r in resp[:-1]]))
 			if debug: sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
 			rmtype = resp[:ml]
-			rml = ord(resp[ml:(ml+1)]) - 2 - len(rmtype)
+			rml = resp[ml:(ml+1)]
+			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
-			if debug: sys.stderr.write("  < %s\n" % repr([rml, rdata]))
-			ret = (rmtype, rml, rdata)
+			if debug: sys.stderr.write("  < %s\n" % repr([rdl, rdata]))
+			ret = (rmtype, rml, rdata, rdl)
 		return ret
