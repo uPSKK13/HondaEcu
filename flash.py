@@ -56,6 +56,7 @@ if __name__ == '__main__':
 	nbyte = 0
 	readsize = 8
 	with open(outfile, "w") as fbin:
+		t = time.time()
 		while nbyte < maxbyte:
 			info = ecu.send_command([0x82, 0x82, 0x00], [int(nbyte/65536)] + map(ord,struct.pack("<H", nbyte % 65536)) + [readsize], debug=args.debug)
 			fbin.write(info[2])
@@ -65,5 +66,7 @@ if __name__ == '__main__':
 				sys.stdout.write(".")
 				sys.stdout.flush()
 			if nbyte % 1024 == 0:
-				sys.stdout.write(" %dkb\n" % int(nbyte/1024))
+				n = time.time()
+				sys.stdout.write(" %dkb %.02fbps\n" % (int(nbyte/1024),1024/(n-t)))
+				t = n
 	print("===============================================")
