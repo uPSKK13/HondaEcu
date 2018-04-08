@@ -36,17 +36,20 @@ class HondaECU(object):
 	def send(self, buf, ml):
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
-		buf = ""
 		r = len(msg)
-		while len(buf) < r:
-			buf += self.dev.read(1)
+		while r > 0:
+			r -= len(self.dev.read(r))
 		buf = ""
 		r = ml+1
-		while len(buf) < r:
-			buf += self.dev.read(1)
-		r += ord(buf[-1])-ml-1
-		while len(buf) < r:
-			buf += self.dev.read(1)
+		while r > 0:
+			tmp = self.dev.read(r)
+			r -= len(tmp)
+			buf += tmp
+		r = ord(buf[-1])-ml-1
+		while r > 0:
+			tmp = self.dev.read(r)
+			r -= len(tmp)
+			buf += tmp
 		return buf
 			
 	def send_command(self, mtype, data=[], debug=False):
