@@ -34,15 +34,20 @@ class HondaECU(object):
 		return ord(b.raw[1]) & 16 == 0
 
 	def send(self, buf, ml):
-		time.sleep(.04)
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
-		time.sleep(.03)
-		self.dev.read(len(msg)) # READ AND DISCARD CMD ECHO
-		buf = self.dev.read(ml+1)
-		if len(buf) > 0:
-			buf += self.dev.read(ord(buf[-1])-ml-1)
-			return buf
+		buf = ""
+		r = len(msg)
+		while len(buf) < r:
+			buf += self.dev.read(1)
+		buf = ""
+		r = ml+1
+		while len(buf) < r:
+			buf += self.dev.read(1)
+		r += ord(buf[-1])-ml-1
+		while len(buf) < r:
+			buf += self.dev.read(1)
+		return buf
 			
 	def send_command(self, mtype, data=[], debug=False):
 		ml = len(mtype)
