@@ -11,17 +11,17 @@ from HondaECU import *
 
 
 if __name__ == '__main__':
-	
+
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('mode', choices=["read","write"], help="ECU mode")
 	parser.add_argument('binfile', help="name of bin to read or write")
-	parser.add_argument('--rom-size', default=256, type=int, help="size of ECU rom in bytes")
+	parser.add_argument('--rom-size', default=256, type=int, help="size of ECU rom in kilobytes")
 	db_grp = parser.add_argument_group('debugging options')
 	db_grp.add_argument('--skip-power-check', action='store_true', help="don't test for k-line activity")
 	db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
 
 	args = parser.parse_args()
-	
+
 	if os.path.isabs(args.binfile):
 		outfile = args.binfile
 	else:
