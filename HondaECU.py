@@ -23,7 +23,7 @@ class HondaECU(object):
 		time.sleep(.130)
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
-		self.send_command([0xfe],[0x72], debug=True)
+		self.send_command([0xfe],[0x72], debug=debug)
 
 	def _cksum(self, data):
 		return -sum(data) % 256
@@ -33,15 +33,15 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
 		return ord(b.raw[1]) & 16 == 0
 
-	def send(self, buf):
+	def send(self, buf, ml):
 		time.sleep(.04)
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
-		time.sleep(.02)
-		self.dev.read(buf[1]) # READ AND DISCARD CMD ECHO
-		buf = self.dev.read(2)
+		time.sleep(.03)
+		self.dev.read(len(msg)) # READ AND DISCARD CMD ECHO
+		buf = self.dev.read(ml+1)
 		if len(buf) > 0:
-			buf += self.dev.read(ord(buf[1])-2)
+			buf += self.dev.read(ord(buf[-1])-ml-1)
 			return buf
 			
 	def send_command(self, mtype, data=[], debug=False):
@@ -54,7 +54,7 @@ class HondaECU(object):
 		if debug:
 			sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
 			sys.stderr.write("->  %s\n" % repr(["%02x" % m for m in msg]))
-		resp = self.send(msg)
+		resp = self.send(msg,ml)
 		ret = None
 		if resp:
 			assert(ord(resp[-1]) == self._cksum([ord(r) for r in resp[:-1]]))
