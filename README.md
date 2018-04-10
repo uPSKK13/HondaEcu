@@ -6,6 +6,8 @@ serial converter though others may work. I used a FTDI Friend from [Adafruit!](h
 For the serial to k-line converter I used the schematic below since it contained no
 special ICs, just common transistors and R/C components that I had laying around the house.
 
+A note about the circuit below, while the PL2303 is a perfectly good USB to serial converter, it does not support bit banging and is not recommended. If you do have one of these converters you will need to use one of the control lines for the init sequence and that complicates things. Just get yourself a FTDI chip, they are cheap.
+
 ![kline_interface_1](http://pinoutguide.com/images/upload/pinout_117944425_image.png)
 
 A much nicer looking k-line to serial converter that I plan on implementing next is
