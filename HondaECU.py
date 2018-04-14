@@ -11,11 +11,11 @@ class HondaECU(object):
 
 	def __init__(self, *args, **kwargs):
 		super(HondaECU, self).__init__(*args, **kwargs)
+
+	def init(self, debug=False):
 		self.dev = Device()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
-
-	def init(self, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
 		self.dev.write('\x00')
 		time.sleep(.070)
@@ -51,14 +51,18 @@ class HondaECU(object):
 			r -= len(tmp)
 			buf += tmp
 		return buf
-			
-	def send_command(self, mtype, data=[], debug=False):
+
+	def _format_message(self, mtype, data):
 		ml = len(mtype)
 		dl = len(data)
 		msgsize = 0x02 + ml + dl
 		msg = mtype + [msgsize] + data
 		msg += [self._cksum(msg)]
 		assert(msg[ml] == len(msg))
+		return msg
+
+	def send_command(self, mtype, data=[], debug=False):
+		msg = self._format_message(self, mtype, data)
 		if debug:
 			sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
 			sys.stderr.write("->  %s\n" % repr(["%02x" % m for m in msg]))

@@ -9,7 +9,7 @@ import argparse
 from HondaECU import *
 
 if __name__ == '__main__':
-	
+
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--debug', action='store_true', help="turn on debugging output")
 	pg_temp = parser.add_argument_group('temperature options')
@@ -17,7 +17,7 @@ if __name__ == '__main__':
 	pg_temp.add_argument('--temp-factor-f', type=float, default=1.0, help="Fahrenheit factor")
 	pg_temp.add_argument('--temp-factor-c', type=float, default=1.0, help="Celcius factor")
 	args = parser.parse_args()
-	
+
 	tables = {
 		0x71: [0x00, 0x11, 0x20, 0x61, 0x70, 0xd0, 0xd1],
 		#0x73: range(256),
