@@ -1,4 +1,4 @@
-<!-- Written 04/09/2018 02:50:48 -->
+<!-- Written 04/10/2018 12:18:16 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -24,16 +24,6 @@
     <CATEGORY index="0xD" name="Upper" />
     <CATEGORY index="0xE" name="Lower" />
   </XDFHEADER>
-  <XDFCHECKSUM uniqueid="0x58C3">
-    <title>Incomplete Checksum</title>
-    <REGION>
-      <datastart>0x0</datastart>
-      <dataend>0x3FFFF</dataend>
-      <storesizebits>0x8</storesizebits>
-      <storeaddress>0x3FFFC</storeaddress>
-      <calculationmethod>0x0</calculationmethod>
-    </REGION>
-  </XDFCHECKSUM>
   <XDFTABLE uniqueid="0x3A51" flags="0x0">
     <title>CYL1</title>
     <CATEGORYMEM index="0" category="1" />
@@ -1172,4 +1162,15 @@
       </MATH>
     </XDFAXIS>
   </XDFTABLE>
+  <XDFCHECKSUM uniqueid="0x43D2">
+    <title>Honda Checksum</title>
+    <REGION>
+      <pluginmoduleid>49524f4e-504f-4e59-524b-000000000000</pluginmoduleid>
+      <datastart>0x0</datastart>
+      <dataend>0x3FFFF</dataend>
+      <storesizebits>0x8</storesizebits>
+      <storeaddress>0x3FFF8</storeaddress>
+      <calculationmethod>0x0</calculationmethod>
+    </REGION>
+  </XDFCHECKSUM>
 </XDFFORMAT>
