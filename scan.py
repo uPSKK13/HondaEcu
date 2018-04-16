@@ -24,7 +24,6 @@ if __name__ == '__main__':
 		#0x74: range(256)
 	}
 
-	# Initialize communication with ECU
 	ecu = HondaECU()
 
 	print("===============================================")

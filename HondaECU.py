@@ -23,7 +23,7 @@ class HondaECU(object):
 		time.sleep(.130)
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
-		self.send_command([0xfe],[0x72], debug=debug)
+		self.send_command([0xfe],[0x72], debug=debug) # 0xfe <- KWP2000 fast init all nodes ?
 
 	def _cksum(self, data):
 		return -sum(data) % 256

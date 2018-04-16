@@ -30,6 +30,7 @@ your electronics.
 * http://ecuhacking.activeboard.com
 * http://www.motorsport-brix.de
 * http://projects.gonzos.net/ctx-obd
+* http://opengarages.org/handbook/ebook
 
 
 ## Donation
