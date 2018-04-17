@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
 	print("===============================================")
 	print("Initializing ECU communications")
-    ecu.setup()
+	ecu.setup()
 	ecu.init(debug=args.debug)
 	print("===============================================")
 
@@ -80,5 +80,5 @@ if __name__ == '__main__':
 						]
 					else:
 						data = unpack(">%dB" % len(info[2][2:]), info[2][2:])
-                                if pdata[j][b]: print(tabulate(pdata[j][b]))
+								if pdata[j][b]: print(tabulate(pdata[j][b]))
 			print("===============================================")
