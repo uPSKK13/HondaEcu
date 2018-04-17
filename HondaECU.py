@@ -59,14 +59,14 @@ class HondaECU(object):
 		msg = mtype + [msgsize] + data
 		msg += [self._cksum(msg)]
 		assert(msg[ml] == len(msg))
-		return msg
+		return msg, ml, dl
 
 	def send_command(self, mtype, data=[], debug=False):
-		msg = self._format_message(self, mtype, data)
+		msg, ml, dl = self._format_message(mtype, data)
 		if debug:
 			sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
 			sys.stderr.write("->  %s\n" % repr(["%02x" % m for m in msg]))
-		resp = self.send(msg,ml)
+		resp = self.send(msg, ml)
 		ret = None
 		if resp:
 			assert(ord(resp[-1]) == self._cksum([ord(r) for r in resp[:-1]]))
