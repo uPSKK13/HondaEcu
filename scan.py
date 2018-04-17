@@ -28,6 +28,7 @@ if __name__ == '__main__':
 
 	print("===============================================")
 	print("Initializing ECU communications")
+    ecu.setup()
 	ecu.init(debug=args.debug)
 	print("===============================================")
 

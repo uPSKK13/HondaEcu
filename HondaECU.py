@@ -7,16 +7,23 @@ import time
 import binascii
 import sys
 
+def checksum8bitHonda(data):
+	return ((sum(data) & 0xFF) ^ 0xFF) + 1
+
 class HondaECU(object):
 
 	def __init__(self, *args, **kwargs):
 		super(HondaECU, self).__init__(*args, **kwargs)
-		self.dev = Device()
+		self.dev = None
+
+	def setup(self):
+		if self.dev == None:
+			self.dev = Device()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
-		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
 
 	def init(self, debug=False):
+		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
 		self.dev.write('\x00')
 		time.sleep(.070)
 		self.dev.write('\x01')
@@ -25,8 +32,16 @@ class HondaECU(object):
 		self.dev.flush()
 		self.send_command([0xfe],[0x72], debug=debug) # 0xfe <- KWP2000 fast init all nodes ?
 
-	def _cksum(self, data):
-		return ((sum(data) & 0xFF) ^ 0xFF) + 1
+	def validate_checksum(self, bytes, fix=False):
+		cksum = len(bytes)-8
+		fcksum = bytes[cksum]
+		ccksum = checksum8bitHonda(bytes[:cksum]+bytes[(cksum+1):])
+		fixed = False
+		if fix:
+			if fcksum != ccksum:
+				fixed = True
+				bytes[cksum] = ccksum
+		return bytes, fcksum, ccksum, fixed
 
 	def kline(self):
 		b = create_string_buffer(2)
@@ -57,7 +72,7 @@ class HondaECU(object):
 		dl = len(data)
 		msgsize = 0x02 + ml + dl
 		msg = mtype + [msgsize] + data
-		msg += [self._cksum(msg)]
+		msg += [checksum8bitHonda(msg)]
 		assert(msg[ml] == len(msg))
 		return msg, ml, dl
 
@@ -69,7 +84,7 @@ class HondaECU(object):
 		resp = self.send(msg, ml)
 		ret = None
 		if resp:
-			assert(ord(resp[-1]) == self._cksum([ord(r) for r in resp[:-1]]))
+			assert(ord(resp[-1]) == checksum8bitHonda([ord(r) for r in resp[:-1]]))
 			if debug: sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
 			rmtype = resp[:ml]
 			rml = resp[ml:(ml+1)]
