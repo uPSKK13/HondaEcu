@@ -23,8 +23,8 @@ def do_validation(binfile, fix=False):
 			status = "good"
 		else:
 			status = "bad"
-		print("  file checksum: %s" % hex(fcksum))
-		print("  calculated checksum: %s" % hex(ccksum))
+		print("  file checksum: %s" % fcksum)
+		print("  calculated checksum: %s" % ccksum)
 		print("  status: %s" % status)
 		return bytes, fcksum, ccksum, fixed
 

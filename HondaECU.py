@@ -8,7 +8,7 @@ import binascii
 import sys
 
 def checksum8bitHonda(data):
-	return ((sum(data) & 0xFF) ^ 0xFF) + 1
+	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
 class HondaECU(object):
 
@@ -34,7 +34,7 @@ class HondaECU(object):
 
 	def validate_checksum(self, bytes, fix=False):
 		cksum = len(bytes)-8
-		fcksum = bytes[cksum]
+		fcksum = ord(bytes[cksum])
 		ccksum = checksum8bitHonda(bytes[:cksum]+bytes[(cksum+1):])
 		fixed = False
 		if fix:
@@ -85,7 +85,7 @@ class HondaECU(object):
 		ret = None
 		if resp:
 			assert(ord(resp[-1]) == checksum8bitHonda([ord(r) for r in resp[:-1]]))
-			if debug: sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
+                        if debug: sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
 			rmtype = resp[:ml]
 			rml = resp[ml:(ml+1)]
 			rdl = ord(rml) - 2 - len(rmtype)
