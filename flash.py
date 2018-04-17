@@ -9,6 +9,25 @@ import argparse
 
 from HondaECU import *
 
+def do_validation(binfile, fix=False):
+	print("===============================================")
+	if fix == "fix_checksum":
+		print("Fixing bin file checksum")
+	else:
+		print("Validating bin file checksum")
+	with open(binfile, "rb") as fbin:
+		bytes, fcksum, ccksum, fixed = ecu.validate_checksum(fbin.read(os.path.getsize(binfile)))
+		if fixed:
+			stats = "fixed"
+		elif fcksum == ccksum:
+			status = "good"
+		else:
+			status = "bad"
+		print("  file checksum: %s" % hex(fcksum))
+		print("  calculated checksum: %s" % hex(ccksum))
+		print("  status: %s" % status)
+		return bytes, fcksum, ccksum, fixed
+
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -29,23 +48,7 @@ if __name__ == '__main__':
 	ecu = HondaECU()
 
 	if args.mode == "validate_checksum" or args.mode == "fix_checksum":
-		print("===============================================")
-		if args.mode == "validate_checksum":
-			print("Validating checksum")
-		elif args.mode == "fix_checksum":
-			print("Fixing checksum")
-		with open(binfile, "rb") as fbin:
-			bytes, fcksum, ccksum, fixed = ecu.validate_checksum(fbin.read(os.path.getsize(binfile)))
-			if fixed:
-				stats = "fixed"
-			elif fcksum == ccksum:
-				status = "good"
-			else:
-				status = "bad"
-			print("  bin checksum: %s" % hex(fcksum))
-			print("  calculated checksum: %s" % hex(ccksum))
-			print("  status: %s" % status)
-
+		do_validation(binfile, args.mode == "fix_checksum")
 	else:
 		ecu.setup()
 
@@ -93,6 +96,7 @@ if __name__ == '__main__':
 						n = time.time()
 						sys.stdout.write(" %dkb %.02fbps\n" % (int(nbyte/1024),1024/(n-t)))
 						t = n
+			do_validation(binfile)
 
 		elif args.mode == "write":
 			print("===============================================")
