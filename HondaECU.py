@@ -26,7 +26,8 @@ class HondaECU(object):
 		self.send_command([0xfe],[0x72], debug=debug) # 0xfe <- KWP2000 fast init all nodes ?
 
 	def _cksum(self, data):
-		return -sum(data) % 256
+                return ((sum(data) & 0xFF) ^ 0xFF) + 1
+
 
 	def kline(self):
 		b = create_string_buffer(2)
