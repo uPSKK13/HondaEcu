@@ -80,5 +80,6 @@ if __name__ == '__main__':
 						]
 					else:
 						data = unpack(">%dB" % len(info[2][2:]), info[2][2:])
-								if pdata[j][b]: print(tabulate(pdata[j][b]))
+						if pdata[j][b]:
+							print(tabulate(pdata[j][b]))
 			print("===============================================")
