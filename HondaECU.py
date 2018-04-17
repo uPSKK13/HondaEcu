@@ -11,12 +11,12 @@ class HondaECU(object):
 
 	def __init__(self, *args, **kwargs):
 		super(HondaECU, self).__init__(*args, **kwargs)
-
-	def init(self, debug=False):
 		self.dev = Device()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
+
+	def init(self, debug=False):
 		self.dev.write('\x00')
 		time.sleep(.070)
 		self.dev.write('\x01')

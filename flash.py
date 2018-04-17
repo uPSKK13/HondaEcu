@@ -44,7 +44,6 @@ if __name__ == '__main__':
 	print("===============================================")
 	print("Initializing ECU communications")
 	ecu.init(debug=args.debug)
-	time.sleep(.1)
 	ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
 	# <- 0x02 0x04 0x00 0xfa
 
