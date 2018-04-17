@@ -85,11 +85,13 @@ class HondaECU(object):
 		ret = None
 		if resp:
 			assert(ord(resp[-1]) == checksum8bitHonda([ord(r) for r in resp[:-1]]))
-                        if debug: sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
+			if debug:
+				sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
 			rmtype = resp[:ml]
 			rml = resp[ml:(ml+1)]
 			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
-			if debug: sys.stderr.write("  < %s\n" % repr([rdl, rdata]))
+			if debug:
+				sys.stderr.write("  < %s\n" % repr([rdl, rdata]))
 			ret = (rmtype, rml, rdata, rdl)
 		return ret
