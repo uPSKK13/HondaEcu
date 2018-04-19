@@ -1,4 +1,4 @@
-<!-- Written 04/19/2018 14:04:37 -->
+<!-- Written 04/19/2018 15:36:22 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -473,7 +473,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x6AEC" flags="0x30">
-    <title>Secondary_Injector%_MS0</title>
+    <title>MS0</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="4" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -1594,6 +1594,45 @@
       <max>8000.000000</max>
       <outputtype>1</outputtype>
       <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+  </XDFTABLE>
+  <XDFTABLE uniqueid="0x18F0" flags="0x30">
+    <title>MS1</title>
+    <CATEGORYMEM index="0" category="1" />
+    <CATEGORYMEM index="1" category="4" />
+    <XDFAXIS id="x" uniqueid="0x0">
+      <EMBEDDEDDATA mmedaddress="0x3E202" mmedelementsizebits="8" mmedcolcount="25" mmedmajorstridebits="8" mmedminorstridebits="0" />
+      <indexcount>25</indexcount>
+      <decimalpl>1</decimalpl>
+      <embedinfo type="1" />
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <MATH equation="(X/255)*100">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="y" uniqueid="0x0">
+      <EMBEDDEDDATA mmedaddress="0x3A656" mmedelementsizebits="16" mmedcolcount="38" mmedmajorstridebits="16" mmedminorstridebits="0" />
+      <indexcount>38</indexcount>
+      <decimalpl>0</decimalpl>
+      <embedinfo type="1" />
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="z">
+      <EMBEDDEDDATA mmedaddress="0x3E21B" mmedelementsizebits="8" mmedrowcount="38" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
+      <decimalpl>0</decimalpl>
+      <min>0.000000</min>
+      <max>100.000000</max>
+      <outputtype>1</outputtype>
+      <MATH equation="(X/255)*100">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
