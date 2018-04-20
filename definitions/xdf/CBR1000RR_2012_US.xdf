@@ -1,4 +1,4 @@
-<!-- Written 04/19/2018 15:36:22 -->
+<!-- Written 04/20/2018 12:42:15 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -389,7 +389,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -428,7 +428,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -467,7 +467,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -583,7 +583,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -622,7 +622,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -661,7 +661,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -700,7 +700,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -739,7 +739,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -778,7 +778,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -817,7 +817,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -856,7 +856,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -895,7 +895,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -933,7 +933,7 @@
       <min>0.000000</min>
       <max>80.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="(X/16)-3.3">
+      <MATH equation="(X*0.08829398)-14.91206232">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
