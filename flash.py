@@ -70,13 +70,12 @@ if __name__ == '__main__':
 		ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
 		# <- 0x02 0x04 0x00 0xfa
 
-		print("===============================================")
-		print("Entering Boot Mode")
-		ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
-		ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
-		time.sleep(.5)
-
 		if args.mode == "read":
+			print("===============================================")
+			print("Entering Boot Mode")
+			ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
+			ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
+			time.sleep(.5)
 			print("===============================================")
 			print("Dumping ECU to bin file")
 			maxbyte = 1024 * args.rom_size
