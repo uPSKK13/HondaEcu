@@ -52,6 +52,7 @@ class HondaECU(object):
 		return ord(b.raw[1]) & 16 == 0
 
 	def send(self, buf, ml):
+		self.dev.flush()
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
 		r = len(msg)
