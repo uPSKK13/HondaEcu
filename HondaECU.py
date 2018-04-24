@@ -51,7 +51,7 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
 		return ord(b.raw[1]) & 16 == 0
 
-	def send(self, buf, ml, timeout=.1):
+	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
@@ -83,7 +83,7 @@ class HondaECU(object):
 		assert(msg[ml] == len(msg))
 		return msg, ml, dl
 
-	def send_command(self, mtype, data=[], retries=5, debug=False):
+	def send_command(self, mtype, data=[], retries=10, debug=False):
 		msg, ml, dl = self._format_message(mtype, data)
 		while retries > 0:
 			if debug:

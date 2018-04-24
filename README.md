@@ -17,6 +17,10 @@ your electronics.
 ![kline_interface_2](http://projects.gonzos.net/wp-content/uploads/2017/04/CTX-kline-interface-1024x514.png)
 
 
+### Bench Harness
+
+If you make a bench harness to work with your ECU you will need a 2.5 amp power supply. The ECU will power-up with a 2.0 amp power supply but transfer rates will be slow and you will get CRC errors.
+
 ## Tuning Software
 
 * http://www.tunerpro.net
