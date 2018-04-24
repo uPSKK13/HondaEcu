@@ -51,24 +51,27 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
 		return ord(b.raw[1]) & 16 == 0
 
-	def send(self, buf, ml):
+	def send(self, buf, ml, timeout=.1):
 		self.dev.flush()
 		msg = ("".join([chr(b) for b in buf]))
 		self.dev.write(msg)
 		r = len(msg)
 		while r > 0:
 			r -= len(self.dev.read(r))
+		to = time.time()
 		buf = ""
 		r = ml+1
 		while r > 0:
 			tmp = self.dev.read(r)
 			r -= len(tmp)
 			buf += tmp
+			if time.time() - to > timeout: return None
 		r = ord(buf[-1])-ml-1
 		while r > 0:
 			tmp = self.dev.read(r)
 			r -= len(tmp)
 			buf += tmp
+			if time.time() - to > timeout: return None
 		return buf
 
 	def _format_message(self, mtype, data):
@@ -80,22 +83,37 @@ class HondaECU(object):
 		assert(msg[ml] == len(msg))
 		return msg, ml, dl
 
-	def send_command(self, mtype, data=[], debug=False):
+	def send_command(self, mtype, data=[], retries=5, debug=False):
 		msg, ml, dl = self._format_message(mtype, data)
-		if debug:
-			sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
-			sys.stderr.write("->  %s\n" % repr(["%02x" % m for m in msg]))
-		resp = self.send(msg, ml)
-		ret = None
-		if resp:
+		while retries > 0:
 			if debug:
-				sys.stderr.write(" <- %s\n" % repr([binascii.hexlify(r) for r in resp]))
-			assert(ord(resp[-1]) == checksum8bitHonda([ord(r) for r in resp[:-1]]))
+				sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
+				sys.stderr.write("->  %s" % repr(["%02x" % m for m in msg]))
+			resp = self.send(msg, ml)
+			ret = None
+			if resp == None:
+				if debug:
+					sys.stderr.write(" !%d \n" % (retries))
+				retries -= 1
+				continue
+			else:
+				if debug:
+					sys.stderr.write("\n")
+			if debug:
+				sys.stderr.write(" <- %s" % repr([binascii.hexlify(r) for r in resp]))
+			invalid = ord(resp[-1]) != checksum8bitHonda([ord(r) for r in resp[:-1]])
+			if invalid:
+				if debug:
+					sys.stderr.write(" !%d \n" % (retries))
+				retries -= 1
+				continue
+			else:
+				if debug:
+					sys.stderr.write("\n")
 			rmtype = resp[:ml]
 			rml = resp[ml:(ml+1)]
 			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
 			if debug:
 				sys.stderr.write("  < %s\n" % repr([rdl, rdata]))
-			ret = (rmtype, rml, rdata, rdl)
-		return ret
+			return (rmtype, rml, rdata, rdl)
