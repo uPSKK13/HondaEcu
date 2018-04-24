@@ -22,14 +22,17 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
 
-	def init(self, debug=False):
+	def _break(self, ms, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
 		self.dev.write('\x00')
-		time.sleep(.070)
+		time.sleep(ms)
 		self.dev.write('\x01')
-		time.sleep(.130)
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
+
+	def init(self, debug=False):
+		self._break(.070)
+		time.sleep(.130)
 		self.send_command([0xfe],[0x72], debug=debug) # 0xfe <- KWP2000 fast init all nodes ?
 
 	def validate_checksum(self, bytes, fix=False):
