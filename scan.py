@@ -30,6 +30,7 @@ if __name__ == '__main__':
 	print("Initializing ECU communications")
 	ecu.setup()
 	ecu.init(debug=args.debug)
+	ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
 	print("===============================================")
 
 	"""
