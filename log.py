@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
 	log = None
 	if args.logfile != None:
-		log = open(logfile, "w")
+		log = open(args.logfile, "w")
 	while True:
 		info = ecu.send_command([0x72], [0x71, args.table], debug=args.debug)
 		log.write(info[2][2:])
