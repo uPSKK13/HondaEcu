@@ -30,8 +30,7 @@ if __name__ == '__main__':
 		log = open(args.logfile, "w")
 	while True:
 		info = ecu.send_command([0x72], [0x71, args.table], debug=args.debug)
-		log.write(info[2][2:])
-		log.write("\n")
+		log.write("%f\t" % (time.time()) + info[2][2:] + "\n")
 		log.flush()
 		if args.debug:
 			data = unpack(">%dB" % len(info[2][2:]) , info[2][2:])
