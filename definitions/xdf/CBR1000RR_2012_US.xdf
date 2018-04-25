@@ -1,4 +1,4 @@
-<!-- Written 04/20/2018 12:42:15 -->
+<!-- Written 04/25/2018 02:24:29 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -374,7 +374,7 @@
     <XDFAXIS id="y" uniqueid="0x0">
       <EMBEDDEDDATA mmedaddress="0x2E192" mmedelementsizebits="16" mmedcolcount="38" mmedmajorstridebits="16" mmedminorstridebits="0" />
       <indexcount>38</indexcount>
-      <decimalpl>1</decimalpl>
+      <decimalpl>0</decimalpl>
       <embedinfo type="1" />
       <datatype>6</datatype>
       <unittype>4</unittype>
