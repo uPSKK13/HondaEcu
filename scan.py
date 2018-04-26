@@ -70,8 +70,8 @@ if __name__ == '__main__':
 							("?UNK2", data[10]),
 							("BATT_volt", data[11]/10),
 							("SPEED_kph", data[12]),
-							("IGN_ang", data[13]/10),
-							("*INJ_ms", data[14]),
+							("IGN_ang", data[13]/100),
+							("INJ_ms", data[14]/100),
 							("?UNK3", data[15])
 						]
 					elif a == 0x71 and (b == 0xd0):
