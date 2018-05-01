@@ -83,9 +83,9 @@ if __name__ == '__main__':
 			time.sleep(.1)
 		ecu.init(debug=args.debug)
 		ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
+		ds = getDateTimeStamp()
+		log = h5.create_table("/", "EngineData_%s" % ds, HDS_TAB11, "Log starting on %s" % (ds))
 		try:
-			ds = getDateTimeStamp()
-			log = h5.create_table("/", "EngineData_%s" % ds, HDS_TAB11, "Log starting on %s" % (ds))
 			while True:
 				t = time.time()
 				info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug)
@@ -113,4 +113,5 @@ if __name__ == '__main__':
 				d.append()
 				log.flush()
 		except:
-			pass
+			log.flush()
+		log.close()
