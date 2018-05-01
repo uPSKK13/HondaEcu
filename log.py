@@ -18,26 +18,26 @@ getTime = get_time
 
 def getDateTimeStamp():
     d = datetime.datetime.now().timetuple()
-    return "%d-%02.d-%02.d_%02.d-%02.d-%02.d" % (d[0], d[1], d[2], d[3], d[4], d[5])
+    return "%d%02d%02d%02d%02d%02d" % (d[0], d[1], d[2], d[3], d[4], d[5])
 
 class HDS_TAB11(IsDescription):
 	timestamp = Float64Col()
-	hds_rpm = UInt16Col()
-	hds_tps_volt = UInt8Col()
-	hds_tps = UInt8Col()
-	hds_ect_volt = UInt8Col()
-	hds_ect = UInt8Col()
-	hds_iat_volt = UInt8Col()
-	hds_iat = UInt8Col()
-	hds_map_volt = UInt8Col()
-	hds_map = UInt8Col()
-	hds_unk1 = UInt8Col()
-	hds_unk2 = UInt8Col()
-	hds_battery_volt = UInt8Col()
-	hds_speed = UInt8Col()
-	hds_ign = UInt8Col()
-	hds_inj = UInt8Col()
-	hds_unk3 = UInt8Col()
+	hds_rpm = Int32Col()
+	hds_tps_volt = Int32Col()
+	hds_tps = Int32Col()
+	hds_ect_volt = Int32Col()
+	hds_ect = Int32Col()
+	hds_iat_volt = Int32Col()
+	hds_iat = Int32Col()
+	hds_map_volt = Int32Col()
+	hds_map = Int32Col()
+	hds_unk1 = Int32Col()
+	hds_unk2 = Int32Col()
+	hds_battery_volt = Int32Col()
+	hds_speed = Int32Col()
+	hds_ign = Int32Col()
+	hds_inj = Int32Col()
+	hds_unk3 = Int32Col()
 
 if __name__ == '__main__':
 
