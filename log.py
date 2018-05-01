@@ -56,7 +56,7 @@ if __name__ == '__main__':
 	ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
 	print("===============================================")
 
-	h5 = open_file("%s_%s.h5" % (args.logfile), mode="w", title="Honda KLine Engine Log")
+	h5 = open_file(args.logfile, mode="w", title="Honda KLine Engine Log")
 	ds = getDateTimeStamp()
 	log = h5.create_table("/", ds, HDS_TAB11, "Log starting on %s" % (ds))
 	while True:
