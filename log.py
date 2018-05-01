@@ -87,6 +87,7 @@ if __name__ == '__main__':
 			ds = getDateTimeStamp()
 			log = h5.create_table("/", "EngineData_%s" % ds, HDS_TAB11, "Log starting on %s" % (ds))
 			while True:
+				t = time.time()
 				info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug)
 				data = unpack(">H12B3H", info[2][2:])
 				if args.debug:
