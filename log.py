@@ -121,5 +121,5 @@ if __name__ == '__main__':
 				d['hds_unk3'] = data[15]
 				d.append()
 				log.flush()
-			except:
-				pass
+		except:
+			pass
