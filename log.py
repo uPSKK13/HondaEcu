@@ -22,22 +22,22 @@ def getDateTimeStamp():
 
 class HDS_TAB11(IsDescription):
 	timestamp = Float64Col()
-	hds_rpm = Int32Col()
-	hds_tps_volt = Int32Col()
-	hds_tps = Int32Col()
-	hds_ect_volt = Int32Col()
-	hds_ect = Int32Col()
-	hds_iat_volt = Int32Col()
-	hds_iat = Int32Col()
-	hds_map_volt = Int32Col()
-	hds_map = Int32Col()
-	hds_unk1 = Int32Col()
-	hds_unk2 = Int32Col()
-	hds_battery_volt = Int32Col()
-	hds_speed = Int32Col()
-	hds_ign = Int32Col()
-	hds_inj = Int32Col()
-	hds_unk3 = Int32Col()
+	hds_rpm = UInt16Col()
+	hds_tps_volt = UInt8Col()
+	hds_tps = UInt8Col()
+	hds_ect_volt = UInt8Col()
+	hds_ect = UInt8Col()
+	hds_iat_volt = UInt8Col()
+	hds_iat = UInt8Col()
+	hds_map_volt = UInt8Col()
+	hds_map = UInt8Col()
+	hds_unk1 = UInt8Col()
+	hds_unk2 = UInt8Col()
+	hds_battery_volt = UInt8Col()
+	hds_speed = UInt8Col()
+	hds_ign = UInt8Col()
+	hds_inj = UInt8Col()
+	hds_unk3 = UInt8Col()
 
 if __name__ == '__main__':
 
@@ -67,22 +67,22 @@ if __name__ == '__main__':
 			print(data)
 		d = log.row
 		d['timestamp'] = t
-		d['hds_rpm'] = UInt16Col()
-		d['hds_tps_volt'] = UInt8Col()
-		d['hds_tps'] = UInt8Col()
-		d['hds_ect_volt'] = UInt8Col()
-		d['hds_ect'] = UInt8Col()
-		d['hds_iat_volt'] = UInt8Col()
-		d['hds_iat'] = UInt8Col()
-		d['hds_map_volt'] = UInt8Col()
-		d['hds_map'] = UInt8Col()
-		d['hds_unk1'] = UInt8Col()
-		d['hds_unk2'] = UInt8Col()
-		d['hds_battery_volt'] = UInt8Col()
-		d['hds_speed'] = UInt8Col()
-		d['hds_ign'] = UInt16Col()
-		d['hds_inj'] = UInt16Col()
-		d['hds_unk3'] = UInt16Col()
+		d['hds_rpm'] = data[0]
+		d['hds_tps_volt'] = data[1]
+		d['hds_tps'] = data[2]
+		d['hds_ect_volt'] = data[3]
+		d['hds_ect'] = data[4]
+		d['hds_iat_volt'] = data[5]
+		d['hds_iat'] =data[6]
+		d['hds_map_volt'] = data[7]
+		d['hds_map'] = data[8]
+		d['hds_unk1'] = data[9]
+		d['hds_unk2'] = data[10]
+		d['hds_battery_volt'] = data[11]
+		d['hds_speed'] = data[12]
+		d['hds_ign'] = data[13]
+		d['hds_inj'] = data[14]
+		d['hds_unk3'] = data[15]
 		d.append()
 		log.flush()
 	h5.close()
