@@ -128,6 +128,7 @@ if __name__ == '__main__':
 								d['hds_inj'] = data[14]
 								d['hds_unk3'] = data[15]
 							d.append()
+							log.flush()
 						else:
 							break
 						yield
