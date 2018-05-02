@@ -7,6 +7,8 @@ import argparse
 import platform
 import datetime
 import time
+import os
+import signal
 import sys, atexit
 from distutils.version import StrictVersion
 import multiprocessing
