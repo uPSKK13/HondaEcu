@@ -126,12 +126,12 @@ if __name__ == '__main__':
 					yield
 		return cooperate(task())
 
-	def flushLog(h5, log):
-		log.flush()
+	def flushLog(h5):
 		h5.flush()
 
-	lc = LoopingCall(flushLog, h5, log)
+	t = get_table(ecu, args)
+
+	lc = LoopingCall(flushLog, h5)
 	lc.start(1)
 
-	t = get_table(ecu, args)
 	reactor.run()
