@@ -132,6 +132,6 @@ if __name__ == '__main__':
 	t = get_table(ecu, args)
 
 	lc = LoopingCall(flushLog, h5)
-	lc.start(1)
+	lc.start(10)
 
 	reactor.run()
