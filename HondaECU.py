@@ -20,6 +20,8 @@ class HondaECU(object):
 		if self.dev != None:
 			self.dev.close()
 		self.dev = Device()
+		self.dev.ftdi_fn.ftdi_usb_reset()
+		self.dev.ftdi_fn.ftdi_usb_purge_buffers()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
 

@@ -16,6 +16,10 @@ import tables
 from tables import *
 from HondaECU import *
 
+import sdnotify
+
+n = sdnotify.SystemdNotifier()
+
 get_time = time.time
 if platform.system() == 'Windows':
 	get_time = time.clock
@@ -82,7 +86,7 @@ if __name__ == '__main__':
 	ecu = HondaECU()
 	ecu.setup()
 
-	def get_table(ecu, args):
+	def get_table(ecu, args, n):
 		def task():
 			while True:
 				if ecu.init(debug=args.debug):
@@ -127,6 +131,7 @@ if __name__ == '__main__':
 								d['hds_unk3'] = data[15]
 							d.append()
 							log.flush()
+							n.notify(STATUS="new-data")
 						else:
 							break
 						yield
@@ -137,16 +142,10 @@ if __name__ == '__main__':
 	def flushLog(h5):
 		h5.flush()
 
-	t = get_table(ecu, args)
+	t = get_table(ecu, args, n)
 
 	lc = LoopingCall(flushLog, h5)
 	lc.start(10)
 
-	def getError(ecu):
-		if ecu.dev.get_error_string() != "all fine":
-			reactor.stop()
-
-	lc2 = LoopingCall(getError, ecu)
-	lc2.start(1)
-
+	n.notify("READY=1")
 	reactor.run()
