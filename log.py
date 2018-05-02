@@ -23,7 +23,7 @@ getTime = get_time
 
 def getDateTimeStamp():
 	d = datetime.datetime.now().timetuple()
-	return "%d%02d%02d%02d%02d%02d" % (d[0], d[1], d[2], d[3], d[4], d[5])
+	return "%d_%02d_%02d__%02d_%02d_%02d" % (d[0], d[1], d[2], d[3], d[4], d[5])
 
 class HDS_TAB(IsDescription):
 	timestamp = Float64Col()
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 							continue
 					yield
 					ds = getDateTimeStamp()
-					log = h5.create_table("/", "EngineData_%s" % ds, hds_tables[hds_table][1], "Log starting on %s" % (ds))
+					log = h5.create_table("/", "HDS_TABLE_0x%d_%s" % (hds_table, ds), hds_tables[hds_table][1], "Log starting on %s" % (ds))
 					while True:
 						info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
 						if info:
