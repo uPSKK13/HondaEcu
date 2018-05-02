@@ -131,7 +131,7 @@ if __name__ == '__main__':
 								d['hds_unk3'] = data[15]
 							d.append()
 							log.flush()
-							n.notify(STATUS="new-data")
+							n.notify("WATCHDOG=1")
 						else:
 							break
 						yield
