@@ -33,7 +33,8 @@ class HondaECU(object):
 	def init(self, debug=False):
 		self._break(.070)
 		time.sleep(.130)
-		self.send_command([0xfe],[0x72], debug=debug) # 0xfe <- KWP2000 fast init all nodes ?
+		info = self.send_command([0xfe],[0x72], debug=debug, retries=0) # 0xfe <- KWP2000 fast init all nodes ?
+		return ord(info[2]) == 0x72 if info else False
 
 	def validate_checksum(self, bytes, fix=False):
 		cksum = len(bytes)-8
@@ -85,7 +86,9 @@ class HondaECU(object):
 
 	def send_command(self, mtype, data=[], retries=10, debug=False):
 		msg, ml, dl = self._format_message(mtype, data)
-		while retries > 0:
+		first = True
+		while first or retries > 0:
+			first = False
 			if debug:
 				sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
 				sys.stderr.write("->  %s" % repr(["%02x" % m for m in msg]))
