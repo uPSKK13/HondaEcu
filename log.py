@@ -68,12 +68,17 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--debug', action='store_true', help="turn on debugging output")
-	parser.add_argument('--logfile', type=str, default='honda_kline_log.h5', help="log filename")
+	parser.add_argument('--logfile', type=str, default='/var/log/HondaECU/honda_kline_log.h5', help="log filename")
 	args = parser.parse_args()
+
+	if os.path.isabs(args.logfile):
+		logfile = args.logfile
+	else:
+		logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), args.logfile)
 
 	atexit.register(my_close_open_files, False)
 	FILTERS = tables.Filters(complib='zlib', complevel=5)
-	h5 = open_file(args.logfile, mode="w", title="Honda KLine Engine Log", filters=FILTERS)
+	h5 = open_file(logfile, mode="w", title="Honda KLine Engine Log", filters=FILTERS)
 
 	ecu = HondaECU()
 
