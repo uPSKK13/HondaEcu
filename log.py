@@ -9,6 +9,7 @@ import datetime
 import time
 import sys, atexit
 from distutils.version import StrictVersion
+import multiprocessing
 
 import tables
 from tables import *
@@ -82,7 +83,12 @@ if __name__ == '__main__':
 
 	ecu = HondaECU()
 
-	while True:
+	stop_event = multiprocessing.Event()
+	def stop(signum, frame):
+		stop_event.set()
+	signal.signal(signal.SIGTERM, stop)
+
+	while not stop_event.is_set():
 		try:
 			ecu.setup()
 			while not ecu.kline():
