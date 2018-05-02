@@ -48,8 +48,8 @@ def my_close_open_files(verbose):
 		sys.stderr.write("\n")
 atexit.register(my_close_open_files, False)
 
-class HDS_TAB11(IsDescription):
-	timestamp = Float64Col()
+class HDS_TAB(IsDescription):
+	timestamp = Float32Col()
 	hds_rpm = UInt16Col()
 	hds_tps_volt = UInt8Col()
 	hds_tps = UInt8Col()
@@ -63,14 +63,35 @@ class HDS_TAB11(IsDescription):
 	hds_unk2 = UInt8Col()
 	hds_battery_volt = UInt8Col()
 	hds_speed = UInt8Col()
-	hds_ign = UInt8Col()
-	hds_inj = UInt8Col()
+	hds_ign = UInt16Col()
+
+class HDS_TAB10(HDS_TAB):
+	"""
+	Honda CBR 1000RR from 2004 to 2007
+	Honda CBR 600RR from 2003 to 2007
+	"""
 	hds_unk3 = UInt8Col()
+
+class HDS_TAB11(HDS_TAB):
+	"""
+	Honda CBR 1000RR from 2008
+	Honda CBR 1000RR HRC from 2014
+	Honda CBR 600RR from 2008
+	Honda CBR 600RR HRC from 2013 (D11 ECU)
+	"""
+	hds_inj = UInt16Col()
+	hds_unk4 = UInt16Col()
+
+hds_tables = {
+	10: [0x10, HDS_TAB10, ">H12BHB"],
+	11: [0x11, HDS_TAB11, ">H12BHHH"]
+}
 
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--debug', action='store_true', help="turn on debugging output")
+	parser.add_argument('--table', type=int, default=11, choices=[10,11], help="hds table")
 	parser.add_argument('--logfile', type=str, default='/var/log/HondaECU/honda_kline_log.h5', help="log filename")
 	args = parser.parse_args()
 
@@ -81,7 +102,7 @@ if __name__ == '__main__':
 
 	atexit.register(my_close_open_files, False)
 	FILTERS = tables.Filters(complib='zlib', complevel=5)
-	h5 = open_file(logfile, mode="w", title="Honda KLine Engine Log", filters=FILTERS)
+	h5 = open_file(logfile, mode="a", title="Honda KLine Engine Log", filters=FILTERS)
 
 	ecu = HondaECU()
 
@@ -98,12 +119,12 @@ if __name__ == '__main__':
 			ecu.init(debug=args.debug)
 			ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
 			ds = getDateTimeStamp()
-			log = h5.create_table("/", "EngineData_%s" % ds, HDS_TAB11, "Log starting on %s" % (ds))
+			log = h5.create_table("/", "EngineData_%s" % ds, hds_tables[args.table][1], "Log starting on %s" % (ds))
 			try:
 				while True:
 					t = time.time()
-					info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug)
-					data = unpack(">H12B3H", info[2][2:])
+					info = ecu.send_command([0x72], [0x71, hds_tables[args.table][0]], debug=args.debug)
+					data = unpack(hds_tables[args.table][2], info[2][2:])
 					if args.debug:
 						print(data)
 					d = log.row
@@ -122,8 +143,11 @@ if __name__ == '__main__':
 					d['hds_battery_volt'] = data[11]
 					d['hds_speed'] = data[12]
 					d['hds_ign'] = data[13]
-					d['hds_inj'] = data[14]
-					d['hds_unk3'] = data[15]
+					if args.table == 10:
+						d['hds_unk3'] = data[14]
+					else:
+						d['hds_inj'] = data[14]
+						d['hds_unk3'] = data[15]
 					d.append()
 					log.flush()
 			except:
