@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function
 from twisted.internet import reactor
-from twisted.internet.task import cooperate, coiterate
+from twisted.internet.task import cooperate, coiterate, LoopingCall
 
 from pylibftdi import Device
 from struct import unpack
@@ -119,13 +119,19 @@ if __name__ == '__main__':
 								d['hds_inj'] = data[14]
 								d['hds_unk3'] = data[15]
 							d.append()
-							log.flush()
 						else:
 							break
 						yield
 				else:
 					yield
 		return cooperate(task())
+
+	def flushLog(h5, log):
+		log.flush()
+		h5.flush()
+
+	lc = LoopingCall(flushLog, h5, log)
+	lc.start(1)
 
 	t = get_table(ecu, args)
 	reactor.run()
