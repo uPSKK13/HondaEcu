@@ -68,7 +68,6 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--debug', action='store_true', help="turn on debugging output")
-	parser.add_argument('--table', type=int, default=11, choices=[10,11], help="hds table")
 	parser.add_argument('--logfile', type=str, default='/var/log/HondaECU/honda_kline_log.h5', help="log filename")
 	args = parser.parse_args()
 
@@ -88,13 +87,23 @@ if __name__ == '__main__':
 			while True:
 				if ecu.init(debug=args.debug):
 					ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug, retries=0)
+					info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug, retries=0)
+					if len(info[2][2:]) == 20:
+						hds_table = 11
+					else:
+						info = ecu.send_command([0x72], [0x71, 0x10], debug=args.debug, retries=0)
+						if len(info[2][2:]) == 17:
+							hds_table = 10
+						else:
+							yield
+							continue
 					yield
 					ds = getDateTimeStamp()
-					log = h5.create_table("/", "EngineData_%s" % ds, hds_tables[args.table][1], "Log starting on %s" % (ds))
+					log = h5.create_table("/", "EngineData_%s" % ds, hds_tables[hds_table][1], "Log starting on %s" % (ds))
 					while True:
-						info = ecu.send_command([0x72], [0x71, hds_tables[args.table][0]], debug=args.debug, retries=0)
+						info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
 						if info:
-							data = unpack(hds_tables[args.table][2], info[2][2:])
+							data = unpack(hds_tables[hds_table][2], info[2][2:])
 							if args.debug:
 								print(data)
 							d = log.row
@@ -113,7 +122,7 @@ if __name__ == '__main__':
 							d['hds_battery_volt'] = data[11]
 							d['hds_speed'] = data[12]
 							d['hds_ign'] = data[13]
-							if args.table == 10:
+							if hds_table == 10:
 								d['hds_unk3'] = data[14]
 							else:
 								d['hds_inj'] = data[14]
