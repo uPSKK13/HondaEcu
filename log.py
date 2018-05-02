@@ -76,42 +76,45 @@ if __name__ == '__main__':
 	h5 = open_file(args.logfile, mode="w", title="Honda KLine Engine Log", filters=FILTERS)
 
 	ecu = HondaECU()
-	ecu.setup()
 
 	while True:
-		while not ecu.kline():
-			time.sleep(.1)
-		ecu.init(debug=args.debug)
-		ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
-		ds = getDateTimeStamp()
-		log = h5.create_table("/", "EngineData_%s" % ds, HDS_TAB11, "Log starting on %s" % (ds))
 		try:
-			while True:
-				t = time.time()
-				info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug)
-				data = unpack(">H12B3H", info[2][2:])
-				if args.debug:
-					print(data)
-				d = log.row
-				d['timestamp'] = t
-				d['hds_rpm'] = data[0]
-				d['hds_tps_volt'] = data[1]
-				d['hds_tps'] = data[2]
-				d['hds_ect_volt'] = data[3]
-				d['hds_ect'] = data[4]
-				d['hds_iat_volt'] = data[5]
-				d['hds_iat'] =data[6]
-				d['hds_map_volt'] = data[7]
-				d['hds_map'] = data[8]
-				d['hds_unk1'] = data[9]
-				d['hds_unk2'] = data[10]
-				d['hds_battery_volt'] = data[11]
-				d['hds_speed'] = data[12]
-				d['hds_ign'] = data[13]
-				d['hds_inj'] = data[14]
-				d['hds_unk3'] = data[15]
-				d.append()
+			ecu.setup()
+			while not ecu.kline():
+				time.sleep(.1)
+			ecu.init(debug=args.debug)
+			ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
+			ds = getDateTimeStamp()
+			log = h5.create_table("/", "EngineData_%s" % ds, HDS_TAB11, "Log starting on %s" % (ds))
+			try:
+				while True:
+					t = time.time()
+					info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug)
+					data = unpack(">H12B3H", info[2][2:])
+					if args.debug:
+						print(data)
+					d = log.row
+					d['timestamp'] = t
+					d['hds_rpm'] = data[0]
+					d['hds_tps_volt'] = data[1]
+					d['hds_tps'] = data[2]
+					d['hds_ect_volt'] = data[3]
+					d['hds_ect'] = data[4]
+					d['hds_iat_volt'] = data[5]
+					d['hds_iat'] =data[6]
+					d['hds_map_volt'] = data[7]
+					d['hds_map'] = data[8]
+					d['hds_unk1'] = data[9]
+					d['hds_unk2'] = data[10]
+					d['hds_battery_volt'] = data[11]
+					d['hds_speed'] = data[12]
+					d['hds_ign'] = data[13]
+					d['hds_inj'] = data[14]
+					d['hds_unk3'] = data[15]
+					d.append()
+					log.flush()
+			except:
 				log.flush()
+			log.close()
 		except:
-			log.flush()
-		log.close()
+			time.sleep(1)
