@@ -17,8 +17,9 @@ class HondaECU(object):
 		self.dev = None
 
 	def setup(self):
-		if self.dev == None:
-			self.dev = Device()
+		if self.dev != None:
+			self.dev.close()
+		self.dev = Device()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
 

@@ -143,7 +143,8 @@ if __name__ == '__main__':
 	lc.start(10)
 
 	def getError(ecu):
-		print(ecu.dev.get_error_string())
+		if ecu.dev.get_error_string() != "all fine":
+			reactor.stop()
 
 	lc2 = LoopingCall(getError, ecu)
 	lc2.start(1)
