@@ -104,8 +104,6 @@ if __name__ == '__main__':
 						info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
 						if info:
 							data = unpack(hds_tables[hds_table][2], info[2][2:])
-							if args.debug:
-								print(data)
 							d = log.row
 							d['timestamp'] = time.time()
 							d['hds_rpm'] = data[0]
@@ -143,5 +141,11 @@ if __name__ == '__main__':
 
 	lc = LoopingCall(flushLog, h5)
 	lc.start(10)
+
+	def getError(ecu):
+		print(ecu.dev.get_error_string())
+
+	lc2 = LoopingCall(getError, ecu)
+	lc2.start(1)
 
 	reactor.run()
