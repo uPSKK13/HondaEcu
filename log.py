@@ -128,7 +128,7 @@ if __name__ == '__main__':
 								d['hds_unk3'] = data[14]
 							else:
 								d['hds_inj'] = data[14]
-								d['hds_unk3'] = data[15]
+								d['hds_unk4'] = data[15]
 							d.append()
 							log.flush()
 							n.notify("WATCHDOG=1")
