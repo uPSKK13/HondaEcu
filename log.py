@@ -100,6 +100,8 @@ if __name__ == '__main__':
 	ds = getDateTimeStamp()
 	log = h5.create_table(grp, "session%s" % (ds), hds_tables[hds_table][1], "Session timestamp %s" % (ds))
 
+	n.notify("READY=1")
+
 	info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
 	while info:
 		data = unpack(hds_tables[hds_table][2], info[2][2:])
