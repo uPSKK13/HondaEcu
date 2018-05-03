@@ -27,7 +27,7 @@ getTime = get_time
 
 def getDateTimeStamp():
 	d = datetime.datetime.now().timetuple()
-	return "%d_%02d_%02d__%02d_%02d_%02d" % (d[0], d[1], d[2], d[3], d[4], d[5])
+	return "%d%02d%02d%02d%02d%02d" % (d[0], d[1], d[2], d[3], d[4], d[5])
 
 class HDS_TAB(IsDescription):
 	timestamp = Float64Col()
@@ -80,62 +80,58 @@ if __name__ == '__main__':
 	else:
 		args.logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), args.logfile)
 
-	FILTERS = tables.Filters(complib='zlib', complevel=5)
-	h5 = open_file(args.logfile, mode="a", title="Honda KLine Engine Log", filters=FILTERS)
+	h5 = open_file(args.logfile, mode="a", title="Honda KLine Engine Log")
 
 	ecu = HondaECU()
 	ecu.setup()
 
+	if not ecu.init(debug=args.debug):
+		sys.exit(-1)
+
+	ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
+
+	hds_table = 10
+	info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug)
+	if len(info[2][2:]) == 20:
+		hds_table = 11
+
+	grp = '/HDS_TAB%d' % (hds_table)
+	if not grp in h5:
+		group = h5.create_group("/", 'HDS_TAB%d' % (hds_table), 'Honda Diagnostics System Table %d' % (hds_table))
+
+	ds = getDateTimeStamp()
+	log = h5.create_table(grp, "session%s" % (ds), hds_tables[hds_table][1], "Session timestamp %s" % (ds))
+
 	def get_table(ecu, args, n):
 		def task():
 			while True:
-				if ecu.init(debug=args.debug):
-					ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug, retries=0)
-					info = ecu.send_command([0x72], [0x71, 0x11], debug=args.debug, retries=0)
-					if len(info[2][2:]) == 20:
-						hds_table = 11
+				info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug)
+				if info:
+					data = unpack(hds_tables[hds_table][2], info[2][2:])
+					d = log.row
+					d['timestamp'] = time.time()
+					d['hds_rpm'] = data[0]
+					d['hds_tps_volt'] = data[1]
+					d['hds_tps'] = data[2]
+					d['hds_ect_volt'] = data[3]
+					d['hds_ect'] = data[4]
+					d['hds_iat_volt'] = data[5]
+					d['hds_iat'] =data[6]
+					d['hds_map_volt'] = data[7]
+					d['hds_map'] = data[8]
+					d['hds_unk1'] = data[9]
+					d['hds_unk2'] = data[10]
+					d['hds_battery_volt'] = data[11]
+					d['hds_speed'] = data[12]
+					d['hds_ign'] = data[13]
+					if hds_table == 10:
+						d['hds_unk3'] = data[14]
 					else:
-						info = ecu.send_command([0x72], [0x71, 0x10], debug=args.debug, retries=0)
-						if len(info[2][2:]) == 17:
-							hds_table = 10
-						else:
-							yield
-							continue
-					yield
-					ds = getDateTimeStamp()
-					log = h5.create_table("/", "HDS_TABLE_0x%d_%s" % (hds_table, ds), hds_tables[hds_table][1], "Log starting on %s" % (ds))
-					while True:
-						info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
-						if info:
-							data = unpack(hds_tables[hds_table][2], info[2][2:])
-							d = log.row
-							d['timestamp'] = time.time()
-							d['hds_rpm'] = data[0]
-							d['hds_tps_volt'] = data[1]
-							d['hds_tps'] = data[2]
-							d['hds_ect_volt'] = data[3]
-							d['hds_ect'] = data[4]
-							d['hds_iat_volt'] = data[5]
-							d['hds_iat'] =data[6]
-							d['hds_map_volt'] = data[7]
-							d['hds_map'] = data[8]
-							d['hds_unk1'] = data[9]
-							d['hds_unk2'] = data[10]
-							d['hds_battery_volt'] = data[11]
-							d['hds_speed'] = data[12]
-							d['hds_ign'] = data[13]
-							if hds_table == 10:
-								d['hds_unk3'] = data[14]
-							else:
-								d['hds_inj'] = data[14]
-								d['hds_unk4'] = data[15]
-							d.append()
-							log.flush()
-							n.notify("WATCHDOG=1")
-						else:
-							break
-						yield
-				else:
+						d['hds_inj'] = data[14]
+						d['hds_unk4'] = data[15]
+					d.append()
+					log.flush()
+					n.notify("WATCHDOG=1")
 					yield
 		return cooperate(task())
 
