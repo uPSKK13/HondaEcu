@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 from __future__ import division, print_function
-from twisted.internet import reactor
-from twisted.internet.task import cooperate, coiterate, LoopingCall
 
 from pylibftdi import Device
 from struct import unpack
@@ -102,46 +100,32 @@ if __name__ == '__main__':
 	ds = getDateTimeStamp()
 	log = h5.create_table(grp, "session%s" % (ds), hds_tables[hds_table][1], "Session timestamp %s" % (ds))
 
-	def get_table(ecu, args, n):
-		def task():
-			while True:
-				info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug)
-				if info:
-					data = unpack(hds_tables[hds_table][2], info[2][2:])
-					d = log.row
-					d['timestamp'] = time.time()
-					d['hds_rpm'] = data[0]
-					d['hds_tps_volt'] = data[1]
-					d['hds_tps'] = data[2]
-					d['hds_ect_volt'] = data[3]
-					d['hds_ect'] = data[4]
-					d['hds_iat_volt'] = data[5]
-					d['hds_iat'] =data[6]
-					d['hds_map_volt'] = data[7]
-					d['hds_map'] = data[8]
-					d['hds_unk1'] = data[9]
-					d['hds_unk2'] = data[10]
-					d['hds_battery_volt'] = data[11]
-					d['hds_speed'] = data[12]
-					d['hds_ign'] = data[13]
-					if hds_table == 10:
-						d['hds_unk3'] = data[14]
-					else:
-						d['hds_inj'] = data[14]
-						d['hds_unk4'] = data[15]
-					d.append()
-					log.flush()
-					n.notify("WATCHDOG=1")
-					yield
-		return cooperate(task())
-
-	def flushLog(h5):
-		h5.flush()
-
-	t = get_table(ecu, args, n)
-
-	lc = LoopingCall(flushLog, h5)
-	lc.start(10)
-
-	n.notify("READY=1")
-	reactor.run()
+	while True:
+		info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
+		if info:
+			data = unpack(hds_tables[hds_table][2], info[2][2:])
+			d = log.row
+			d['timestamp'] = time.time()
+			d['hds_rpm'] = data[0]
+			d['hds_tps_volt'] = data[1]
+			d['hds_tps'] = data[2]
+			d['hds_ect_volt'] = data[3]
+			d['hds_ect'] = data[4]
+			d['hds_iat_volt'] = data[5]
+			d['hds_iat'] =data[6]
+			d['hds_map_volt'] = data[7]
+			d['hds_map'] = data[8]
+			d['hds_unk1'] = data[9]
+			d['hds_unk2'] = data[10]
+			d['hds_battery_volt'] = data[11]
+			d['hds_speed'] = data[12]
+			d['hds_ign'] = data[13]
+			if hds_table == 10:
+				d['hds_unk3'] = data[14]
+			else:
+				d['hds_inj'] = data[14]
+				d['hds_unk4'] = data[15]
+			d.append()
+			log.flush()
+			h5.flush()
+			n.notify("WATCHDOG=1")
