@@ -27,15 +27,16 @@ class HondaECU(object):
 
 	def _break(self, ms, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
-		self.dev.write('\x00')
+		self.dev._write('\x00')
 		time.sleep(ms)
-		self.dev.write('\x01')
+		self.dev._write('\x01')
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
 
 	def init(self, debug=False):
 		self._break(.070)
 		time.sleep(.130)
+		self.dev.flush()
 		info = self.send_command([0xfe],[0x72], debug=debug, retries=0) # 0xfe <- KWP2000 fast init all nodes ?
 		return ord(info[2]) == 0x72 if info else False
 
@@ -58,21 +59,21 @@ class HondaECU(object):
 	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()
 		msg = ("".join([chr(b) for b in buf]))
-		self.dev.write(msg)
+		self.dev._write(msg)
 		r = len(msg)
 		while r > 0:
-			r -= len(self.dev.read(r))
+			r -= len(self.dev._read(r))
 		to = time.time()
 		buf = ""
 		r = ml+1
 		while r > 0:
-			tmp = self.dev.read(r)
+			tmp = self.dev._read(r)
 			r -= len(tmp)
 			buf += tmp
 			if time.time() - to > timeout: return None
 		r = ord(buf[-1])-ml-1
 		while r > 0:
-			tmp = self.dev.read(r)
+			tmp = self.dev._read(r)
 			r -= len(tmp)
 			buf += tmp
 			if time.time() - to > timeout: return None
