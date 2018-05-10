@@ -76,7 +76,7 @@ if __name__ == '__main__':
 							("SPEED_kph", data[12]),
 							("IGN_ang", data[13]/100),
 							("INJ_ms", data[14]/100),
-							("?UNK3", data[15])
+							("O2_volt", data[15])
 						]
 					elif a == 0x71 and (b == 0x10 or b == 0x60) and len(info[2][2:]) == 17:
 						data = unpack(">H12B1HB", info[2][2:])

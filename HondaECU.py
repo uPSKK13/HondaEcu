@@ -1,5 +1,5 @@
 from __future__ import division
-from pylibftdi import Device
+from pylibftdi import Device, FtdiError, Driver
 from struct import unpack
 from ctypes import *
 import time
@@ -14,11 +14,12 @@ class HondaECU(object):
 	def __init__(self, *args, **kwargs):
 		super(HondaECU, self).__init__(*args, **kwargs)
 		self.dev = None
+		self.reset()
+
+	def reset(self):
+		self.dev = Device()
 
 	def setup(self):
-		if self.dev != None:
-			self.dev.close()
-		self.dev = Device()
 		self.dev.ftdi_fn.ftdi_usb_reset()
 		self.dev.ftdi_fn.ftdi_usb_purge_buffers()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
@@ -37,7 +38,7 @@ class HondaECU(object):
 		time.sleep(.130)
 		self.dev.flush()
 		info = self.send_command([0xfe],[0x72], debug=debug, retries=0) # 0xfe <- KWP2000 fast init all nodes ?
-		return ord(info[2]) == 0x72 if info else False
+		return ord(info[2]) == 0x72 if info != None and ord(info[0]) > 0 else False
 
 	def validate_checksum(self, bytes, fix=False):
 		cksum = len(bytes)-8
@@ -53,16 +54,17 @@ class HondaECU(object):
 	def kline(self):
 		b = create_string_buffer(2)
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
-		return ord(b.raw[1]) & 16 == 0
+		return b.raw[1] & 16 == 0
 
 	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()
 		msg = "".join([chr(b) for b in buf]).encode('latin1')
 		self.dev._write(msg)
 		r = len(msg)
+		to = time.time()
 		while r > 0:
 			r -= len(self.dev._read(r))
-		to = time.time()
+			if time.time() - to > timeout: return None
 		buf = bytearray()
 		r = ml+1
 		while r > 0:
@@ -106,7 +108,7 @@ class HondaECU(object):
 				if debug:
 					sys.stderr.write("\n")
 			if debug:
-				sys.stderr.write(" <- %s" % repr([r for r in resp]))
+				sys.stderr.write(" <- %s" % repr(["%02x" % r for r in resp]))
 			invalid = (resp[-1] != checksum8bitHonda([r for r in resp[:-1]]))
 			if invalid:
 				if debug:
