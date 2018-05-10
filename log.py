@@ -10,8 +10,6 @@ import datetime
 import time
 import os
 
-import tables
-from tables import *
 from HondaECU import *
 
 import sdnotify
