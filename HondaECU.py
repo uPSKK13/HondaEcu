@@ -1,7 +1,6 @@
 from __future__ import division
 from pylibftdi import Device
 from struct import unpack
-from tabulate import tabulate
 from ctypes import *
 import time
 import binascii
@@ -27,9 +26,9 @@ class HondaECU(object):
 
 	def _break(self, ms, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
-		self.dev._write('\x00')
+		self.dev._write(b'\x00')
 		time.sleep(ms)
-		self.dev._write('\x01')
+		self.dev._write(b'\x01')
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
 
@@ -58,24 +57,24 @@ class HondaECU(object):
 
 	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()
-		msg = ("".join([chr(b) for b in buf]))
+		msg = "".join([chr(b) for b in buf]).encode('latin1')
 		self.dev._write(msg)
 		r = len(msg)
 		while r > 0:
 			r -= len(self.dev._read(r))
 		to = time.time()
-		buf = ""
+		buf = bytearray()
 		r = ml+1
 		while r > 0:
 			tmp = self.dev._read(r)
 			r -= len(tmp)
-			buf += tmp
+			buf.extend(tmp)
 			if time.time() - to > timeout: return None
-		r = ord(buf[-1])-ml-1
+		r = buf[-1]-ml-1
 		while r > 0:
 			tmp = self.dev._read(r)
 			r -= len(tmp)
-			buf += tmp
+			buf.extend(tmp)
 			if time.time() - to > timeout: return None
 		return buf
 
@@ -107,8 +106,8 @@ class HondaECU(object):
 				if debug:
 					sys.stderr.write("\n")
 			if debug:
-				sys.stderr.write(" <- %s" % repr([binascii.hexlify(r) for r in resp]))
-			invalid = ord(resp[-1]) != checksum8bitHonda([ord(r) for r in resp[:-1]])
+				sys.stderr.write(" <- %s" % repr([r for r in resp]))
+			invalid = (resp[-1] != checksum8bitHonda([r for r in resp[:-1]]))
 			if invalid:
 				if debug:
 					sys.stderr.write(" !%d \n" % (retries))
@@ -122,5 +121,5 @@ class HondaECU(object):
 			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
 			if debug:
-				sys.stderr.write("  < %s\n" % repr([rdl, rdata]))
+				sys.stderr.write("  < %s\n" % repr([rdl, rdata.decode("latin1")]))
 			return (rmtype, rml, rdata, rdl)

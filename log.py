@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import division, print_function
 
@@ -12,9 +12,7 @@ import os
 
 from HondaECU import *
 
-import sdnotify
-
-n = sdnotify.SystemdNotifier()
+import asyncio
 
 get_time = time.time
 if platform.system() == 'Windows':
@@ -29,6 +27,21 @@ hds_tables = {
 	10: [0x10, ">H12BHB"],
 	11: [0x11, ">H12BHHH"]
 }
+
+async def log_hds(ecu, hds_table):
+	ds = getDateTimeStamp()
+	with open("/var/log/HondaECU/%s.log" % (ds), "w") as log:
+		info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
+		while info and len(info[2][2:]) > 0:
+			tt = time.time()
+			data = list(unpack(hds_tables[hds_table][1], info[2][2:]))
+			data = ["%.08f" % (tt)] + list(map(str,data))
+			d = "\t".join(data)
+			log.write(d)
+			log.write("\n")
+			log.flush()
+			info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
+			await asyncio.sleep(0)
 
 if __name__ == '__main__':
 
@@ -47,17 +60,8 @@ if __name__ == '__main__':
 	if len(info[2][2:]) == 20:
 		hds_table = 11
 
-	ds = getDateTimeStamp()
-	n.notify("READY=1")
-	with open("/var/log/HondaECU/%s.log" % (ds), "w") as log:
-		info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
-		while info and len(info[2][2:]) > 0:
-			tt = time.time()
-			data = list(unpack(hds_tables[hds_table][1], info[2][2:]))
-			data = ["%.08f" % (tt)] + map(str,data)
-			d = "\t".join(data)
-			log.write(d)
-			log.write("\n")
-			log.flush()
-			n.notify("WATCHDOG=1")
-			info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
+	loop = asyncio.get_event_loop()
+	loop.create_task(log_hds(ecu, hds_table))
+
+	loop.run_forever()
+	loop.close()
