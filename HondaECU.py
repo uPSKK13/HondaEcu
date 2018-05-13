@@ -14,9 +14,14 @@ class HondaECU(object):
 	def __init__(self, *args, **kwargs):
 		super(HondaECU, self).__init__(*args, **kwargs)
 		self.dev = None
+		self.error = 0
+		self.resets = 0
 		self.reset()
 
 	def reset(self):
+		if self.dev != None:
+			del self.dev
+			self.dev = None
 		self.dev = Device()
 
 	def setup(self):
@@ -34,11 +39,15 @@ class HondaECU(object):
 		self.dev.flush()
 
 	def init(self, debug=False):
+		ret = False
 		self._break(.070)
 		time.sleep(.130)
 		self.dev.flush()
 		info = self.send_command([0xfe],[0x72], debug=debug, retries=0) # 0xfe <- KWP2000 fast init all nodes ?
-		return ord(info[2]) == 0x72 if info != None and ord(info[0]) > 0 else False
+		if info != None and ord(info[0]) > 0:
+			if ord(info[2]) == 0x72:
+				ret = True
+		return ret
 
 	def validate_checksum(self, bytes, fix=False):
 		cksum = len(bytes)-8
