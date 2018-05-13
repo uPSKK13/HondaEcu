@@ -45,7 +45,7 @@ async def log_hds_table(loop, ecu, lock, hds_table):
 			with await lock:
 				if ecu.error == 0:
 					try:
-						info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug, retries=0)
+						info = ecu.send_command([0x72], [0x71, hds_tables[hds_table][0]], debug=args.debug)
 						if info and len(info[2][2:]) > 0:
 							data = list(unpack(hds_tables[hds_table][1], info[2][2:]))
 							data = ["%.08f" % (time.time()), "%d" % (ecu.resets)] + list(map(str,data))

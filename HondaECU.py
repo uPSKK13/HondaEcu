@@ -112,6 +112,7 @@ class HondaECU(object):
 				if debug:
 					sys.stderr.write(" !%d \n" % (retries))
 				retries -= 1
+				time.sleep(0)
 				continue
 			else:
 				if debug:
@@ -123,6 +124,7 @@ class HondaECU(object):
 				if debug:
 					sys.stderr.write(" !%d \n" % (retries))
 				retries -= 1
+				time.sleep(0)
 				continue
 			else:
 				if debug:
