@@ -53,9 +53,10 @@ if __name__ == '__main__':
 			if info:
 				if args.verbose:
 					print(info)
-				a = ord(info[2][0])
-				b = ord(info[2][1])
-				if info and info[2] > 0:
+				print(info[2][0])
+				a = int(info[2][0])
+				b = int(info[2][1])
+				if info and len(info[2]) > 0:
 					if a == 0x71 and (b == 0x11 or b == 0x61) and len(info[2][2:]) == 20:
 						data = unpack(">H12B3H", info[2][2:])
 						pdata[j][b] = [
