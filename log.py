@@ -26,7 +26,7 @@ def getDateTimeStamp():
 
 hds_tables = {
 	10: [0x10, ">H12BHB", ["rpm","tps_volt","tps","ect_volt","ect","iat_volt","iat","map_volt","map","unk1","unk2","batt_volt","speed","ign"]],
-	11: [0x11, ">H12BHHH", ["rpm","tps_volt","tps","ect_volt","ect","iat_volt","iat","map_volt","map","unk1","unk2","batt_volt","speed","ign","inj","o2_volt"]]
+	11: [0x11, ">H12BHHH", ["rpm","tps_volt","tps","ect_volt","ect","iat_volt","iat","map_volt","map","unk1","unk2","batt_volt","speed","inj","ign","o2_volt"]]
 }
 
 class timestamp(object):
