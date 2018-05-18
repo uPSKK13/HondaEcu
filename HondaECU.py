@@ -11,8 +11,9 @@ def checksum8bitHonda(data):
 
 class HondaECU(object):
 
-	def __init__(self, *args, **kwargs):
-		super(HondaECU, self).__init__(*args, **kwargs)
+	def __init__(self, device_id=None):
+		super(HondaECU, self).__init__()
+		self.device_id = device_id
 		self.dev = None
 		self.error = 0
 		self.resets = 0
@@ -22,7 +23,7 @@ class HondaECU(object):
 		if self.dev != None:
 			del self.dev
 			self.dev = None
-		self.dev = Device()
+		self.dev = Device(self.device_id)
 
 	def setup(self):
 		self.dev.ftdi_fn.ftdi_usb_reset()
