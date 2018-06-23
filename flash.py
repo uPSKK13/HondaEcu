@@ -16,7 +16,7 @@ def do_validation(binfile, fix=False):
 	else:
 		print("Validating bin file checksum")
 	with open(binfile, "rb") as fbin:
-		bytes, fcksum, ccksum, fixed = ecu.validate_checksum(fbin.read(os.path.getsize(binfile)))
+		bytes, fcksum, ccksum, fixed = ecu.validate_checksum(bytearray(fbin.read(os.path.getsize(binfile))))
 		if fixed:
 			stats = "fixed"
 		elif fcksum == ccksum:
@@ -80,10 +80,10 @@ if __name__ == '__main__':
 			maxbyte = 1024 * args.rom_size
 			nbyte = 0
 			readsize = 8
-			with open(binfile, "w") as fbin:
+			with open(binfile, "wb") as fbin:
 				t = time.time()
 				while nbyte < maxbyte:
-					info = ecu.send_command([0x82, 0x82, 0x00], [int(nbyte/65536)] + map(ord,struct.pack("<H", nbyte % 65536)) + [readsize], debug=args.debug)
+					info = ecu.send_command([0x82, 0x82, 0x00], [int(nbyte/65536)] + [b for b in struct.pack("<H", nbyte % 65536)] + [readsize], debug=args.debug)
 					fbin.write(info[2])
 					fbin.flush()
 					nbyte += readsize

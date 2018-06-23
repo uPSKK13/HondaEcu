@@ -52,7 +52,7 @@ class HondaECU(object):
 
 	def validate_checksum(self, bytes, fix=False):
 		cksum = len(bytes)-8
-		fcksum = ord(bytes[cksum])
+		fcksum = bytes[cksum]
 		ccksum = checksum8bitHonda(bytes[:cksum]+bytes[(cksum+1):])
 		fixed = False
 		if fix:
@@ -68,7 +68,7 @@ class HondaECU(object):
 
 	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()
-		msg = "".join([chr(b) for b in buf]).encode('latin1')
+		msg = "".join([chr(b) for b in buf]).encode("latin1")
 		self.dev._write(msg)
 		r = len(msg)
 		to = time.time()

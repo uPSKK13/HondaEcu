@@ -51,9 +51,6 @@ if __name__ == '__main__':
 			else:
 				info = ecu.send_command([0x72], [j, i], debug=args.debug)
 			if info:
-				if args.verbose:
-					print(info)
-				print(info[2][0])
 				a = int(info[2][0])
 				b = int(info[2][1])
 				if info and len(info[2]) > 0:
