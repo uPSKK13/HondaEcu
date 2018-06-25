@@ -28,7 +28,7 @@ def do_validation(binfile, fix=False):
 		print("  status: %s" % status)
 		return byts, fcksum, ccksum, fixed
 
-def do_read_flash(ecu, binfile, rom_size):
+def do_read_flash(ecu, binfile, rom_size, debug=False):
 	maxbyte = 1024 * rom_size
 	nbyte = 0
 	readsize = 8
@@ -39,18 +39,20 @@ def do_read_flash(ecu, binfile, rom_size):
 			fbin.write(info[2])
 			fbin.flush()
 			nbyte += readsize
-			if nbyte % 64 == 0:
-				sys.stdout.write(".")
+			if not debug:
+				if nbyte % 64 == 0:
+					sys.stdout.write(".")
+				if nbyte % 1024 == 0:
+					n = time.time()
+					sys.stdout.write(" %dkb %.02fbps\n" % (int(nbyte/1024),1024/(n-t)))
+					t = n
 				sys.stdout.flush()
-			if nbyte % 1024 == 0:
-				n = time.time()
-				sys.stdout.write(" %dkb %.02fbps\n" % (int(nbyte/1024),1024/(n-t)))
-				t = n
 
-def do_write_flash(ecu, byts):
+def do_write_flash(ecu, byts, debug=False):
 	writesize = 128
 	maxi = len(byts)/128
 	i = 0
+	t = time.time()
 	while i < maxi:
 		a1 = [s for s in struct.pack(">H",8*i)]
 		a2 = [s for s in struct.pack(">H",8*(i+1))]
@@ -68,6 +70,14 @@ def do_write_flash(ecu, byts):
 		ecu.send_command([0x7e], [0x01, 0x08], debug=args.debug)
 		i += 2
 		time.sleep(2)
+		if not debug:
+			sys.stdout.write(".")
+			if i % 64 == 0:
+				n = time.time()
+				w = (i*writesize)
+				sys.stdout.write(" %dkb %.02fbps\n" % (int(w/1024),(64*128)/(n-t)))
+				t = n
+			sys.stdout.flush()
 
 if __name__ == '__main__':
 
@@ -126,7 +136,7 @@ if __name__ == '__main__':
 			ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
 			print("===============================================")
 			print("Dumping ECU to bin file")
-			do_read_flash(ecu, binfile, args.rom_size)
+			do_read_flash(ecu, binfile, args.rom_size, debug=args.debug)
 			do_validation(binfile)
 
 		elif args.mode == "recover":
@@ -138,7 +148,7 @@ if __name__ == '__main__':
 			ecu.do_pre_write(debug=args.debug)
 			ecu.do_pre_write_wait(debug=args.debug)
 			ecu.send_command([0x7e], [0x01, 0xa0, 0x02], debug=args.debug)
-			do_write_flash(ecu, byts)
+			do_write_flash(ecu, byts, debug=args.debug)
 
 		elif args.mode == "write":
 			print("===============================================")
