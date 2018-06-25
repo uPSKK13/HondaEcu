@@ -9,6 +9,17 @@ import sys
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
+def validate_checksum(byts, fix=False):
+	cksum = len(byts)-8
+	fcksum = byts[cksum]
+	ccksum = checksum8bitHonda(byts[:cksum]+byts[(cksum+1):])
+	fixed = False
+	if fix:
+		if fcksum != ccksum:
+			fixed = True
+			byts[cksum] = ccksum
+	return byts, fcksum, ccksum, fixed
+
 class HondaECU(object):
 
 	def __init__(self, device_id=None):
@@ -50,17 +61,6 @@ class HondaECU(object):
 				ret = True
 		return ret
 
-	def validate_checksum(self, bytes, fix=False):
-		cksum = len(bytes)-8
-		fcksum = bytes[cksum]
-		ccksum = checksum8bitHonda(bytes[:cksum]+bytes[(cksum+1):])
-		fixed = False
-		if fix:
-			if fcksum != ccksum:
-				fixed = True
-				bytes[cksum] = ccksum
-		return bytes, fcksum, ccksum, fixed
-
 	def kline(self):
 		b = create_string_buffer(2)
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
@@ -90,7 +90,7 @@ class HondaECU(object):
 			if time.time() - to > timeout: return None
 		return buf
 
-	def _format_message(self, mtype, data):
+	def format_message(self, mtype, data):
 		ml = len(mtype)
 		dl = len(data)
 		msgsize = 0x02 + ml + dl
@@ -100,7 +100,7 @@ class HondaECU(object):
 		return msg, ml, dl
 
 	def send_command(self, mtype, data=[], retries=10, debug=False):
-		msg, ml, dl = self._format_message(mtype, data)
+		msg, ml, dl = self.format_message(mtype, data)
 		first = True
 		while first or retries > 0:
 			first = False
@@ -138,7 +138,7 @@ class HondaECU(object):
 				sys.stderr.write("  < %s\n" % repr([rdl, rdata.decode("latin1")]))
 			return (rmtype, rml, rdata, rdl)
 
-	def do_init_recover(debug=False):
+	def do_init_recover(self, debug=False):
 		self.send_command([0x7b], [0x00, 0x01, 0x03], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
@@ -146,7 +146,7 @@ class HondaECU(object):
 		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17], debug=debug) # seed/key?
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13], debug=debug) # seed/key?
 
-	def do_init_write(debug=False):
+	def do_init_write(self, debug=False):
 		self.send_command([0x7d], [0x01, 0x01, 0x00], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
@@ -154,20 +154,20 @@ class HondaECU(object):
 		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d], debug=debug) # seed/key?
 		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49], debug=debug) # seed/key?
 
-	def do_pre_write(debug=False):
+	def do_pre_write(self, debug=False):
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 		time.sleep(11)
 		self.send_command([0x7e], [0x01, 0x02], debug=debug)
 		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff], debug=debug)
+		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff], debug=debug) # password?
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 		self.send_command([0x7e], [0x01, 0x0e, 0x01, 0x90], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7e], [0x01, 0x04, 0xff], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
-	def do_pre_write_wait(debug=False):
+	def do_pre_write_wait(self, debug=False):
 		while True:
 			info = self.send_command([0x7e], [0x01, 0x05], debug=debug)
 			if info[2][1] == 0x00:
