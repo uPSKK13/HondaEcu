@@ -39,14 +39,13 @@ def do_read_flash(ecu, binfile, rom_size, debug=False):
 			fbin.write(info[2])
 			fbin.flush()
 			nbyte += readsize
-			if not debug:
-				if nbyte % 64 == 0:
-					sys.stdout.write(".")
-				if nbyte % 1024 == 0:
-					n = time.time()
-					sys.stdout.write(" %dkb %.02fbps\n" % (int(nbyte/1024),1024/(n-t)))
-					t = n
-				sys.stdout.flush()
+			if nbyte % 64 == 0:
+				sys.stdout.write(".")
+			if nbyte % 1024 == 0:
+				n = time.time()
+				sys.stdout.write(" %dkB %.02fBps\n" % (int(nbyte/1024),1024/(n-t)))
+				t = n
+			sys.stdout.flush()
 
 def do_write_flash(ecu, byts, debug=False):
 	writesize = 128
@@ -61,23 +60,33 @@ def do_write_flash(ecu, byts, debug=False):
 		d2 = list(byts[((i+1)*128):((i+2)*128)])
 		c1 = checksum8bitHonda(a1+a2+d1)
 		c2 = checksum8bitHonda(a2+a3+d2)
-		s1 = 0xff-struct.pack(">H",sum(d1))[0]
-		s2 = 0xff-struct.pack(">H",sum(d2))[0]
+		s1 = mysteryChecksum(d1)
+		s2 = mysteryChecksum(d2)
 		x1 = [0x01, 0x06] + a1 + d1 + a2 + [s1, c1]
 		x2 = [0x01, 0x06] + a2 + d2 + a3 + [s2, c2]
-		ecu.send_command([0x7e], x1, debug=args.debug)
-		ecu.send_command([0x7e], x2, debug=args.debug)
-		ecu.send_command([0x7e], [0x01, 0x08], debug=args.debug)
+		ecu.send_command([0x7e], x1, debug=debug)
+		ecu.send_command([0x7e], x2, debug=debug)
+		ecu.send_command([0x7e], [0x01, 0x08], debug=debug)
 		i += 2
 		time.sleep(2)
-		if not debug:
-			sys.stdout.write(".")
-			if i % 64 == 0:
-				n = time.time()
-				w = (i*writesize)
-				sys.stdout.write(" %dkb %.02fbps\n" % (int(w/1024),(64*128)/(n-t)))
-				t = n
-			sys.stdout.flush()
+		sys.stdout.write(".")
+		if i % 64 == 0:
+			n = time.time()
+			w = (i*writesize)
+			sys.stdout.write(" %dkB %.02fBps\n" % (int(w/1024),(64*128)/(n-t)))
+			t = n
+		sys.stdout.flush()
+
+def do_post_write(ecu, debug=False):
+	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x09], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x0a], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x0c], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x0d], debug=debug)
+	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
 if __name__ == '__main__':
 
@@ -142,13 +151,17 @@ if __name__ == '__main__':
 		elif args.mode == "recover":
 			print("===============================================")
 			print("Recovering ECU")
-			ecu.do_init_recover(debug=args.debug)
-			ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
-			ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
+			ecu.send_command([0x27],[0x00, 0x00, 0x00], debug=args.debug) # New recover
 			ecu.do_pre_write(debug=args.debug)
-			ecu.do_pre_write_wait(debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0xa0, 0x02], debug=args.debug)
 			do_write_flash(ecu, byts, debug=args.debug)
+			do_post_write(ecu, debug=args.debug)
+			# ecu.do_init_recover(debug=args.debug)
+			# ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
+			# ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
+			# ecu.do_pre_write(debug=args.debug)
+			# ecu.do_pre_write_wait(debug=args.debug)
+			# ecu.send_command([0x7e], [0x01, 0xa0, 0x02], debug=args.debug)
+			# do_write_flash(ecu, byts, debug=args.debug)
 
 		elif args.mode == "write":
 			print("===============================================")
@@ -156,16 +169,8 @@ if __name__ == '__main__':
 			ecu.do_init_write(debug=args.debug)
 			ecu.do_pre_write(debug=args.debug)
 			ecu.do_pre_write_wait(debug=args.debug)
-			do_write_flash(ecu, byts)
-			ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x09], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x0a], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x0c], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x0d], debug=args.debug)
-			ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=args.debug)
+			do_write_flash(ecu, byts, debug=args.debug)
+			do_post_write(ecu, debug=args.debug)
 
 
 	print("===============================================")

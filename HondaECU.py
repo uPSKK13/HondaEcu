@@ -9,6 +9,15 @@ import sys
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
+def mysteryChecksum(data):
+	return (((sum(data[:64]) >> 8) ^ 0xff) + ((sum(data[64:]) >> 8) ^ 0xff) & 0xff)
+
+def mysteryChecksum2(data):
+	return 0xff - (sum(data) >> 8)
+
+def mysteryChecksum3(data):
+    return 0x00
+
 def validate_checksum(byts, fix=False):
 	cksum = len(byts)-8
 	fcksum = byts[cksum]
@@ -19,6 +28,16 @@ def validate_checksum(byts, fix=False):
 			fixed = True
 			byts[cksum] = ccksum
 	return byts, fcksum, ccksum, fixed
+
+
+def format_message(mtype, data):
+	ml = len(mtype)
+	dl = len(data)
+	msgsize = 0x02 + ml + dl
+	msg = mtype + [msgsize] + data
+	msg += [checksum8bitHonda(msg)]
+	assert(msg[ml] == len(msg))
+	return msg, ml, dl
 
 class HondaECU(object):
 
@@ -90,17 +109,8 @@ class HondaECU(object):
 			if time.time() - to > timeout: return None
 		return buf
 
-	def format_message(self, mtype, data):
-		ml = len(mtype)
-		dl = len(data)
-		msgsize = 0x02 + ml + dl
-		msg = mtype + [msgsize] + data
-		msg += [checksum8bitHonda(msg)]
-		assert(msg[ml] == len(msg))
-		return msg, ml, dl
-
 	def send_command(self, mtype, data=[], retries=10, debug=False):
-		msg, ml, dl = self.format_message(mtype, data)
+		msg, ml, dl = format_message(mtype, data)
 		first = True
 		while first or retries > 0:
 			first = False
