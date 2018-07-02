@@ -52,6 +52,7 @@ def do_write_flash(ecu, byts, debug=False):
 	maxi = len(byts)/128
 	i = 0
 	t = time.time()
+	errors = 0
 	while i < maxi:
 		a1 = [s for s in struct.pack(">H",8*i)]
 		a2 = [s for s in struct.pack(">H",8*(i+1))]
@@ -64,8 +65,10 @@ def do_write_flash(ecu, byts, debug=False):
 		c2 = checksum8bitHonda(a2+a3+d2)
 		x1 = [0x01, 0x06] + a1 + d1 + a2 + [s1, c1]
 		x2 = [0x01, 0x06] + a2 + d2 + a3 + [s2, c2]
-		ecu.send_command([0x7e], x1, debug=debug)
-		ecu.send_command([0x7e], x2, debug=debug)
+		info = ecu.send_command([0x7e], x1, debug=debug)
+		errors += (ord(info[1])!=5)
+		info = ecu.send_command([0x7e], x2, debug=debug)
+		errors += (ord(info[1])!=5)
 		ecu.send_command([0x7e], [0x01, 0x08], debug=debug)
 		i += 2
 		time.sleep(2)
@@ -76,6 +79,7 @@ def do_write_flash(ecu, byts, debug=False):
 			sys.stdout.write(" %dkB %.02fBps\n" % (int(w/1024),(64*128)/(n-t)))
 			t = n
 		sys.stdout.flush()
+	return errors
 
 def do_post_write(ecu, debug=False):
 	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
@@ -169,7 +173,8 @@ if __name__ == '__main__':
 			ecu.do_init_write(debug=args.debug)
 			ecu.do_pre_write(debug=args.debug)
 			ecu.do_pre_write_wait(debug=args.debug)
-			do_write_flash(ecu, byts, debug=args.debug)
+			errors = do_write_flash(ecu, byts, debug=args.debug)
+			print("  completed with %d erros" % (errors))
 			do_post_write(ecu, debug=args.debug)
 
 
