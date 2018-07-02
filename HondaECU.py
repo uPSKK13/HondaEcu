@@ -9,14 +9,8 @@ import sys
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
-def mysteryChecksum(data):
-	return (((sum(data[:64]) >> 8) ^ 0xff) + ((sum(data[64:]) >> 8) ^ 0xff) & 0xff)
-
-def mysteryChecksum2(data):
-	return 0xff - (sum(data) >> 8)
-
-def mysteryChecksum3(data):
-    return 0x00
+def checksum8bit(data):
+	return 0xff - (sum(bytearray(data)) >> 8)
 
 def validate_checksum(byts, fix=False):
 	cksum = len(byts)-8
@@ -115,7 +109,6 @@ class HondaECU(object):
 		while first or retries > 0:
 			first = False
 			if debug:
-				sys.stderr.write(">   %s\n" % repr([dl, "".join([chr(b) for b in data])]))
 				sys.stderr.write("->  %s" % repr(["%02x" % m for m in msg]))
 			resp = self.send(msg, ml)
 			ret = None
@@ -144,8 +137,6 @@ class HondaECU(object):
 			rml = resp[ml:(ml+1)]
 			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
-			if debug:
-				sys.stderr.write("  < %s\n" % repr([rdl, rdata.decode("latin1")]))
 			return (rmtype, rml, rdata, rdl)
 
 	def do_init_recover(self, debug=False):
