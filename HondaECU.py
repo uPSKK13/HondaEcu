@@ -133,6 +133,7 @@ class HondaECU(object):
 			else:
 				if debug:
 					sys.stderr.write("\n")
+			sys.stderr.flush()
 			rmtype = resp[:ml]
 			rml = resp[ml:(ml+1)]
 			rdl = ord(rml) - 2 - len(rmtype)
