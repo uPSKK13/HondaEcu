@@ -47,33 +47,26 @@ def do_read_flash(ecu, binfile, rom_size, debug=False):
 				t = n
 			sys.stdout.flush()
 
-def do_write_flash(ecu, byts, debug=False):
+def do_write_flash(ecu, byts, debug=False, offset=0x00):
 	writesize = 128
 	maxi = len(byts)/128
 	i = 0
 	t = time.time()
 	while i < maxi:
-		a1 = [s for s in struct.pack(">H",8*i)]
-		a2 = [s for s in struct.pack(">H",8*(i+1))]
-		a3 = [s for s in struct.pack(">H",8*(i+2))]
-		d1 = list(byts[((i+0)*128):((i+1)*128)])
-		d2 = list(byts[((i+1)*128):((i+2)*128)])
-		s1 = checksum8bit(a1+a2+d1)
-		s2 = checksum8bit(a2+a3+d2)
-		c1 = checksum8bitHonda(a1+a2+d1)
-		c2 = checksum8bitHonda(a2+a3+d2)
-		x1 = [0x01, 0x06] + a1 + d1 + a2 + [s1, c1]
-		x2 = [0x01, 0x06] + a2 + d2 + a3 + [s2, c2]
-		info = ecu.send_command([0x7e], x1, debug=debug)
+		bytstart = [s for s in struct.pack(">H",offset+(8*i))]
+		bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
+		d = list(byts[((i+0)*128):((i+1)*128)])
+		x = bytstart + d + bytend
+		c1 = checksum8bit(x)
+		c2 = checksum8bitHonda(x)
+		x = [0x01, 0x06] + x + [c1, c2]
+		info = ecu.send_command([0x7e], x, debug=debug)
 		if ord(info[1]) != 5:
-			print(" error")
-			return None
-		info = ecu.send_command([0x7e], x2, debug=debug)
-		if ord(info[1]) != 5:
-			print(" error")
-			return None
-		ecu.send_command([0x7e], [0x01, 0x08], debug=debug)
-		i += 2
+			sys.stdout.write(" error\n")
+			sys.exit(1)
+		i += 1
+		if i % 2 == 0:
+			ecu.send_command([0x7e], [0x01, 0x08], debug=debug)
 		sys.stdout.write(".")
 		if i % 64 == 0:
 			n = time.time()
@@ -169,6 +162,9 @@ if __name__ == '__main__':
 			# do_write_flash(ecu, byts, debug=args.debug)
 
 		elif args.mode == "write":
+			# if write fails for some reason it looks like you can resume
+			# starting with the pre_write command, the ECU does not respond to
+			# any of the normal init commands (write specific or not)
 			print("===============================================")
 			print("Writing bin file to ECU")
 			ecu.do_init_write(debug=args.debug)

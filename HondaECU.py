@@ -10,7 +10,7 @@ def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
 def checksum8bit(data):
-	return 0xff - (sum(bytearray(data)) >> 8)
+	return 0xff - ((sum(bytearray(data))-1) >> 8)
 
 def validate_checksum(byts, fix=False):
 	cksum = len(byts)-8
