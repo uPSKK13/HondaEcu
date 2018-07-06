@@ -24,6 +24,17 @@ unsigned char checksum8bitHonda(unsigned char msg[], unsigned int l)
   return ((csum ^ 0xff) + 1) & 0xff;
 }
 
+void build_command(honda_ecu_command_t *cmd, unsigned char mtype[], unsigned int mtl, unsigned char data[], unsigned int dl)
+{
+  int i;
+  cmd->mtl = mtl;
+  cmd->dl = dl;
+  for (i=0;i<cmd->mtl;i++)
+    cmd->mtype[i] = mtype[i];
+  for (i=0;i<cmd->dl;i++)
+    cmd->data[i] = data[i];
+}
+
 void format_message(unsigned char msg[], unsigned char mtype[], unsigned int mtl, unsigned char data[], unsigned int dl)
 {
   unsigned char l = 2 + mtl + dl;
@@ -145,15 +156,13 @@ bool HondaECU::init(bool debug)
     std::this_thread::sleep_for(milliseconds(130));
     ftdi_usb_purge_buffers(this->ftdi);
     honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
-    cmd->mtype = new unsigned char[1]();
-    cmd->mtype[0] = 0xfe;
-    cmd->mtl = 1;
-    cmd->data = new unsigned char[1]();
-    cmd->data[0] = 0x72;
-    cmd->dl = 1;
+    {
+      unsigned char mtype[] = {0xfe};
+      unsigned char data[] = {0x72};
+      build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+    }
     unsigned char *resp = this->sendCommand(cmd, debug);
-    delete[] cmd->mtype;
-    delete[] cmd->data;
+    delete[] resp;
     free(cmd);
 }
 
@@ -329,17 +338,13 @@ int main(int argc, char **argv)
         cout << "==============================================================================" << endl;
         cout << "Initializing ECU communications" << endl;
         ecu->init(debug);
-        cmd->mtl = 1;
-        cmd->mtype = new unsigned char[cmd->mtl]();
-        cmd->mtype[0] = 0x72;
-        cmd->dl = 2;
-        cmd->data = new unsigned char[cmd->dl]();
-        cmd->data[0] = 0x00;
-        cmd->data[1] = 0xf0;
+        {
+          unsigned char mtype[] = {0x72};
+          unsigned char data[] = {0x00, 0xf0};
+          build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+        }
         resp = ecu->sendCommand(cmd, debug);
         delete[] resp;
-        delete[] cmd->mtype;
-        delete[] cmd->data;
       }
       if (strcmp(args.pos[0],"write")==0) {
         cout << "==============================================================================" << endl;
@@ -347,40 +352,20 @@ int main(int argc, char **argv)
       } else if (strcmp(args.pos[0],"read")==0) {
         cout << "==============================================================================" << endl;
 				cout << "Entering Boot Mode" << endl;
-        cmd->mtl = 1;
-        cmd->mtype = new unsigned char[cmd->mtl]();
-        cmd->mtype[0] = 0x27;
-        cmd->dl = 8;
-        cmd->data = new unsigned char[cmd->dl]();
-        cmd->data[0] = 0xe0;
-        cmd->data[1] = 0x48;
-        cmd->data[2] = 0x65;
-        cmd->data[3] = 0x6c;
-        cmd->data[4] = 0x6c;
-        cmd->data[5] = 0x6f;
-        cmd->data[6] = 0x48;
-        cmd->data[7] = 0x6f;
+        {
+          unsigned char mtype[] = {0x27};
+          unsigned char data[] = {0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f};
+          build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+        }
         resp = ecu->sendCommand(cmd, debug);
         delete[] resp;
-        delete[] cmd->mtype;
-        delete[] cmd->data;
-        cmd->mtl = 1;
-        cmd->mtype = new unsigned char[cmd->mtl]();
-        cmd->mtype[0] = 0x27;
-        cmd->dl = 8;
-        cmd->data = new unsigned char[cmd->dl]();
-        cmd->data[0] = 0xe0;
-        cmd->data[1] = 0x77;
-        cmd->data[2] = 0x41;
-        cmd->data[3] = 0x72;
-        cmd->data[4] = 0x65;
-        cmd->data[5] = 0x59;
-        cmd->data[6] = 0x6f;
-        cmd->data[7] = 0x75;
+        {
+          unsigned char mtype[] = {0x27};
+          unsigned char data[] = {0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75};
+          build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+        }
         resp = ecu->sendCommand(cmd, debug);
         delete[] resp;
-        delete[] cmd->mtype;
-        delete[] cmd->data;
         cout << "==============================================================================" << endl;
 				cout << "Dumping ECU to bin file" << endl;
         unsigned int maxbyte = 1024 * size;
@@ -393,17 +378,11 @@ int main(int argc, char **argv)
         while (nbyte < maxbyte)
         {
           offset = nbyte % 65536;
-          cmd->mtl = 3;
-          cmd->mtype = new unsigned char[cmd->mtl]();
-          cmd->mtype[0] = 0x82;
-          cmd->mtype[1] = 0x82;
-          cmd->mtype[2] = 0x00;
-          cmd->dl = 4;
-          cmd->data = new unsigned char[cmd->dl]();
-          cmd->data[0] = nbyte/65536;
-          cmd->data[1] = (offset >> 0) & 0xff;
-          cmd->data[2] = (offset >> 8) & 0xff;
-          cmd->data[3] = readsize;
+          {
+            unsigned char mtype[] = {0x82, 0x82, 0x00};
+            unsigned char data[] = {(unsigned char)(nbyte/65536), (unsigned char)((offset >> 0) & 0xff), (unsigned char)((offset >> 8) & 0xff), (unsigned char)readsize};
+            build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+          }
           resp = ecu->sendCommand(cmd, debug);
           nbyte = nbyte + readsize;
           if (nbyte % 256 == 0)
@@ -417,8 +396,6 @@ int main(int argc, char **argv)
           fwrite(&resp[4], sizeof(unsigned char), readsize, bin);
           fflush(bin);
           delete[] resp;
-          delete[] cmd->mtype;
-          delete[] cmd->data;
         }
         fclose(bin);
         buffer = do_validation(&cont, args.pos[1], false);

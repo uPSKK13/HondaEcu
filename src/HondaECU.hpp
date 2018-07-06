@@ -4,9 +4,9 @@
 #include <ftdi.h>
 
 typedef struct {
-  unsigned char *mtype;
+  unsigned char mtype[3];
   unsigned int mtl;
-  unsigned char *data;
+  unsigned char data[256];
   unsigned int dl;
 } honda_ecu_command_t;
 
