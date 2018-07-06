@@ -1,0 +1,5 @@
+HOST = x86_64-linux-gnu
+CXX = $(HOST)-g++
+HONDAECU_BIN = HondaECU
+
+include Makefile.in

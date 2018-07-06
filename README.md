@@ -1,3 +1,7 @@
+## Software
+
+Use zdiag to install libusbK on Windows.
+
 ## Hardware
 
 The easiest way to talk to the ECU via the k-line is a USB to serial (TTL) converter,

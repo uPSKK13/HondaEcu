@@ -149,6 +149,7 @@ class HondaECU(object):
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13], debug=debug) # seed/key?
 
 	def do_init_write(self, debug=False):
+		# is this the command to erase the ECU?
 		self.send_command([0x7d], [0x01, 0x01, 0x00], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
