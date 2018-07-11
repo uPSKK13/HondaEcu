@@ -369,16 +369,13 @@ void HondaECU::do_write(unsigned char *buffer, long *n, bool debug)
       }
       resp = this->sendCommand(cmd, debug);
       delete[] resp;
-      if (debug) {
-        cout << "." << flush;
-        if (i % 128 == 0) {
-          msn = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
-          cout << " " << (i*writesize)/1024 << "kB @ " << std::setprecision(5) << (64.0*writesize)/(msn-ms)*1000 << " Bps" << endl;
-          ms = msn;
-        }
+      cout << "." << flush;
+      if (i % 128 == 0) {
+        msn = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+        cout << " " << (i*writesize)/1024 << "kB @ " << std::setprecision(5) << (64.0*writesize)/(msn-ms)*1000 << " Bps" << endl;
+        ms = msn;
       }
     }
-
   }
   free(cmd);
 }

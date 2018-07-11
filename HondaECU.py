@@ -109,7 +109,7 @@ class HondaECU(object):
 		while first or retries > 0:
 			first = False
 			if debug:
-				sys.stderr.write("->  %s" % repr(["%02x" % m for m in msg]))
+				sys.stderr.write("> [%s]" % ", ".join(["%02x" % m for m in msg]))
 			resp = self.send(msg, ml)
 			ret = None
 			if resp == None:
@@ -122,7 +122,7 @@ class HondaECU(object):
 				if debug:
 					sys.stderr.write("\n")
 			if debug:
-				sys.stderr.write(" <- %s" % repr(["%02x" % r for r in resp]))
+				sys.stderr.write("< [%s]" % ", ".join(["%02x" % r for r in resp]))
 			invalid = (resp[-1] != checksum8bitHonda([r for r in resp[:-1]]))
 			if invalid:
 				if debug:
