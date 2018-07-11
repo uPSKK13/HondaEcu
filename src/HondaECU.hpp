@@ -19,6 +19,11 @@ public:
   void interrupt(unsigned int ms);
   bool init(bool debug);
   unsigned char * sendCommand(honda_ecu_command_t *cmd, bool debug);
+  void do_init_write(bool debug);
+  void do_pre_write(bool debug);
+  void do_pre_write_wait(bool debug);
+  void do_write(unsigned char *buffer, long *n, bool debug);
+  void do_post_write(bool debug);
 private:
   struct ftdi_context *ftdi;
   unsigned char zero[1] = {'\x00'};

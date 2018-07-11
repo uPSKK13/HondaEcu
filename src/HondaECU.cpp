@@ -16,12 +16,22 @@ using namespace std::chrono;
 
 unsigned char checksum8bitHonda(unsigned char msg[], unsigned int l)
 {
-  unsigned char csum = 0;
+  long csum = 0;
   for (int i=0; i<l; i++)
   {
     csum += msg[i];
   }
   return ((csum ^ 0xff) + 1) & 0xff;
+}
+
+unsigned char checksum8bit(unsigned char msg[], unsigned int l)
+{
+  long csum = 0;
+  for (int i=0; i<l; i++)
+  {
+    csum += msg[i];
+  }
+  return 0xff - ((csum - 1) >> 8);
 }
 
 void build_command(honda_ecu_command_t *cmd, unsigned char mtype[], unsigned int mtl, unsigned char data[], unsigned int dl)
@@ -93,7 +103,7 @@ unsigned char * HondaECU::sendCommand(honda_ecu_command_t *cmd, bool debug)
     cerr << "> [";
     for (int z=0;z<ml;z++)
     {
-      cerr << (int)buf[z];
+      cerr << hex << std::setfill('0') << setw(2) << (int)buf[z];
       if (z<ml-1)
       {
         cerr << ", ";
@@ -139,7 +149,7 @@ unsigned char * HondaECU::sendCommand(honda_ecu_command_t *cmd, bool debug)
     cerr << "< [";
     for (int z=0;z<msize;z++)
     {
-      cerr << (int)resp[z];
+      cerr << hex << std::setfill('0') << setw(2) << (int)resp[z];
       if (z<msize-1)
       {
         cerr << ", ";
@@ -166,9 +176,286 @@ bool HondaECU::init(bool debug)
     free(cmd);
 }
 
-unsigned char * do_validation(bool *cont, const char* binfile, bool fix)
+void HondaECU::do_init_write(bool debug)
 {
-  cout << "==============================================================================" << endl;
+  unsigned char *resp;
+  honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
+  {
+    unsigned char mtype[] = {0x7d};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7d};
+    unsigned char data[] = {0x01, 0x01, 0x01};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7d};
+    unsigned char data[] = {0x01, 0x01, 0x02};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7d};
+    unsigned char data[] = {0x01, 0x01, 0x03};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7d};
+    unsigned char data[] = {0x01, 0x02, 0x50, 0x47, 0x4d};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7d};
+    unsigned char data[] = {0x01, 0x03, 0x2d, 0x46, 0x49};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  free(cmd);
+}
+
+void HondaECU::do_pre_write(bool debug)
+{
+  unsigned char *resp;
+  honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  std::this_thread::sleep_for(milliseconds(11000));
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x02};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x03, 0x00, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x0e, 0x01, 0x90};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x01};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x04, 0xff};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  free(cmd);
+}
+
+void HondaECU::do_pre_write_wait(bool debug)
+{
+  unsigned char *resp;
+  honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x05};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  bool cont = true;
+  while (cont)
+  {
+    resp = this->sendCommand(cmd, debug);
+    cont = (resp[cmd->mtl+2] != 0x00);
+    delete[] resp;
+  }
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  free(cmd);
+}
+
+void HondaECU::do_write(unsigned char *buffer, long *n, bool debug)
+{
+  unsigned int writesize = 128;
+  unsigned int maxi = *n / writesize;
+  unsigned int i = 0;
+  unsigned char *resp;
+  unsigned int ss = writesize + 8;
+  honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
+  unsigned int ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+  unsigned int msn;
+  while (i < maxi)
+  {
+    {
+      unsigned char mtype[] = {0x7e};
+      unsigned char *data = (unsigned char*)calloc(1, ss);
+      data[2] = (unsigned char)(((8*i) >> 8) & 0xff);
+      data[3] = (unsigned char)(((8*i) >> 0) & 0xff);
+      memcpy(&data[4], &buffer[i*writesize], writesize);
+      data[132] = (unsigned char)(((8*(i+1)) >> 8) & 0xff);
+      data[133] = (unsigned char)(((8*(i+1)) >> 0) & 0xff);
+      unsigned char c1 = checksum8bit(data, ss);
+      unsigned char c2 = checksum8bitHonda(data, ss);
+      data[134] = c1;
+      data[135] = c2;
+      data[0] = 0x01;
+      data[1] = 0x06;
+      build_command(cmd, mtype, 1, data, ss);
+      free(data);
+    }
+    resp = this->sendCommand(cmd, debug);
+    delete[] resp;
+    i += 1;
+    if (i % 2 == 0) {
+      {
+        unsigned char mtype[] = {0x7e};
+        unsigned char data[] = {0x01, 0x08};
+        build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+      }
+      resp = this->sendCommand(cmd, debug);
+      delete[] resp;
+      if (debug) {
+        cout << "." << flush;
+        if (i % 128 == 0) {
+          msn = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+          cout << " " << (i*writesize)/1024 << "kB @ " << std::setprecision(5) << (64.0*writesize)/(msn-ms)*1000 << " Bps" << endl;
+          ms = msn;
+        }
+      }
+    }
+
+  }
+  free(cmd);
+}
+
+void HondaECU::do_post_write(bool debug)
+{
+  unsigned char *resp;
+  honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x09};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x0a};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x0c};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x0d};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7e};
+    unsigned char data[] = {0x01, 0x01, 0x00};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  free(cmd);
+}
+
+unsigned char * do_validation(bool *cont, long *lSize, const char* binfile, bool fix)
+{
+  cout << "======================================================================================" << endl;
   FILE *bin;
   *cont = false;
   unsigned int csum_old = 0;
@@ -178,14 +465,14 @@ unsigned char * do_validation(bool *cont, const char* binfile, bool fix)
   if (!bin)
     return NULL;
   fseek(bin, 0L, SEEK_END);
-  long lSize = ftell(bin);
+  *lSize = ftell(bin);
   rewind(bin);
-  unsigned char *buffer = (unsigned char*)calloc(1, lSize+1);
-  fread(buffer, lSize, 1, bin);
+  unsigned char *buffer = (unsigned char*)calloc(1, *lSize+1);
+  fread(buffer, *lSize, 1, bin);
   fclose(bin);
-  csum_old = buffer[lSize-8];
-  buffer[lSize-8] = 0;
-  csum_new = checksum8bitHonda(buffer, lSize);
+  csum_old = buffer[*lSize-8];
+  buffer[*lSize-8] = 0;
+  csum_new = checksum8bitHonda(buffer, *lSize);
   if (fix)
     cout << "Fixing bin file checksum" << endl;
   else
@@ -195,15 +482,16 @@ unsigned char * do_validation(bool *cont, const char* binfile, bool fix)
   if (csum_old == csum_new)
   {
     status = "good";
+    buffer[*lSize-8] = csum_new;
     *cont = true;
   }
   else
   {
     if (fix)
     {
-      buffer[lSize-8] = csum_new;
+      buffer[*lSize-8] = csum_new;
       bin = fopen(binfile, "wb");
-      fwrite(buffer, sizeof(unsigned char), lSize, bin);
+      fwrite(buffer, sizeof(unsigned char), *lSize, bin);
       fclose(bin);
       status = "fixed";
       *cont = true;
@@ -309,10 +597,11 @@ int main(int argc, char **argv)
     }
 
     bool cont = false;
+    long lSize = 0;
     unsigned char *buffer;
     if (strcmp(args.pos[0],"read")!=0)
     {
-      buffer = do_validation(&cont, args.pos[1], args["fix"]);
+      buffer = do_validation(&cont, &lSize, args.pos[1], args["fix"]);
       if (strcmp(args.pos[0],"checksum")==0) {
         cont = false;
       }
@@ -321,7 +610,7 @@ int main(int argc, char **argv)
     {
       ftdi_usb_open_dev(ftdi, devlist[dev].dev);
       HondaECU *ecu = new HondaECU(ftdi);
-      cout << "==============================================================================" << endl;
+      cout << "======================================================================================" << endl;
       if (ecu->kline()) {
         cout << "Turn off bike/ECU" << endl;
         while (ecu->kline())
@@ -335,7 +624,7 @@ int main(int argc, char **argv)
       honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
       unsigned char *resp;
       if (strcmp(args.pos[0],"recover")!=0) {
-        cout << "==============================================================================" << endl;
+        cout << "======================================================================================" << endl;
         cout << "Initializing ECU communications" << endl;
         ecu->init(debug);
         {
@@ -347,10 +636,33 @@ int main(int argc, char **argv)
         delete[] resp;
       }
       if (strcmp(args.pos[0],"write")==0) {
-        cout << "==============================================================================" << endl;
+        cout << "======================================================================================" << endl;
 				cout << "Writing bin file to ECU" << endl;
+        cout << "  do_init_write" << endl;
+        ecu->do_init_write(debug);
+        std::this_thread::sleep_for(milliseconds(100));
+        cout << "  do_pre_write" << endl;
+        ecu->do_pre_write(debug);
+        cout << "  do_pre_write_wait" << endl;
+        ecu->do_pre_write_wait(debug);
+        cout << "  do_write" << endl;
+        ecu->do_write(buffer, &lSize, debug);
+        cout << "  do_post_write" << endl;
+        ecu->do_post_write(debug);
+      } else if (strcmp(args.pos[0],"recover")==0) {
+        cout << "======================================================================================" << endl;
+				cout << "Recovering ECU" << endl;
+        std::this_thread::sleep_for(milliseconds(100));
+        cout << "  do_pre_write" << endl;
+        ecu->do_pre_write(debug);
+        cout << "  do_pre_write_wait" << endl;
+        ecu->do_pre_write_wait(debug);
+        cout << "  do_write" << endl;
+        ecu->do_write(buffer, &lSize, debug);
+        cout << "  do_post_write" << endl;
+        ecu->do_post_write(debug);
       } else if (strcmp(args.pos[0],"read")==0) {
-        cout << "==============================================================================" << endl;
+        cout << "======================================================================================" << endl;
 				cout << "Entering Boot Mode" << endl;
         {
           unsigned char mtype[] = {0x27};
@@ -366,7 +678,7 @@ int main(int argc, char **argv)
         }
         resp = ecu->sendCommand(cmd, debug);
         delete[] resp;
-        cout << "==============================================================================" << endl;
+        cout << "======================================================================================" << endl;
 				cout << "Dumping ECU to bin file" << endl;
         unsigned int maxbyte = 1024 * size;
         unsigned int nbyte = 0;
@@ -390,7 +702,7 @@ int main(int argc, char **argv)
           if (nbyte % (16*1024) == 0)
           {
             msn = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
-            cout << " " << nbyte/1024 << "kB " << std::setprecision(5) << (1024*16.0)/(msn-ms)*1000 << " Bps" << endl;
+            cout << " " << nbyte/1024 << "kB @ " << std::setprecision(5) << (1024*16.0)/(msn-ms)*1000 << " Bps" << endl;
             ms = msn;
           }
           fwrite(&resp[4], sizeof(unsigned char), readsize, bin);
@@ -398,12 +710,12 @@ int main(int argc, char **argv)
           delete[] resp;
         }
         fclose(bin);
-        buffer = do_validation(&cont, args.pos[1], false);
+        buffer = do_validation(&cont, &lSize, args.pos[1], false);
       }
       free(cmd);
     }
     if (buffer)
       free(buffer);
-    cout << "==============================================================================" << endl;
+    cout << "======================================================================================" << endl;
   }
 }
