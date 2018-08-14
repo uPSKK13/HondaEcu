@@ -47,14 +47,17 @@ def do_read_flash(ecu, binfile, rom_size, debug=False):
 				t = n
 			sys.stdout.flush()
 
-def do_write_flash(ecu, byts, debug=False, offset=0x00):
+def do_write_flash(ecu, byts, debug=False, offset=0):
 	writesize = 128
 	maxi = len(byts)/128
-	i = 0
+	i = offset
 	t = time.time()
 	while i < maxi:
-		bytstart = [s for s in struct.pack(">H",offset+(8*i))]
-		bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
+		bytstart = [s for s in struct.pack(">H",(8*i))]
+		if i+1 == maxi:
+			bytend = [s for s in struct.pack(">H",0)]
+		else:
+			bytend = [s for s in struct.pack(">H",(8*(i+1)))]
 		d = list(byts[((i+0)*128):((i+1)*128)])
 		x = bytstart + d + bytend
 		c1 = checksum8bit(x)
@@ -76,6 +79,7 @@ def do_write_flash(ecu, byts, debug=False, offset=0x00):
 		sys.stdout.flush()
 
 def do_post_write(ecu, debug=False):
+	time.sleep(3)
 	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 	ecu.send_command([0x7e], [0x01, 0x09], debug=debug)
 	ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
@@ -100,7 +104,7 @@ if __name__ == '__main__':
 	db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
 	args = parser.parse_args()
 
-	offset = 0x00
+	offset = 0
 
 	if os.path.isabs(args.binfile):
 		binfile = args.binfile
@@ -135,49 +139,38 @@ if __name__ == '__main__':
 				time.sleep(.1)
 			time.sleep(.5)
 
-		if args.mode != "recover":
+		print("===============================================")
+		print("Initializing ECU communications")
+		ecu.init(debug=args.debug)
 
+		if args.mode == "read":
 			print("===============================================")
-			print("Initializing ECU communications")
-			ecu.init(debug=args.debug)
+			print("Reading ECU")
 			ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
+			ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
+			ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
+			do_read_flash(ecu, binfile, args.rom_size, debug=args.debug)
+			do_validation(binfile)
 
-			if args.mode == "read":
-				print("===============================================")
-				print("Entering Boot Mode")
-				ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
-				ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
-				print("===============================================")
-				print("Dumping ECU to bin file")
-				do_read_flash(ecu, binfile, args.rom_size, debug=args.debug)
-				do_validation(binfile)
-
-			elif args.mode == "write":
-				# if write fails for some reason it looks like you can resume
-				# starting with the pre_write command, the ECU does not respond to
-				# any of the normal init commands (write specific or not)
-				print("===============================================")
-				print("Writing bin file to ECU")
-				if args.write_mode == 0:
-					ecu.do_init_write(debug=args.debug)
-				elif args.write_mode == 1:
-					offset = 0x8000
-					ecu.do_init_recover(debug=args.debug)
-					ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
-					ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
-				ecu.do_pre_write(debug=args.debug)
-				ecu.do_pre_write_wait(debug=args.debug)
-				do_write_flash(ecu, byts, offset=offset, debug=args.debug)
-				do_post_write(ecu, debug=args.debug)
-
-		else:
+		elif args.mode == "write":
 			print("===============================================")
-			print("Recovering ECU")
-			if args.recover_mode == 1:
-				ecu.send_command([0x27],[0x00, 0x00, 0x00], debug=args.debug)
+			print("Writing ECU")
+			ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
+			ecu.do_init_write(debug=args.debug)
 			ecu.do_pre_write(debug=args.debug)
 			ecu.do_pre_write_wait(debug=args.debug)
-			do_write_flash(ecu, byts, offset=offset, debug=args.debug)
+			do_write_flash(ecu, byts, offset=0, debug=args.debug)
+			do_post_write(ecu, debug=args.debug)
+
+		elif args.mode == "recover":
+			print("===============================================")
+			print("Recovering ECU")
+			ecu.do_init_recover(debug=args.debug)
+			ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
+			ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
+			ecu.do_pre_write(debug=args.debug)
+			ecu.do_pre_write_wait(debug=args.debug)
+			do_write_flash(ecu, byts, offset=0, debug=args.debug)
 			do_post_write(ecu, debug=args.debug)
 
 	print("===============================================")

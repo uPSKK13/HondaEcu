@@ -93,24 +93,9 @@ void HondaECU::interrupt(unsigned int ms)
   ftdi_usb_purge_buffers(this->ftdi);
 }
 
-unsigned char * HondaECU::sendCommand(honda_ecu_command_t *cmd, bool debug)
+unsigned char * HondaECU::send(const unsigned char *buf, unsigned int ml)
 {
-  unsigned char buf[256];
-  unsigned int ml = 2 + cmd->mtl + cmd->dl;
   unsigned int r,rr;
-  format_message(buf, cmd->mtype, cmd->mtl, cmd->data, cmd->dl);
-  if (debug) {
-    cerr << "> [";
-    for (int z=0;z<ml;z++)
-    {
-      cerr << hex << std::setfill('0') << setw(2) << (int)buf[z];
-      if (z<ml-1)
-      {
-        cerr << ", ";
-      }
-    }
-    cerr << "]" << endl;
-  }
   ftdi_write_data(this->ftdi, buf, ml);
   r = ml;
   while (r>0)
@@ -145,19 +130,47 @@ unsigned char * HondaECU::sendCommand(honda_ecu_command_t *cmd, bool debug)
   {
     resp[i+j] = buf[j];
   }
-  if (debug) {
-    cerr << "< [";
-    for (int z=0;z<msize;z++)
-    {
-      cerr << hex << std::setfill('0') << setw(2) << (int)resp[z];
-      if (z<msize-1)
+  return resp;
+}
+
+unsigned char * HondaECU::sendCommand(honda_ecu_command_t *cmd, bool debug)
+{
+  unsigned char buf[256];
+  unsigned char *resp;
+  format_message(buf, cmd->mtype, cmd->mtl, cmd->data, cmd->dl);
+  unsigned int ml = 2 + cmd->mtl + cmd->dl;
+  unsigned int retries = 10;
+  bool first = true;
+  while (first || retries > 10) {
+    first = false;
+    if (debug) {
+      cerr << "> [";
+      for (int z=0;z<ml;z++)
       {
-        cerr << ", ";
+        cerr << hex << std::setfill('0') << setw(2) << (int)buf[z];
+        if (z<ml-1)
+        {
+          cerr << ", ";
+        }
+      }
+      cerr << "]" << endl;
+    }
+    resp = this->send(buf, ml);
+    if (resp != NULL) {
+      if (debug) {
+        cerr << "< [";
+        for (int z=0;z<msize;z++)
+        {
+          cerr << hex << std::setfill('0') << setw(2) << (int)resp[z];
+          if (z<msize-1)
+          {
+            cerr << ", ";
+          }
+        }
+        cerr << "]" << endl;
       }
     }
-    cerr << "]" << endl;
   }
-  return resp;
 }
 
 bool HondaECU::init(bool debug)
@@ -218,6 +231,41 @@ void HondaECU::do_init_write(bool debug)
   {
     unsigned char mtype[] = {0x7d};
     unsigned char data[] = {0x01, 0x03, 0x2d, 0x46, 0x49};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  free(cmd);
+}
+
+void HondaECU::do_init_recover(bool debug)
+{
+  unsigned char *resp;
+  honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
+  {
+    unsigned char mtype[] = {0x7b};
+    unsigned char data[] = {0x00, 0x01, 0x02};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7b};
+    unsigned char data[] = {0x00, 0x01, 0x03};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7b};
+    unsigned char data[] = {0x00, 0x02, 0x76, 0x03, 0x17};
+    build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+  }
+  resp = this->sendCommand(cmd, debug);
+  delete[] resp;
+  {
+    unsigned char mtype[] = {0x7b};
+    unsigned char data[] = {0x00, 0x03, 0x75, 0x05, 0x13};
     build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
   }
   resp = this->sendCommand(cmd, debug);
@@ -347,8 +395,13 @@ void HondaECU::do_write(unsigned char *buffer, long *n, bool debug)
       data[2] = (unsigned char)(((8*i) >> 8) & 0xff);
       data[3] = (unsigned char)(((8*i) >> 0) & 0xff);
       memcpy(&data[4], &buffer[i*writesize], writesize);
-      data[132] = (unsigned char)(((8*(i+1)) >> 8) & 0xff);
-      data[133] = (unsigned char)(((8*(i+1)) >> 0) & 0xff);
+      if (i+1 == maxi) {
+        data[132] = 0x00;
+        data[133] = 0x00;
+      } else {
+        data[132] = (unsigned char)(((8*(i+1)) >> 8) & 0xff);
+        data[133] = (unsigned char)(((8*(i+1)) >> 0) & 0xff);
+      }
       unsigned char c1 = checksum8bit(data, ss);
       unsigned char c2 = checksum8bitHonda(data, ss);
       data[134] = c1;
@@ -617,13 +670,15 @@ int main(int argc, char **argv)
       while (!ecu->kline())
         std::this_thread::sleep_for(milliseconds(100));
       std::this_thread::sleep_for(milliseconds(500));
+      cout << "======================================================================================" << endl;
+      cout << "Initializing ECU communications" << endl;
       ecu->setup();
+      ecu->init(debug);
       honda_ecu_command_t *cmd = (honda_ecu_command_t*)malloc(sizeof(honda_ecu_command_t));
       unsigned char *resp;
-      if (strcmp(args.pos[0],"recover")!=0) {
+      if (strcmp(args.pos[0],"write")==0) {
         cout << "======================================================================================" << endl;
-        cout << "Initializing ECU communications" << endl;
-        ecu->init(debug);
+				cout << "Writing ECU" << endl;
         {
           unsigned char mtype[] = {0x72};
           unsigned char data[] = {0x00, 0xf0};
@@ -631,13 +686,9 @@ int main(int argc, char **argv)
         }
         resp = ecu->sendCommand(cmd, debug);
         delete[] resp;
-      }
-      if (strcmp(args.pos[0],"write")==0) {
-        cout << "======================================================================================" << endl;
-				cout << "Writing bin file to ECU" << endl;
+        std::this_thread::sleep_for(milliseconds(100));
         cout << "  do_init_write" << endl;
         ecu->do_init_write(debug);
-        std::this_thread::sleep_for(milliseconds(100));
         cout << "  do_pre_write" << endl;
         ecu->do_pre_write(debug);
         cout << "  do_pre_write_wait" << endl;
@@ -649,7 +700,23 @@ int main(int argc, char **argv)
       } else if (strcmp(args.pos[0],"recover")==0) {
         cout << "======================================================================================" << endl;
 				cout << "Recovering ECU" << endl;
+        cout << "  do_init_recover" << endl;
+        ecu->do_init_recover(debug);
+        {
+          unsigned char mtype[] = {0x72};
+          unsigned char data[] = {0x00, 0xf1};
+          build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+        }
+        resp = ecu->sendCommand(cmd, debug);
+        delete[] resp;
         std::this_thread::sleep_for(milliseconds(100));
+        {
+          unsigned char mtype[] = {0x27};
+          unsigned char data[] = {0x00, 0x9f, 0x00};
+          build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+        }
+        resp = ecu->sendCommand(cmd, debug);
+        delete[] resp;
         cout << "  do_pre_write" << endl;
         ecu->do_pre_write(debug);
         cout << "  do_pre_write_wait" << endl;
@@ -660,7 +727,15 @@ int main(int argc, char **argv)
         ecu->do_post_write(debug);
       } else if (strcmp(args.pos[0],"read")==0) {
         cout << "======================================================================================" << endl;
-				cout << "Entering Boot Mode" << endl;
+				cout << "Reading ECU" << endl;
+        {
+          unsigned char mtype[] = {0x72};
+          unsigned char data[] = {0x00, 0xf0};
+          build_command(cmd, mtype, sizeof(mtype)/sizeof(mtype[0]), data, sizeof(data)/sizeof(data[0]));
+        }
+        resp = ecu->sendCommand(cmd, debug);
+        delete[] resp;
+        std::this_thread::sleep_for(milliseconds(100));
         {
           unsigned char mtype[] = {0x27};
           unsigned char data[] = {0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f};
@@ -675,8 +750,6 @@ int main(int argc, char **argv)
         }
         resp = ecu->sendCommand(cmd, debug);
         delete[] resp;
-        cout << "======================================================================================" << endl;
-				cout << "Dumping ECU to bin file" << endl;
         unsigned int maxbyte = 1024 * size;
         unsigned int nbyte = 0;
         unsigned int readsize = 8;

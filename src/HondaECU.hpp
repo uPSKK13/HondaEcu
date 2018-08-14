@@ -20,6 +20,7 @@ public:
   bool init(bool debug);
   unsigned char * sendCommand(honda_ecu_command_t *cmd, bool debug);
   void do_init_write(bool debug);
+  void do_init_recover(bool debug);
   void do_pre_write(bool debug);
   void do_pre_write_wait(bool debug);
   void do_write(unsigned char *buffer, long *n, bool debug);

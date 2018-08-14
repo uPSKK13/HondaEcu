@@ -48,6 +48,10 @@ class HondaECU(object):
 			del self.dev
 			self.dev = None
 		self.dev = Device(self.device_id)
+		self.starttime = time.time()
+
+	def time(self):
+		return time.time() - self.starttime
 
 	def setup(self):
 		self.dev.ftdi_fn.ftdi_usb_reset()
@@ -109,9 +113,8 @@ class HondaECU(object):
 		while first or retries > 0:
 			first = False
 			if debug:
-				sys.stderr.write("> [%s]" % ", ".join(["%02x" % m for m in msg]))
+				sys.stderr.write("[%s] > [%s]" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % m for m in msg])))
 			resp = self.send(msg, ml)
-			ret = None
 			if resp == None:
 				if debug:
 					sys.stderr.write(" !%d \n" % (retries))
@@ -122,7 +125,7 @@ class HondaECU(object):
 				if debug:
 					sys.stderr.write("\n")
 			if debug:
-				sys.stderr.write("< [%s]" % ", ".join(["%02x" % r for r in resp]))
+				sys.stderr.write("[%s] < [%s]" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % r for r in resp])))
 			invalid = (resp[-1] != checksum8bitHonda([r for r in resp[:-1]]))
 			if invalid:
 				if debug:
@@ -141,8 +144,6 @@ class HondaECU(object):
 			return (rmtype, rml, rdata, rdl)
 
 	def do_init_recover(self, debug=False):
-		self.send_command([0x7b], [0x00, 0x01, 0x03], debug=debug)
-		self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x03], debug=debug)
 		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17], debug=debug) # seed/key?
@@ -150,8 +151,8 @@ class HondaECU(object):
 
 	def do_init_write(self, debug=False):
 		# is this the command to erase the ECU?
-		self.send_command([0x7d], [0x01, 0x01, 0x00], debug=debug)
-		self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
+		#self.send_command([0x7d], [0x01, 0x01, 0x00], debug=debug)
+		#self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x03], debug=debug)
 		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d], debug=debug) # seed/key?
@@ -159,7 +160,7 @@ class HondaECU(object):
 
 	def do_pre_write(self, debug=False):
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-		time.sleep(11)
+		time.sleep(14)
 		self.send_command([0x7e], [0x01, 0x02], debug=debug)
 		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
