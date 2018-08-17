@@ -5,6 +5,7 @@ from ctypes import *
 import time
 import binascii
 import sys
+import platform
 
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
@@ -12,8 +13,7 @@ def checksum8bitHonda(data):
 def checksum8bit(data):
 	return 0xff - ((sum(bytearray(data))-1) >> 8)
 
-def validate_checksum(byts, fix=False):
-	cksum = len(byts)-8
+def validate_checksum(byts, cksum, fix=False):
 	fcksum = byts[cksum]
 	ccksum = checksum8bitHonda(byts[:cksum]+byts[(cksum+1):])
 	fixed = False
@@ -33,6 +33,13 @@ def format_message(mtype, data):
 	assert(msg[ml] == len(msg))
 	return msg, ml, dl
 
+class Hex(object):
+	def __call__(self, value):
+		return int(value, 16)
+
+class MaxRetriesException(Exception):
+	pass
+
 class HondaECU(object):
 
 	def __init__(self, device_id=None):
@@ -47,7 +54,8 @@ class HondaECU(object):
 		if self.dev != None:
 			del self.dev
 			self.dev = None
-		self.dev = Device(self.device_id)
+
+		self.dev = Device(self.device_id, auto_detach=(platform.system()=="Windows"))
 		self.starttime = time.time()
 
 	def time(self):
@@ -142,6 +150,7 @@ class HondaECU(object):
 			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
 			return (rmtype, rml, rdata, rdl)
+		raise MaxRetriesException()
 
 	def do_init_recover(self, debug=False):
 		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
@@ -150,30 +159,42 @@ class HondaECU(object):
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13], debug=debug) # seed/key?
 
 	def do_init_write(self, debug=False):
-		# is this the command to erase the ECU?
-		#self.send_command([0x7d], [0x01, 0x01, 0x00], debug=debug)
-		#self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x03], debug=debug)
 		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d], debug=debug) # seed/key?
 		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49], debug=debug) # seed/key?
 
-	def do_pre_write(self, debug=False):
+	def do_erase(self, debug=False):
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-		time.sleep(14)
+		time.sleep(12)
 		self.send_command([0x7e], [0x01, 0x02], debug=debug)
 		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
 		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff], debug=debug) # password?
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
 		self.send_command([0x7e], [0x01, 0x0e, 0x01, 0x90], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7e], [0x01, 0x04, 0xff], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
-	def do_pre_write_wait(self, debug=False):
 		while True:
 			info = self.send_command([0x7e], [0x01, 0x05], debug=debug)
 			if info[2][1] == 0x00:
 				break
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
+	def do_post_write(self, debug=False):
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
+		self.send_command([0x7e], [0x01, 0x09], debug=debug)
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
+		self.send_command([0x7e], [0x01, 0x0a], debug=debug)
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
+		self.send_command([0x7e], [0x01, 0x0c], debug=debug)
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
+		self.send_command([0x7e], [0x01, 0x0d], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
