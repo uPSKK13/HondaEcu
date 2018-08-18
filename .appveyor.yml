@@ -2,7 +2,7 @@ image:
 - Visual Studio 2017
 - Ubuntu
 
-stack: python 3
+stack: python 3.6
 
 environment:
   PY_DIR: C:\Python36
@@ -15,11 +15,11 @@ init:
 - cmd: set PATH=%PY_DIR%;%PY_DIR%\Scripts;%PATH%
 
 install:
-  - cmd: pip install pylibftdi"
-  - cmd: pip install pyinstaller"
+  - pip install pylibftdi"
+  - pip install pyinstaller"
 
 build_script:
-  - cmd: python -m PyInstaller --onefile --clean flash.py"
+  - python -m PyInstaller --onefile --clean flash.py"
 
 artifacts:
   - path: dist\*
