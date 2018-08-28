@@ -2,7 +2,32 @@
 
 ## Software
 
-Use zdiag to install libusbK on Windows.
+### Windows
+
+HondaECU for Windows requires the libusbK driver. Download [Zadig](https://zadig.akeo.ie/) and use it to install the libusbK driver. There is a usage guide on the Zadig website if you need help using it. Once libusbK is installed for your FTDI device, download the latest release of HondaECU.exe.
+
+#### Usage
+
+```
+HondaECU.exe --help
+usage: HondaECU.exe [-h] [--checksum CHECKSUM] [--rom-size ROM_SIZE]
+                   [--fix-checksum] [--debug]
+                   {read,write,recover,validate_checksum,fix_checksum} binfile
+
+positional arguments:
+  {read,write,recover,validate_checksum,fix_checksum}
+                        ECU mode
+  binfile               name of bin to read or write
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --checksum CHECKSUM   hex location of checksum in ECU bin (default: 0x3fff8)
+  --rom-size ROM_SIZE   size of ECU bin in kilobytes (default: 256)
+  --fix-checksum        fix checksum before write/recover (default: False)
+
+debugging options:
+  --debug               turn on debugging output (default: False)
+```
 
 ## Hardware
 
