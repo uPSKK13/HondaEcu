@@ -1,3 +1,5 @@
+![Build Status](https://ci.appveyor.com/api/projects/status/rigvo8jwvgaxcbtp?svg=true)
+
 ## Software
 
 Use zdiag to install libusbK on Windows.
