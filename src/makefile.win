@@ -1,6 +1,0 @@
-HOST = i686-w64-mingw32
-CXX = $(HOST)-g++-win32
-LDFLAGS = -static -mconsole -lgdi32 
-HONDAECU_BIN = HondaECU.exe
-
-include Makefile.in

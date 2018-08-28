@@ -20,16 +20,17 @@ install:
   - pip install pyinstaller
 
 build_script:
-  - python -m PyInstaller --onefile --clean flash.py
+  - python -m PyInstaller --onefile --clean HondaECU.py
 
 artifacts:
   - path: dist\*
-  
+
 deploy:
-  release: HondaECU-v$(appveyor_build_version)
+
   provider: GitHub
+  description: 'Honda ECU K-line commandline tool'
   auth_token:
-    secure: c6843d5a7453c9d4c55854e585869af2cdfdd62b
+    secure: VDADKxNk9UEQ11Ycj0bjwqi5yzJKuKOZ+qAWu5vfPqSQTeJDiCoqWSuCLYK1o2pC
   artifact: /.*\.exe/
   draft: false
   prerelease: false
