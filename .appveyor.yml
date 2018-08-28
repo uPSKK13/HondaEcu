@@ -15,7 +15,7 @@ init:
 - cmd: set PATH=%PY_DIR%;%PY_DIR%\Scripts;%PATH%
 
 install:
-  - sh: sudo apt-get install -y libpython3.6-dev
+  - sh: sudo apt-get install -y libpython3.6-dev libftdi1 libftdi1-dev
   - pip install pylibftdi
   - pip install pyinstaller
 
@@ -28,7 +28,6 @@ artifacts:
 deploy:
 
   provider: GitHub
-  release: HondaECU-$(APPVEYOR_REPO_TAG_NAME)
   description: 'Honda ECU K-line commandline tool'
   auth_token:
     secure: VDADKxNk9UEQ11Ycj0bjwqi5yzJKuKOZ+qAWu5vfPqSQTeJDiCoqWSuCLYK1o2pC

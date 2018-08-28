@@ -57,7 +57,7 @@ class HondaECU(object):
 			del self.dev
 			self.dev = None
 
-		self.dev = Device(self.device_id, auto_detach=(platform.system()=="Windows"))
+		self.dev = Device(self.device_id, auto_detach=(platform.system()!="Windows"))
 		self.starttime = time.time()
 
 	def time(self):
