@@ -24,3 +24,15 @@ build_script:
 
 artifacts:
   - path: dist\*
+  
+deploy:
+  release: HondaECU-v$(appveyor_build_version)
+  provider: GitHub
+  auth_token:
+    secure: c6843d5a7453c9d4c55854e585869af2cdfdd62b
+  artifact: /.*\.exe/
+  draft: false
+  prerelease: false
+  on:
+    branch: master
+    appveyor_repo_tag: true
