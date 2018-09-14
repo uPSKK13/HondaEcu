@@ -366,68 +366,11 @@ if __name__ == '__main__':
 
 		if args.mode == "scan":
 			print_header()
-			temp_offset = -40
-			temp_factor_c = 1
-			pdata = {}
-			for j in [0x00, 0x10, 0x60, 0x11, 0x61, 0x20, 0x70, 0xd0, 0xd1]:
-				pdata[j] = {}
-				sys.stdout.write("HDS Table %s\n" % (hex(j)))
+			sys.stdout.write("HDS Tables\n")
+			for j in range(256):
 				info = ecu.send_command([0x72], [0x71, j], debug=args.debug)
-				if info:
-					if info and len(info[2]) > 0:
-						if (j == 0x11 or j == 0x61) and len(info[2][2:]) == 20:
-							data = struct.struct.unpack(">H12B3H", info[2][2:])
-							pdata[j] = [
-								("RPM", data[0]),
-								("TPS_volt", data[1]*5/256),
-								("TPS_%", data[2]/1.6),
-								("ECT_volt", data[3]*5/256),
-								("ECT_deg_C", (data[4]+temp_offset)*temp_factor_c),
-								("ECT_deg_F", (data[4]+temp_offset)*1.8+32),
-								("IAT_volt", data[5]*5/256),
-								("IAT_deg_C", (data[6]+temp_offset)*temp_factor_c),
-								("IAT_deg_F", (data[6]+temp_offset)*1.8+32),
-								("MAP_volt", data[7]*5/256),
-								("MAP_kpa", data[8]),
-								("?UNK1", data[9]),
-								("?UNK2", data[10]),
-								("BATT_volt", data[11]/10),
-								("SPEED_kph", data[12]),
-								("IGN_ang", data[13]/100),
-								("INJ_ms", data[14]/100),
-								("O2_volt", data[15])
-							]
-						elif (j == 0x10 or j == 0x60) and len(info[2][2:]) == 17:
-							data = struct.unpack(">H12B1HB", info[2][2:])
-							pdata[j] = [
-								("RPM", data[0]),
-								("TPS_volt", data[1]*5/256),
-								("TPS_%", data[2]/1.6),
-								("ECT_volt", data[3]*5/256),
-								("ECT_deg_C", (data[4]+temp_offset)*temp_factor_c),
-								("ECT_deg_F", (data[4]+temp_offset)*1.8+32),
-								("IAT_volt", data[5]*5/256),
-								("IAT_deg_C", (data[6]+temp_offset)*temp_factor_c),
-								("IAT_deg_F", (data[6]+temp_offset)*1.8+32),
-								("MAP_volt", data[7]*5/256),
-								("MAP_kpa", data[8]),
-								("?UNK1", data[9]),
-								("?UNK2", data[10]),
-								("BATT_volt", data[11]/10),
-								("SPEED_kph", data[12]),
-								("IGN_ang", data[13]/100)
-								# ("INJ_ms", data[14]/100),
-								# ("?UNK3", data[15])
-							]
-						elif j == 0xd0:
-							data = struct.unpack(">14B", info[2][2:])
-							pdata[j] = [
-								("STARTED", data[1])
-							]
-						else:
-							data = struct.unpack(">%dB" % len(info[2][2:]), info[2][2:])
-				if pdata[j]:
-					print(tabulate(pdata[j]))
+				if info and len(info[2][2:]) > 0:
+					sys.stdout.write(" %s\t%s\n" % (hex(j), repr([b for b in info[2][2:]])))
 
 		elif args.mode == "read":
 			print_header()
