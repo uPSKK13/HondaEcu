@@ -8,6 +8,7 @@ import sys
 import platform
 import os
 import argparse
+from tabulate import tabulate
 
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
@@ -280,26 +281,54 @@ def do_write_flash(ecu, byts, debug=False, offset=0):
 
 if __name__ == '__main__':
 
+	default_checksum = '0x3fff8'
+	default_romsize = 256
+
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument('mode', choices=["read","write","recover","validate_checksum","fix_checksum"], help="ECU mode")
-	parser.add_argument('binfile', help="name of bin to read or write")
-	parser.add_argument('--checksum', default='0x3fff8', type=Hex(), help="hex location of checksum in ECU bin")
-	parser.add_argument('--rom-size', default=256, type=int, help="size of ECU bin in kilobytes")
-	parser.add_argument('--fix-checksum', action='store_true', help="fix checksum before write/recover")
+	subparsers = parser.add_subparsers(metavar='mode',dest='mode')
+
+	parser_read = subparsers.add_parser('read', help='read ecu to binfile')
+	parser_read.add_argument('binfile', help="name of output binfile")
+	parser_read.add_argument('--checksum', default=default_checksum, type=Hex(), help="hex location of checksum in binfile")
+	parser_read.add_argument('--rom-size', default=default_romsize, type=int, help="size of ecu rom in kilobytes")
+
+	parser_write = subparsers.add_parser('write', help='write ecu from binfile')
+	parser_write.add_argument('binfile', help="name of input binfile")
+	parser_write.add_argument('--checksum', default=default_checksum, type=Hex(), help="hex location of checksum in binfile")
+	parser_write.add_argument('--rom-size', default=default_romsize, type=int, help="size of ecu rom in kilobytes")
+	parser_write.add_argument('--fix-checksum', action='store_true', help="fix checksum before write")
+
+	parser_recover = subparsers.add_parser('recover', help='recover ecu from binfile')
+	parser_recover.add_argument('binfile', help="name of input binfile")
+	parser_recover.add_argument('--checksum', default=default_checksum, type=Hex(), help="hex location of checksum in binfile")
+	parser_recover.add_argument('--rom-size', default=default_romsize, type=int, help="size of ecu rom in kilobytes")
+	parser_recover.add_argument('--fix-checksum', action='store_true', help="fix checksum before recover")
+
+	parser_checksum = subparsers.add_parser('checksum', help='validate binfile checksum')
+	parser_checksum.add_argument('binfile', help="name of input binfile")
+	parser_checksum.add_argument('--checksum', default=default_checksum, type=Hex(), help="hex location of checksum in binfile")
+	parser_checksum.add_argument('--fix-checksum', action='store_true', help="fix checksum in binfile")
+
+	parser_scan = subparsers.add_parser('scan', help='scan engine data')
+
+	parser_log = subparsers.add_parser('log', help='log engine data')
+
+	subparsers.required = True
+
 	db_grp = parser.add_argument_group('debugging options')
 	db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
 	args = parser.parse_args()
 
 	offset = 0
-
-	if os.path.isabs(args.binfile):
-		binfile = args.binfile
-	else:
-		binfile = os.path.abspath(os.path.expanduser(args.binfile))
-
+	binfile = None
 	ret = 1
-	if args.mode != "read":
-		byts, fcksum, ccksum, fixed = do_validation(binfile, args.checksum, args.mode == "fix_checksum" or args.fix_checksum)
+	if not args.mode in ["scan", "log", "read"]:
+		if os.path.isabs(args.binfile):
+			binfile = args.binfile
+		else:
+			binfile = os.path.abspath(os.path.expanduser(args.binfile))
+
+		byts, fcksum, ccksum, fixed = do_validation(binfile, args.checksum, args.fix_checksum)
 		if (fcksum == ccksum or fixed) and args.mode in ["recover","write"]:
 			ret = 0
 		else:
@@ -312,15 +341,16 @@ if __name__ == '__main__':
 		ecu = HondaECU()
 		ecu.setup()
 
-		print_header()
-		if ecu.kline():
+		if ecu.kline() and args.mode != "scan":
+			print_header()
 			sys.stdout.write("Turn off bike\n")
 			while ecu.kline():
 				time.sleep(.1)
-		sys.stdout.write("Turn on bike\n")
-		while not ecu.kline():
-			time.sleep(.1)
-		time.sleep(.5)
+		if not ecu.kline():
+			sys.stdout.write("Turn on bike\n")
+			while not ecu.kline():
+				time.sleep(.1)
+			time.sleep(.5)
 
 		print_header()
 		sys.stdout.write("Wake-up ECU\n")
@@ -334,7 +364,72 @@ if __name__ == '__main__':
 		except:
 			sys.exit(-1)
 
-		if args.mode == "read":
+		if args.mode == "scan":
+			print_header()
+			temp_offset = -40
+			temp_factor_c = 1
+			pdata = {}
+			for j in [0x00, 0x10, 0x60, 0x11, 0x61, 0x20, 0x70, 0xd0, 0xd1]:
+				pdata[j] = {}
+				sys.stdout.write("HDS Table %s\n" % (hex(j)))
+				info = ecu.send_command([0x72], [0x71, j], debug=args.debug)
+				if info:
+					if info and len(info[2]) > 0:
+						if (j == 0x11 or j == 0x61) and len(info[2][2:]) == 20:
+							data = struct.struct.unpack(">H12B3H", info[2][2:])
+							pdata[j] = [
+								("RPM", data[0]),
+								("TPS_volt", data[1]*5/256),
+								("TPS_%", data[2]/1.6),
+								("ECT_volt", data[3]*5/256),
+								("ECT_deg_C", (data[4]+temp_offset)*temp_factor_c),
+								("ECT_deg_F", (data[4]+temp_offset)*1.8+32),
+								("IAT_volt", data[5]*5/256),
+								("IAT_deg_C", (data[6]+temp_offset)*temp_factor_c),
+								("IAT_deg_F", (data[6]+temp_offset)*1.8+32),
+								("MAP_volt", data[7]*5/256),
+								("MAP_kpa", data[8]),
+								("?UNK1", data[9]),
+								("?UNK2", data[10]),
+								("BATT_volt", data[11]/10),
+								("SPEED_kph", data[12]),
+								("IGN_ang", data[13]/100),
+								("INJ_ms", data[14]/100),
+								("O2_volt", data[15])
+							]
+						elif (j == 0x10 or j == 0x60) and len(info[2][2:]) == 17:
+							data = struct.unpack(">H12B1HB", info[2][2:])
+							pdata[j] = [
+								("RPM", data[0]),
+								("TPS_volt", data[1]*5/256),
+								("TPS_%", data[2]/1.6),
+								("ECT_volt", data[3]*5/256),
+								("ECT_deg_C", (data[4]+temp_offset)*temp_factor_c),
+								("ECT_deg_F", (data[4]+temp_offset)*1.8+32),
+								("IAT_volt", data[5]*5/256),
+								("IAT_deg_C", (data[6]+temp_offset)*temp_factor_c),
+								("IAT_deg_F", (data[6]+temp_offset)*1.8+32),
+								("MAP_volt", data[7]*5/256),
+								("MAP_kpa", data[8]),
+								("?UNK1", data[9]),
+								("?UNK2", data[10]),
+								("BATT_volt", data[11]/10),
+								("SPEED_kph", data[12]),
+								("IGN_ang", data[13]/100)
+								# ("INJ_ms", data[14]/100),
+								# ("?UNK3", data[15])
+							]
+						elif j == 0xd0:
+							data = struct.unpack(">14B", info[2][2:])
+							pdata[j] = [
+								("STARTED", data[1])
+							]
+						else:
+							data = struct.unpack(">%dB" % len(info[2][2:]), info[2][2:])
+				if pdata[j]:
+					print(tabulate(pdata[j]))
+
+		elif args.mode == "read":
 			print_header()
 			sys.stdout.write("Security access\n")
 			ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
