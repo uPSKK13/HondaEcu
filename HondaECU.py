@@ -8,7 +8,6 @@ import sys
 import platform
 import os
 import argparse
-from tabulate import tabulate
 
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
