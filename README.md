@@ -1,5 +1,11 @@
 [![Build Status](https://ci.appveyor.com/api/projects/status/rigvo8jwvgaxcbtp?svg=true)](https://ci.appveyor.com/project/RyanHope/hondaecu)
 
+## Donation
+
+If you found this project useful, please consider donating. You can also help facilidate R&D by sending me ECUs.
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=XL3H864LE567E)
+
 ## Software
 
 ### Windows
@@ -105,9 +111,3 @@ If you make a bench harness to work with your ECU you will need a 2.5 amp power 
 * http://projects.gonzos.net/ctx-obd
 * http://opengarages.org/handbook/ebook
 
-
-## Donation
-
-If you found this project useful, please consider donating.
-
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=XL3H864LE567E)
