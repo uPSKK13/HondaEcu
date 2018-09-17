@@ -1,8 +1,8 @@
 [![Build Status](https://ci.appveyor.com/api/projects/status/rigvo8jwvgaxcbtp?svg=true)](https://ci.appveyor.com/project/RyanHope/hondaecu)
 
-#### Donation
+#### Support and Development
 
-If you found this project useful, please consider donating. You can also help facilidate R&D by sending me ECUs.
+Research and development takes time and money. Since it is my goal to keep this project opensource, if you find this project useful, please consider donating. You can also help facilidate R&D by sending me ECUs, connectors, harnesses, etc.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=XL3H864LE567E)
 
