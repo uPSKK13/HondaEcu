@@ -1,4 +1,4 @@
-<!-- Written 09/27/2018 19:08:38 -->
+<!-- Written 09/28/2018 00:47:32 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -16,9 +16,10 @@
     <CATEGORY index="0x7" name="U1" />
     <CATEGORY index="0x8" name="U2" />
     <CATEGORY index="0x9" name="U3" />
+    <CATEGORY index="0xA" name="Unknown" />
   </XDFHEADER>
   <XDFTABLE uniqueid="0x7D7F" flags="0x0">
-    <title>Ign Neutral</title>
+    <title>Ign: Neutral</title>
     <CATEGORYMEM index="0" category="1" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
@@ -55,7 +56,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x74B5" flags="0x0">
-    <title>Cyl 1</title>
+    <title>Ign: Gear 3-4, Cyl 1</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="6" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -93,7 +94,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x5146" flags="0x0">
-    <title>Cyl 2</title>
+    <title>Ign: Gear 3-4, Cyl 2</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="6" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -131,7 +132,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x3F31" flags="0x0">
-    <title>Cyl 1</title>
+    <title>Ign: Gear 1-2, Cyl 1</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="5" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -169,7 +170,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x4E0" flags="0x0">
-    <title>Cyl 2</title>
+    <title>Ign: Gear 1-2, Cyl 2</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="5" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -207,7 +208,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x12B0" flags="0x0">
-    <title>Cyl 1</title>
+    <title>Ign: Gear 5-6, Cyl 1</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="7" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -245,7 +246,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x373" flags="0x0">
-    <title>Cyl 2</title>
+    <title>Ign: Gear 5-6, Cyl 2</title>
     <CATEGORYMEM index="0" category="1" />
     <CATEGORYMEM index="1" category="7" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -283,7 +284,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x1E3B" flags="0x0">
-    <title>Cyl 1</title>
+    <title>Fuel: MAP vs RPM, Cyl 1</title>
     <CATEGORYMEM index="0" category="2" />
     <CATEGORYMEM index="1" category="3" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -321,10 +322,9 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x169C" flags="0x0">
-    <title>Cyl 1</title>
+    <title>Fuel: TPS vs RPM, Cyl 1</title>
     <CATEGORYMEM index="0" category="2" />
     <CATEGORYMEM index="1" category="4" />
-    <CATEGORYMEM index="2" category="8" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
       <indexcount>25</indexcount>
@@ -360,10 +360,9 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x1CED" flags="0x0">
-    <title>Cyl 2</title>
+    <title>Fuel: TPS vs RPM, Cyl 2</title>
     <CATEGORYMEM index="0" category="2" />
     <CATEGORYMEM index="1" category="4" />
-    <CATEGORYMEM index="2" category="8" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
       <indexcount>25</indexcount>
@@ -399,7 +398,7 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x4260" flags="0x0">
-    <title>Cyl 2</title>
+    <title>Fuel: MAP vs RPM, Cyl 2</title>
     <CATEGORYMEM index="0" category="2" />
     <CATEGORYMEM index="1" category="3" />
     <XDFAXIS id="x" uniqueid="0x0">
@@ -437,10 +436,9 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x2DDF" flags="0x0">
-    <title>Cyl 1</title>
+    <title>Fuel: Unknown vs RPM, Cyl 1</title>
     <CATEGORYMEM index="0" category="2" />
-    <CATEGORYMEM index="1" category="4" />
-    <CATEGORYMEM index="2" category="9" />
+    <CATEGORYMEM index="1" category="11" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
       <indexcount>25</indexcount>
@@ -476,10 +474,9 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x9A2" flags="0x0">
-    <title>Cyl 2</title>
+    <title>Fuel: Unknown vs RPM, Cyl 2</title>
     <CATEGORYMEM index="0" category="2" />
-    <CATEGORYMEM index="1" category="4" />
-    <CATEGORYMEM index="2" category="9" />
+    <CATEGORYMEM index="1" category="11" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
       <indexcount>25</indexcount>
@@ -505,6 +502,82 @@
     </XDFAXIS>
     <XDFAXIS id="z">
       <EMBEDDEDDATA mmedaddress="0x29C3C" mmedelementsizebits="16" mmedrowcount="35" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
+      <decimalpl>2</decimalpl>
+      <min>0.000000</min>
+      <max>255.000000</max>
+      <outputtype>1</outputtype>
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+  </XDFTABLE>
+  <XDFTABLE uniqueid="0x1EBA" flags="0x0">
+    <title>Fuel: TPS low vs RPM, Cyl 1</title>
+    <CATEGORYMEM index="0" category="2" />
+    <CATEGORYMEM index="1" category="4" />
+    <XDFAXIS id="x" uniqueid="0x0">
+      <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
+      <indexcount>25</indexcount>
+      <embedinfo type="1" />
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="y" uniqueid="0x0">
+      <EMBEDDEDDATA mmedaddress="0x2876C" mmedelementsizebits="16" mmedcolcount="35" mmedmajorstridebits="16" mmedminorstridebits="0" />
+      <indexcount>35</indexcount>
+      <decimalpl>0</decimalpl>
+      <embedinfo type="1" />
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="z">
+      <EMBEDDEDDATA mmedaddress="0x2A314" mmedelementsizebits="16" mmedrowcount="35" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
+      <decimalpl>2</decimalpl>
+      <min>0.000000</min>
+      <max>255.000000</max>
+      <outputtype>1</outputtype>
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+  </XDFTABLE>
+  <XDFTABLE uniqueid="0x4E91" flags="0x0">
+    <title>Fuel: TPS low vs RPM, Cyl 2</title>
+    <CATEGORYMEM index="0" category="2" />
+    <CATEGORYMEM index="1" category="4" />
+    <XDFAXIS id="x" uniqueid="0x0">
+      <EMBEDDEDDATA mmedaddress="0x28738" mmedelementsizebits="16" mmedcolcount="25" mmedmajorstridebits="16" mmedminorstridebits="0" />
+      <indexcount>25</indexcount>
+      <embedinfo type="1" />
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="y" uniqueid="0x0">
+      <EMBEDDEDDATA mmedaddress="0x2876C" mmedelementsizebits="16" mmedcolcount="35" mmedmajorstridebits="16" mmedminorstridebits="0" />
+      <indexcount>35</indexcount>
+      <decimalpl>0</decimalpl>
+      <embedinfo type="1" />
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="z">
+      <EMBEDDEDDATA mmedaddress="0x2A9EC" mmedelementsizebits="16" mmedrowcount="35" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
       <decimalpl>2</decimalpl>
       <min>0.000000</min>
       <max>255.000000</max>
