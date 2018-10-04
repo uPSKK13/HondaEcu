@@ -337,7 +337,11 @@ if __name__ == '__main__':
 
 	if ret == 0:
 
-		ecu = HondaECU()
+		try:
+			ecu = HondaECU()
+		except FtdiError:
+			sys.stderr.write("No flash adapters detected!\n")
+			sys.exit(-2)
 		ecu.setup()
 
 		if ecu.kline() and args.mode != "scan":
