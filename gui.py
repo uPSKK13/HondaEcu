@@ -1,130 +1,58 @@
-import usb1
-import wx
+import sys
+from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QAction, QTabWidget,QVBoxLayout
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import pyqtSlot
 
-class HondaECU_GUI(wx.Frame):
+class App(QMainWindow):
 
-    def hotplug_callback(self, context, device, event):
-        if device.getProductID() in [0x6001, 0x60010, 0x6011, 0x6014, 0x6015]:
-            if event == usb1.HOTPLUG_EVENT_DEVICE_ARRIVED:
-                if not device in self.ftdi_devices:
-                    print("Adding device (%s) to list" % device)
-                    self.ftdi_devices.append(device)
-                    self.UpdateDeviceList()
-            elif event == usb1.HOTPLUG_EVENT_DEVICE_LEFT:
-                if device in self.ftdi_devices:
-                    if device == self.ftdi_active:
-                        # TODO: CLOSE ACTIVE DEVICE
-                        print("Deactivating device (%s)" % self.ftdi_active)
-                        self.ftdi_active = None
-                    self.ftdi_devices.remove(device)
-                    self.UpdateDeviceList()
-                    print("Removing device (%s) from list" % device)
+    def __init__(self):
+        super().__init__()
+        self.title = 'PyQt5 tabs - pythonspot.com'
+        self.left = 0
+        self.top = 0
+        self.width = 300
+        self.height = 200
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
 
-    def __init__(self, usbcontext):
-        self.ftdi_devices = []
-        self.ftdi_active = None
-        self.usbcontext = usbcontext
+        self.table_widget = MyTableWidget(self)
+        self.setCentralWidget(self.table_widget)
 
-        wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
+        self.show()
 
-        menuBar = wx.MenuBar()
-        menu = wx.Menu()
-        m_exit = menu.Append(wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program.")
-        self.Bind(wx.EVT_MENU, self.OnClose, m_exit)
-        menuBar.Append(menu, "&File")
-        self.SetMenuBar(menuBar)
+class MyTableWidget(QWidget):
 
-        panel = wx.Panel(self)
-        mainbox = wx.BoxSizer(wx.VERTICAL)
-        devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "FTDI Devices")
-        flashbox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "Flash Operations")
-        databox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "Engine Data")
+    def __init__(self, parent):
+        super(QWidget, self).__init__(parent)
+        self.layout = QVBoxLayout(self)
 
-        self.m_devices = wx.Choice(panel, wx.ID_ANY)
-        devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
+        # Initialize tab screen
+        self.tabs = QTabWidget()
+        self.tab1 = QWidget()
+        self.tab2 = QWidget()
+        self.tabs.resize(300,200)
 
-        self.m_read = wx.Button(panel, wx.ID_ANY, "Read")
-        self.m_write = wx.Button(panel, wx.ID_ANY, "Write")
-        self.m_recover = wx.Button(panel, wx.ID_ANY, "Recover")
-        self.m_checksum = wx.Button(panel, wx.ID_ANY, "Checksum")
-        flashbox.AddStretchSpacer(1)
-        flashbox.Add(self.m_read, 0, wx.ALL, 5)
-        flashbox.Add(self.m_write, 0, wx.ALL, 5)
-        flashbox.Add(self.m_recover, 0, wx.ALL, 5)
-        flashbox.Add(self.m_checksum, 0, wx.ALL, 5)
-        flashbox.AddStretchSpacer(1)
+        # Add tabs
+        self.tabs.addTab(self.tab1,"Tab 1")
+        self.tabs.addTab(self.tab2,"Tab 2")
 
-        self.m_scan = wx.Button(panel, wx.ID_ANY, "Scan")
-        self.m_log = wx.Button(panel, wx.ID_ANY, "Log")
-        databox.AddStretchSpacer(1)
-        databox.Add(self.m_scan, 0, wx.ALL, 5)
-        databox.Add(self.m_log, 0, wx.ALL, 5)
-        databox.AddStretchSpacer(1)
+        # Create first tab
+        self.tab1.layout = QVBoxLayout(self)
+        self.pushButton1 = QPushButton("PyQt5 button")
+        self.tab1.layout.addWidget(self.pushButton1)
+        self.tab1.setLayout(self.tab1.layout)
 
-        mainbox.AddStretchSpacer(1)
-        mainbox.Add(devicebox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        mainbox.AddStretchSpacer(1)
-        mainbox.Add(flashbox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        mainbox.AddStretchSpacer(1)
-        mainbox.Add(databox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        mainbox.AddStretchSpacer(1)
+        # Add tabs to widget
+        self.layout.addWidget(self.tabs)
+        self.setLayout(self.layout)
 
-        panel.SetSizer(mainbox)
-        panel.Layout()
-        self.Centre()
-
-        self.Bind(wx.EVT_IDLE, self.OnIdle)
-        self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
-        #self.Bind(wx.EVT_CLOSE, self.OnClose)
-
-        print('Registering hotplug callback...')
-        self.usbcontext.hotplugRegisterCallback(self.hotplug_callback, vendor_id=0x403)
-        print('Callback registered. Monitoring events.')
-
-    def OnDeviceSelected(self, event):
-        newdevice = self.ftdi_devices[self.m_devices.GetSelection()]
-        if self.ftdi_active != None:
-            if self.ftdi_active != newdevice:
-                print("Deactivating device (%s)" % self.ftdi_active)
-                # TODO: CLOSE ACTIVE DEVICE
-                pass
-        self.ftdi_active = newdevice
-        print("Activating device (%s)" % self.ftdi_active)
-        # TODO: OPEN ACTIVE DEVICE
-
-
-    def UpdateDeviceList(self):
-        self.m_devices.Clear()
-        for i,d in enumerate(self.ftdi_devices):
-            self.m_devices.Append(str(d))
-            if self.ftdi_active == d:
-                self.m_devices.SetSelection(i)
-            if self.ftdi_active == None:
-                self.ftdi_active = self.ftdi_devices[0]
-                self.m_devices.SetSelection(0)
-                self.OnDeviceSelected(None)
-
-    def OnClose(self, event):
-        dlg = wx.MessageDialog(self,
-            "Do you really want to close this application?",
-            "Confirm Exit", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
-        result = dlg.ShowModal()
-        dlg.Destroy()
-        if result == wx.ID_OK:
-            self.Destroy()
-
-    def OnIdle(self, event):
-        self.usbcontext.handleEventsTimeout(0)
-        event.RequestMore()
+    @pyqtSlot()
+    def on_click(self):
+        print("\n")
+        for currentQTableWidgetItem in self.tableWidget.selectedItems():
+            print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
 
 if __name__ == '__main__':
-
-    usbcontext = usb1.USBContext()
-    if not usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG):
-        print('Hotplug support is missing. Please update your libusb version.')
-        sys.exit(-1)
-
-    app = wx.App(redirect=False)
-    gui = HondaECU_GUI(usbcontext)
-    gui.Show()
-    app.MainLoop()
+    app = QApplication(sys.argv)
+    ex = App()
+    sys.exit(app.exec_())
