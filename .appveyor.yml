@@ -26,8 +26,8 @@ install:
   - pip install pyinstaller
 
 build_script:
-  - cmd: python -m PyInstaller --onefile --clean HondaECU.py
-  - cmd: python -m PyInstaller --onefile --clean --add-data MS32/dll/libusb-1.0.dll;. gui.py
+  - cmd: python -m PyInstaller --onefile --clean ecu.py --name HondaECU_old
+  - cmd: python -m PyInstaller --onefile --clean --add-binary MS32/dll/libusb-1.0.dll;. gui.py --name HondaECU
 
 artifacts:
   - path: dist\*

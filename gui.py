@@ -1,3 +1,5 @@
+import os
+import sys
 import usb1
 import wx
 
@@ -46,6 +48,10 @@ class HondaECU_GUI(wx.Frame):
         self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 
         wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
+
+        ib = wx.IconBundle()
+        ib.AddIcon("honda.ico", wx.BITMAP_TYPE_ANY)
+        self.SetIcons(ib)
 
         menuBar = wx.MenuBar()
         menu = wx.Menu()
@@ -121,7 +127,7 @@ class HondaECU_GUI(wx.Frame):
     def UpdateDeviceList(self):
         self.m_devices.Clear()
         for i,d in enumerate(self.ftdi_devices):
-            self.m_devices.Append(str(d))
+            self.m_devices.Append(str(d) + " | " + d.getSerialNumber())
             if self.ftdi_active == d:
                 self.m_devices.SetSelection(i)
             if self.ftdi_active == None:
