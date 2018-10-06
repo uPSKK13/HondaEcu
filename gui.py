@@ -83,9 +83,13 @@ class HondaECU_GUI(wx.Frame):
         devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
 
         self.m_read = wx.Button(panel, wx.ID_ANY, "Read")
+        self.m_read.Disable()
         self.m_write = wx.Button(panel, wx.ID_ANY, "Write")
+        self.m_write.Disable()
         self.m_recover = wx.Button(panel, wx.ID_ANY, "Recover")
+        self.m_recover.Disable()
         self.m_checksum = wx.Button(panel, wx.ID_ANY, "Checksum")
+        self.m_checksum.Disable()
         flashbox.AddStretchSpacer(1)
         flashbox.Add(self.m_read, 0, wx.ALL, 5)
         flashbox.Add(self.m_write, 0, wx.ALL, 5)
@@ -94,7 +98,9 @@ class HondaECU_GUI(wx.Frame):
         flashbox.AddStretchSpacer(1)
 
         self.m_scan = wx.Button(panel, wx.ID_ANY, "Scan")
+        self.m_scan.Disable()
         self.m_log = wx.Button(panel, wx.ID_ANY, "Log")
+        self.m_log.Disable()
         databox.AddStretchSpacer(1)
         databox.Add(self.m_scan, 0, wx.ALL, 5)
         databox.Add(self.m_log, 0, wx.ALL, 5)
@@ -131,9 +137,10 @@ class HondaECU_GUI(wx.Frame):
         if self.ftdi_active != None:
             if self.ftdi_active != newdevice:
                 print("Deactivating device (%s)" % self.ftdi_active)
-                self.ecu.dev.close()
-                del self.ecu
-                pass
+                if self.ecu != None:
+                    self.ecu.dev.close()
+                    del self.ecu
+                    self.ecu = None
         self.ftdi_active = newdevice
         print("Activating device (%s)" % self.ftdi_active)
         try:
