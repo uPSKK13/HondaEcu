@@ -43,7 +43,7 @@ class HondaECU_GUI(wx.Frame):
         self.ftdi_devices = []
         self.ftdi_active = None
         self.usbcontext = usbcontext
-        self.usbhotplug = False#self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
+        self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 
         wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
 
