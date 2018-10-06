@@ -55,7 +55,7 @@ class HondaECU_GUI(wx.Frame):
             ip = os.path.join(os.path.dirname(os.path.realpath(__file__)),"honda.ico")
 
         ib = wx.IconBundle()
-        ib.AddIcon("honda.ico")
+        ib.AddIcon(ip)
         self.SetIcons(ib)
 
         menuBar = wx.MenuBar()
