@@ -49,6 +49,11 @@ class HondaECU_GUI(wx.Frame):
 
         wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
 
+        if getattr( sys, 'frozen', False ) :
+            ip = os.path.join(sys._MEIPASS,"honda.ico")
+        else:
+            ip = os.path.join(os.path.dirname(os.path.realpath(__file__)),"honda.ico")
+
         ib = wx.IconBundle()
         ib.AddIcon("honda.ico")
         self.SetIcons(ib)
