@@ -23,6 +23,7 @@ class HondaECU_GUI(wx.Frame):
                 if device == self.ftdi_active:
                     self.ecu.dev.close()
                     del self.ecu
+                    self.ecu = None
                     print("Deactivating device (%s)" % self.ftdi_active)
                     self.ftdi_active = None
                 self.ftdi_devices.remove(device)
@@ -41,6 +42,7 @@ class HondaECU_GUI(wx.Frame):
                     if device == self.ftdi_active:
                         self.ecu.dev.close()
                         del self.ecu
+                        self.ecu = None
                         print("Deactivating device (%s)" % self.ftdi_active)
                         self.ftdi_active = None
                     self.ftdi_devices.remove(device)
@@ -172,6 +174,8 @@ class HondaECU_GUI(wx.Frame):
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:
+            for d in self.ftdi_devices:
+                d.close()
             self.Destroy()
 
     def OnIdle(self, event):
