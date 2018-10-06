@@ -1,15 +1,19 @@
 import os
 import sys
 import usb1
+import pylibftdi
 import wx
+import platform
+
+from ecu import HondaECU
 
 class HondaECU_GUI(wx.Frame):
 
     def PollUSBDevices(self, event):
         new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
         for device in new_devices:
-            if device.getVendorID() == 0x403:
-                if device.getProductID() in [0x6001, 0x60010, 0x6011, 0x6014, 0x6015]:
+            if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
+                if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
                     if not device in self.ftdi_devices:
                         print("Adding device (%s) to list" % device)
                         self.ftdi_devices.append(device)
@@ -17,7 +21,8 @@ class HondaECU_GUI(wx.Frame):
         for device in self.ftdi_devices:
             if not device in new_devices:
                 if device == self.ftdi_active:
-                    # TODO: CLOSE ACTIVE DEVICE
+                    self.ecu.dev.close()
+                    del self.ecu
                     print("Deactivating device (%s)" % self.ftdi_active)
                     self.ftdi_active = None
                 self.ftdi_devices.remove(device)
@@ -25,7 +30,7 @@ class HondaECU_GUI(wx.Frame):
                 print("Removing device (%s) from list" % device)
 
     def hotplug_callback(self, context, device, event):
-        if device.getProductID() in [0x6001, 0x60010, 0x6011, 0x6014, 0x6015]:
+        if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
             if event == usb1.HOTPLUG_EVENT_DEVICE_ARRIVED:
                 if not device in self.ftdi_devices:
                     print("Adding device (%s) to list" % device)
@@ -34,7 +39,8 @@ class HondaECU_GUI(wx.Frame):
             elif event == usb1.HOTPLUG_EVENT_DEVICE_LEFT:
                 if device in self.ftdi_devices:
                     if device == self.ftdi_active:
-                        # TODO: CLOSE ACTIVE DEVICE
+                        self.ecu.dev.close()
+                        del self.ecu
                         print("Deactivating device (%s)" % self.ftdi_active)
                         self.ftdi_active = None
                     self.ftdi_devices.remove(device)
@@ -48,6 +54,8 @@ class HondaECU_GUI(wx.Frame):
         self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 
         wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
+
+        self.statusbar = self.CreateStatusBar(1)
 
         if getattr( sys, 'frozen', False ) :
             ip = os.path.join(sys._MEIPASS,"honda.ico")
@@ -106,11 +114,11 @@ class HondaECU_GUI(wx.Frame):
 
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
-        #self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
         if self.usbhotplug:
             print('Registering hotplug callback...')
-            self.usbcontext.hotplugRegisterCallback(self.hotplug_callback, vendor_id=0x403)
+            self.usbcontext.hotplugRegisterCallback(self.hotplug_callback, vendor_id=pylibftdi.driver.FTDI_VENDOR_ID)
             print('Callback registered. Monitoring events.')
         else:
             self.usbpolltimer = wx.Timer(self, wx.ID_ANY)
@@ -122,18 +130,26 @@ class HondaECU_GUI(wx.Frame):
         if self.ftdi_active != None:
             if self.ftdi_active != newdevice:
                 print("Deactivating device (%s)" % self.ftdi_active)
-                # TODO: CLOSE ACTIVE DEVICE
+                self.ecu.dev.close()
+                del self.ecu
                 pass
         self.ftdi_active = newdevice
         print("Activating device (%s)" % self.ftdi_active)
-        print(self.ftdi_active._getASCIIStringDescriptor(self.ftdi_active.getSerialNumberDescriptor()))
-        # TODO: OPEN ACTIVE DEVICE
-
+        try:
+            self.ecu = HondaECU(device_id=self.ftdi_active.getSerialNumber())
+        except usb1.USBErrorNotSupported as e:
+            self.ecu = None
+            self.statusbar.SetStatusText("Incorrect driver for device, install libusbK with Zadig!")
 
     def UpdateDeviceList(self):
         self.m_devices.Clear()
         for i,d in enumerate(self.ftdi_devices):
-            self.m_devices.Append(str(d) + " | " + d.getSerialNumber())
+            n = str(d)
+            try:
+                n += " | " + d.getSerialNumber()
+            except usb1.USBErrorNotSupported:
+                pass
+            self.m_devices.Append(n)
             if self.ftdi_active == d:
                 self.m_devices.SetSelection(i)
             if self.ftdi_active == None:
@@ -153,7 +169,7 @@ class HondaECU_GUI(wx.Frame):
     def OnIdle(self, event):
         if self.usbhotplug:
             self.usbcontext.handleEventsTimeout(0)
-            event.RequestMore()
+        event.RequestMore()
 
 if __name__ == '__main__':
 
