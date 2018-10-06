@@ -20,7 +20,6 @@ install:
   - sh: pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 wxPython
   - ps: Start-FileDownload 'https://github.com/libusb/libusb/releases/download/v1.0.22/libusb-1.0.22.7z'
   - cmd: 7z x libusb-1.0.22.7z
-  - ps: ls
   - cmd: pip install wxPython
   - pip install libusb1
   - pip install pylibftdi
@@ -28,7 +27,7 @@ install:
 
 build_script:
   - cmd: python -m PyInstaller --onefile --clean HondaECU.py
-  - cmd: python -m PyInstaller --onefile --clean --add-data MS32/dll/libusb-1.0.dll gui.py
+  - cmd: python -m PyInstaller --onefile --clean --add-data MS32/dll/libusb-1.0.dll;. gui.py
 
 artifacts:
   - path: dist\*
