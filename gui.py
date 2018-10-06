@@ -126,6 +126,7 @@ class HondaECU_GUI(wx.Frame):
                 pass
         self.ftdi_active = newdevice
         print("Activating device (%s)" % self.ftdi_active)
+        print(self.ftdi_active._getASCIIStringDescriptor(self.ftdi_active.getSerialNumberDescriptor()))
         # TODO: OPEN ACTIVE DEVICE
 
 
