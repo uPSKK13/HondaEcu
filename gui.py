@@ -50,7 +50,7 @@ class HondaECU_GUI(wx.Frame):
         wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
 
         ib = wx.IconBundle()
-        ib.AddIcon("honda.ico", wx.BITMAP_TYPE_ANY)
+        ib.AddIcon("honda.ico")
         self.SetIcons(ib)
 
         menuBar = wx.MenuBar()
