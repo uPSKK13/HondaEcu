@@ -126,6 +126,7 @@ class HondaECU_GUI(wx.Frame):
             self.usbpolltimer.Start(250)
 
     def OnDeviceSelected(self, event):
+        self.statusbar.SetStatusText("")
         newdevice = self.ftdi_devices[self.m_devices.GetSelection()]
         if self.ftdi_active != None:
             if self.ftdi_active != newdevice:
