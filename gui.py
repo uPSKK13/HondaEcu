@@ -9,6 +9,22 @@ from ecu import HondaECU
 
 class HondaECU_GUI(wx.Frame):
 
+    binsizes = {
+        "56k":56,
+        "256k":256,
+        "512k":512,
+        "1024k":1024
+    }
+    checksums = [
+        "0xDFEF",
+        "0x18FFE",
+        "0x19FFE",
+        "0x1FFFA",
+        "0x3FFF8",
+        "0x7FFF8",
+        "0xFFFF8"
+    ]
+
     def PollUSBDevices(self, event):
         new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
         for device in new_devices:
@@ -55,7 +71,7 @@ class HondaECU_GUI(wx.Frame):
         self.usbcontext = usbcontext
         self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 
-        wx.Frame.__init__(self, None, title="HondaECU", size=(400,250), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
+        wx.Frame.__init__(self, None, title="HondaECU", size=(560,440), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
 
         self.statusbar = self.CreateStatusBar(1)
 
@@ -78,43 +94,55 @@ class HondaECU_GUI(wx.Frame):
         panel = wx.Panel(self)
         mainbox = wx.BoxSizer(wx.VERTICAL)
         devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "FTDI Devices")
-        flashbox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "Flash Operations")
-        databox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "Engine Data")
 
         self.m_devices = wx.Choice(panel, wx.ID_ANY)
-        devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
+        devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 0)
 
-        self.m_read = wx.Button(panel, wx.ID_ANY, "Read")
-        self.m_read.Disable()
-        self.m_write = wx.Button(panel, wx.ID_ANY, "Write")
-        self.m_write.Disable()
-        self.m_recover = wx.Button(panel, wx.ID_ANY, "Recover")
-        self.m_recover.Disable()
-        self.m_checksum = wx.Button(panel, wx.ID_ANY, "Checksum")
-        self.m_checksum.Disable()
-        flashbox.AddStretchSpacer(1)
-        flashbox.Add(self.m_read, 0, wx.ALL, 5)
-        flashbox.Add(self.m_write, 0, wx.ALL, 5)
-        flashbox.Add(self.m_recover, 0, wx.ALL, 5)
-        flashbox.Add(self.m_checksum, 0, wx.ALL, 5)
-        flashbox.AddStretchSpacer(1)
+        self.notebook = wx.Notebook(panel, wx.ID_ANY)
 
-        self.m_scan = wx.Button(panel, wx.ID_ANY, "Scan")
-        self.m_scan.Disable()
-        self.m_log = wx.Button(panel, wx.ID_ANY, "Log")
-        self.m_log.Disable()
-        databox.AddStretchSpacer(1)
-        databox.Add(self.m_scan, 0, wx.ALL, 5)
-        databox.Add(self.m_log, 0, wx.ALL, 5)
-        databox.AddStretchSpacer(1)
+        flashp = wx.Panel(self.notebook)
+        self.flashpsizer = wx.GridBagSizer(0,0)
+        self.mode = wx.RadioBox(flashp, wx.ID_ANY, "Mode", choices=["Read","Write","Recover"])
+        self.flashpsizer.Add(self.mode, pos=(0,0), span=(1,6), flag=wx.ALL|wx.ALIGN_CENTER, border=20)
+        wfilel = wx.StaticText(flashp, wx.ID_ANY, "File")
+        self.readfpicker = wx.FilePickerCtrl(flashp, wx.ID_ANY, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+        self.writefpicker = wx.FilePickerCtrl(flashp, wx.ID_ANY, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+        self.writefpicker.Show(False)
+        self.flashpsizer.Add(wfilel, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+        self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.fpickerbox.Add(self.readfpicker, 1)
+        self.fpickerbox.Add(self.writefpicker, 1)
+        self.flashpsizer.Add(self.fpickerbox, pos=(1,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT, border=10)
+        wsizel = wx.StaticText(flashp, wx.ID_ANY, "Size")
+        self.writesize = wx.Choice(flashp, wx.ID_ANY, choices=list(self.binsizes.keys()))
+        self.flashpsizer.Add(wsizel, pos=(2,0), flag=wx.ALL|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, border=0)
+        self.flashpsizer.Add(self.writesize, pos=(2,1), span=(1,1), flag=wx.ALL, border=0)
+        wchecksuml = wx.StaticText(flashp, wx.ID_ANY, "Checksum")
+        self.checksum = wx.Choice(flashp, wx.ID_ANY, choices=list(self.checksums))
+        self.fixchecksum = wx.CheckBox(flashp, wx.ID_ANY, "Fix")
+        self.flashpsizer.Add(wchecksuml, pos=(2,3), flag=wx.ALL|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, border=0)
+        self.flashpsizer.Add(self.checksum, pos=(2,4), flag=wx.ALL, border=0)
+        self.flashpsizer.Add(self.fixchecksum, pos=(2,5), flag=wx.ALL|wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL, border=0)
+        self.progress = wx.Gauge(flashp, wx.ID_ANY)
+        self.progress.SetRange(100)
+        self.progress.SetValue(0)
+        self.flashpsizer.Add(self.progress, pos=(4,0), span=(1,6), flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.ALIGN_CENTER, border=10)
+        self.gobutton = wx.Button(flashp, wx.ID_ANY, "Start")
+        self.gobutton.Disable()
+        self.flashpsizer.Add(self.gobutton, pos=(5,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.BOTTOM|wx.RIGHT, border=10)
+        self.flashpsizer.AddGrowableRow(4,1)
+        self.flashpsizer.AddGrowableCol(5,1)
+        flashp.SetSizer(self.flashpsizer)
+        self.notebook.AddPage(flashp, "Flash Operations")
 
-        mainbox.AddStretchSpacer(1)
-        mainbox.Add(devicebox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        mainbox.AddStretchSpacer(1)
-        mainbox.Add(flashbox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        mainbox.AddStretchSpacer(1)
-        mainbox.Add(databox, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        mainbox.AddStretchSpacer(1)
+        datap = wx.Panel(self.notebook)
+        self.notebook.AddPage(datap, "Diagnostic Tables")
+
+        errorp = wx.Panel(self.notebook)
+        self.notebook.AddPage(errorp, "Error Codes")
+
+        mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
+        mainbox.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
 
         panel.SetSizer(mainbox)
         panel.Layout()
@@ -123,6 +151,7 @@ class HondaECU_GUI(wx.Frame):
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.mode.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 
         if self.usbhotplug:
             print('Registering hotplug callback...')
@@ -132,6 +161,15 @@ class HondaECU_GUI(wx.Frame):
             self.usbpolltimer = wx.Timer(self, wx.ID_ANY)
             self.Bind(wx.EVT_TIMER, self.PollUSBDevices)
             self.usbpolltimer.Start(250)
+
+    def OnModeChange(self, event):
+        if self.mode.GetSelection() == 0:
+            self.writefpicker.Show(False)
+            self.readfpicker.Show(True)
+        else:
+            self.readfpicker.Show(False)
+            self.writefpicker.Show(True)
+        self.fpickerbox.Layout()
 
     def OnDeviceSelected(self, event):
         self.statusbar.SetStatusText("")
