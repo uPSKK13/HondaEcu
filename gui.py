@@ -71,7 +71,7 @@ class HondaECU_GUI(wx.Frame):
         self.usbcontext = usbcontext
         self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 
-        wx.Frame.__init__(self, None, title="HondaECU", size=(560,440), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
+        wx.Frame.__init__(self, None, title="HondaECU", size=(560,460), style=wx.DEFAULT_FRAME_STYLE & ~(wx.RESIZE_BORDER | wx.MAXIMIZE_BOX))
 
         self.statusbar = self.CreateStatusBar(1)
 
