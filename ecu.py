@@ -9,6 +9,38 @@ import platform
 import os
 import argparse
 
+DTC = {
+	"01-01": "MAP sensor circuit low voltage (less than 0.2 V)",
+	"01-02": "MAP sensor circuit high voltage (more than 3.9 V)",
+	"02-01": "MAP sensor performance problem",
+	"07-01": "ECT sensor circuit low voltage (less than 0.07 V)",
+	"07-02": "ECT sensor circuit high voltage (more than 4.93 V)",
+	"08-01": "TP sensor circuit low voltage (less than 0.3 V)",
+	"08-02": "TP sensor circuit high voltage (more than 4.93 V)",
+	"09-01": "IAT sensor circuit low voltage (less than 0.07 V)",
+	"09-02": "IAT sensor circuit high voltage (more than 4.93 V)",
+	"11-01": "VS sensor no signal",
+	"12-01": "No.1 primary injector circuit malfunction",
+	"13-01": "No.2 primary injector circuit malfunction",
+	"14-01": "No.3 primary injector circuit malfunction",
+	"15-01": "No.4 primary injector circuit malfunction",
+	"16-01": "No.1 secondary injector circuit malfunction",
+	"17-01": "No.2 secondary injector circuit malfunction",
+	"18-01": "CMP sensor no signal",
+	"19-01": "CKP sensor no signal",
+	"25-02": "Knock sensor circuit malfunction",
+	"25-03": "Knock sensor circuit malfunction",
+	"29-01": "IACV circuit malfunction",
+	"33-02": "ECM EEPROM malfunction",
+	"34-01": "ECV POT low voltage malfunction",
+	"34-02": "ECV POT high voltage malfunction",
+	"35-01": "EGCA malfunction",
+	"48-01": "No.3 secondary injector circuit malfunction",
+	"49-01": "No.4 secondary injector circuit malfunction",
+	"51-01": "HESD linear solenoid malfunction",
+	"56-01": "Knock sensor IC malfunction"
+}
+
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
@@ -320,6 +352,8 @@ if __name__ == '__main__':
 
 	parser_scan = subparsers.add_parser('scan', help='scan engine data')
 
+	parser_faults = subparsers.add_parser('faults', help='read fault codes')
+
 	parser_log = subparsers.add_parser('log', help='log engine data')
 
 	subparsers.required = True
@@ -331,7 +365,7 @@ if __name__ == '__main__':
 	offset = 0
 	binfile = None
 	ret = 1
-	if not args.mode in ["scan", "log", "read"]:
+	if not args.mode in ["faults", "scan", "log", "read"]:
 		if os.path.isabs(args.binfile):
 			binfile = args.binfile
 		else:
@@ -354,7 +388,7 @@ if __name__ == '__main__':
 			sys.exit(-2)
 		ecu.setup()
 
-		if ecu.kline() and args.mode != "scan":
+		if ecu.kline() and args.mode not in ["scan","log","faults"]:
 			print_header()
 			sys.stdout.write("Turn off bike\n")
 			while ecu.kline():
@@ -372,6 +406,8 @@ if __name__ == '__main__':
 			print_header()
 			sys.stdout.write("Entering diagnostic mode\n")
 			ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
+			info = ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=args.debug)
+			sys.stdout.write("  ECM ID: %s\n" % " ".join(["%02x" % b for b in info[2][3:]]))
 		except MaxRetriesException:
 			initok = False
 		except:
@@ -384,6 +420,34 @@ if __name__ == '__main__':
 				info = ecu.send_command([0x72], [0x71, j], debug=args.debug)
 				if info and len(info[2][2:]) > 0:
 					sys.stdout.write(" %s\t%s\n" % (hex(j), repr([b for b in info[2][2:]])))
+
+		elif args.mode == "faults":
+			print_header()
+			sys.stdout.write("Fault codes\n")
+			faults = {'past':[], 'current':[]}
+			for i in range(1,0x0c):
+				info_current = ecu.send_command([0x72],[0x74, i], debug=args.debug)[2]
+				for j in [3,5,7]:
+					if info_current[j] != 0:
+						faults['current'].append("%02d-%02d" % (info_current[j],info_current[j+1]))
+				if info_current[2] == 0:
+					break
+			for i in range(1,0x0c):
+				info_past = ecu.send_command([0x72],[0x73, i], debug=args.debug)[2]
+				for j in [3,5,7]:
+					if info_past[j] != 0:
+						faults['past'].append("%02d-%02d" % (info_past[j],info_past[j+1]))
+				if info_past[2] == 0:
+					break
+			if len(faults['current']) > 0:
+				sys.stdout.write("  Current:\n")
+				for code in faults['current']:
+					sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
+			if len(faults['past']) > 0:
+				sys.stdout.write("  Past:\n")
+				for code in faults['past']:
+					sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
+
 
 		elif args.mode == "read":
 			print_header()
