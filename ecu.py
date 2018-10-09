@@ -167,16 +167,16 @@ class HondaECU(object):
 		self.send_command([0x7b], [0x00, 0x01, 0x03], debug=debug)
 		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17], debug=debug) # seed/key?
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13], debug=debug) # seed/key?
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
 	def do_init_write(self, debug=False):
 		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x03], debug=debug)
 		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d], debug=debug) # seed/key?
 		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49], debug=debug) # seed/key?
+		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
 	def do_erase(self, debug=False):
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-		time.sleep(12)
 		self.send_command([0x7e], [0x01, 0x02], debug=debug)
 		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
@@ -188,6 +188,8 @@ class HondaECU(object):
 		self.send_command([0x7e], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7e], [0x01, 0x04, 0xff], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+
+	def do_erase_wait(self, debug=False):
 		while True:
 			info = self.send_command([0x7e], [0x01, 0x05], debug=debug)
 			if info[2][1] == 0x00:
@@ -419,7 +421,9 @@ if __name__ == '__main__':
 
 			print_header()
 			sys.stdout.write("Erasing ECU\n")
+			time.sleep(12)
 			ecu.do_erase(debug=args.debug)
+			ecu.do_erase_wait(debug=args.debug)
 
 			print_header()
 			sys.stdout.write("Writing ECU\n")
