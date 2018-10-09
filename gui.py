@@ -30,7 +30,7 @@ DEVICE_STATE_WRITE_FINALIZE = 13
 class FlashDialog(wx.Dialog):
 
 	def __init__(self, parent):
-		wx.Dialog.__init__(self, parent)
+		wx.Dialog.__init__(self, parent, size=(280,230))
 		self.parent = parent
 		mainbox = wx.BoxSizer(wx.VERTICAL)
 		self.msgoff = wx.StaticText(self, wx.ID_ANY, "Turn off ECU", style=wx.ALIGN_CENTRE)
@@ -50,13 +50,14 @@ class FlashDialog(wx.Dialog):
 		mainbox.Add(self.msgwrite, 0, wx.ALIGN_CENTER|wx.TOP, 40)
 		mainbox.Add(self.offactivity, 0, wx.ALIGN_CENTER, 0)
 		mainbox.Add(self.onactivity, 0, wx.ALIGN_CENTER, 0)
-		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.LEFT|wx.RIGHT, 40)
+		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.ALL, 40)
 		self.msgon.Show(False)
 		self.msgread.Show(False)
 		self.msgwrite.Show(False)
 		self.offactivity.Show(False)
 		self.SetSizer(mainbox)
 		self.Layout()
+		self.Center()
 
 	def WaitOff(self):
 		self.msgon.Show(False)
@@ -244,7 +245,7 @@ class HondaECU_GUI(wx.Frame):
 		#self.gobutton.Disable()
 		self.flashpsizer.Add(self.gobutton, pos=(4,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.BOTTOM|wx.RIGHT, border=10)
 		self.flashpsizer.AddGrowableRow(3,1)
-		self.flashpsizer.AddGrowableCol(4,1)
+		self.flashpsizer.AddGrowableCol(5,1)
 		flashp.SetSizer(self.flashpsizer)
 		self.notebook.AddPage(flashp, "Flash Operations")
 
