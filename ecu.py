@@ -353,6 +353,7 @@ if __name__ == '__main__':
 	parser_scan = subparsers.add_parser('scan', help='scan engine data')
 
 	parser_faults = subparsers.add_parser('faults', help='read fault codes')
+	parser_faults.add_argument('--clear', action='store_true', help="clear fault codes")
 
 	parser_log = subparsers.add_parser('log', help='log engine data')
 
@@ -422,6 +423,13 @@ if __name__ == '__main__':
 					sys.stdout.write(" %s\t%s\n" % (hex(j), repr([b for b in info[2][2:]])))
 
 		elif args.mode == "faults":
+			if args.clear:
+				print_header()
+				sys.stdout.write("Clearing fault codes\n")
+				while True:
+					info = ecu.send_command([0x72],[0x60, 0x03], debug=args.debug)[2]
+					if info[1] == 0x00:
+						break
 			print_header()
 			sys.stdout.write("Fault codes\n")
 			faults = {'past':[], 'current':[]}
