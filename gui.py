@@ -364,121 +364,124 @@ class HondaECU_GUI(wx.Frame):
 	def OnIdle(self, event):
 		if self.usbhotplug:
 			self.usbcontext.handleEventsTimeout(0)
-		if self.device_state == DEVICE_STATE_SETUP:
-			if self.ecu != None:
-				if self.ecu.loopTest() and self.ecu.kline():
-					self.ecu.setup()
-					# if self.ecu.init(debug=True):
-					self.device_state = DEVICE_STATE_CONNECTED
-					# 	self.statusbar.SetStatusText("ECU connected!")
-			else:
-				self.device_state = DEVICE_STATE_UNKNOWN
-		elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
-			self.ValidateModes()
-		elif self.device_state == DEVICE_STATE_POWER_OFF:
-			if not self.ecu.kline():
-				self.device_state = DEVICE_STATE_POWER_ON
-				self.flashdlg.WaitOn()
-		elif self.device_state == DEVICE_STATE_POWER_ON:
-			if self.ecu.kline():
-				self.device_state = DEVICE_STATE_INIT
-				self.init_wait = time.time()
-		elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
-			try:
-				self.initok = self.ecu.init(debug=True)
-			except MaxRetriesException:
-				self.initok = False
-			if self.initok:
-				print("Entering diagnostic mode")
-				self.ecu.send_command([0x72],[0x00, 0xf0], debug=True)
-			if self.mode.GetSelection() == 0:
-				self.device_state = DEVICE_STATE_READ_SECURITY
-				self.flashdlg.WaitRead()
-			elif self.mode.GetSelection() == 1:
-				self.device_state = DEVICE_STATE_WRITE_INIT
-				self.flashdlg.WaitWrite()
-			elif self.mode.GetSelection() == 2:
-				self.write_wait = time.time()
-				self.device_state = DEVICE_STATE_ERASE
-				print("Erasing ECU")
-				self.flashdlg.WaitWrite()
-		elif self.device_state == DEVICE_STATE_READ_SECURITY:
-			print("Security access")
-			self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=True)
-			self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=True)
-			self.initRead(list(self.binsizes.values())[self.size.GetSelection()])
-			self.file = open(self.readfpicker.GetPath(), "wb")
-			print("Reading ECU")
-			self.device_state = DEVICE_STATE_READ
-		elif self.device_state == DEVICE_STATE_READ:
-			if self.nbyte < self.maxbyte:
-				info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=True)
-				self.file.write(info[2])
-				self.file.flush()
-				self.nbyte += self.readsize
-				self.flashdlg.progress.SetValue(int(100*self.nbyte/self.maxbyte))
-			else:
-				self.device_state = DEVICE_STATE_READY
-				self.file.close()
-				self.flashdlg.EndModal(1)
-		elif self.device_state == DEVICE_STATE_RECOVER_INIT:
-			self.ecu.do_init_recover(debug=True)
-			self.write_wait = time.time()
-			self.device_state = DEVICE_STATE_ERASE
-			print("Erasing ECU")
-		elif self.device_state == DEVICE_STATE_WRITE_INIT:
-			print("Initializing write process")
-			try:
-				self.ecu.do_init_write(debug=True)
-				self.write_wait = time.time()
-				self.device_state = DEVICE_STATE_ERASE
-				print("Erasing ECU")
-			except MaxRetriesException:
-				if self.initok:
-					print("Switching to recovery mode")
-					self.device_state = DEVICE_STATE_RECOVER_INIT
+		try:
+			if self.device_state == DEVICE_STATE_SETUP:
+				if self.ecu != None:
+					if self.ecu.loopTest() and self.ecu.kline():
+						self.ecu.setup()
+						# if self.ecu.init(debug=True):
+						self.device_state = DEVICE_STATE_CONNECTED
+						# 	self.statusbar.SetStatusText("ECU connected!")
 				else:
+					self.device_state = DEVICE_STATE_UNKNOWN
+			elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
+				self.ValidateModes()
+			elif self.device_state == DEVICE_STATE_POWER_OFF:
+				if not self.ecu.kline():
+					self.device_state = DEVICE_STATE_POWER_ON
+					self.flashdlg.WaitOn()
+			elif self.device_state == DEVICE_STATE_POWER_ON:
+				if self.ecu.kline():
+					self.device_state = DEVICE_STATE_INIT
+					self.init_wait = time.time()
+			elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
+				try:
+					self.initok = self.ecu.init(debug=True)
+				except MaxRetriesException:
+					self.initok = False
+				if self.initok:
+					print("Entering diagnostic mode")
+					self.ecu.send_command([0x72],[0x00, 0xf0], debug=True)
+				if self.mode.GetSelection() == 0:
+					self.device_state = DEVICE_STATE_READ_SECURITY
+					self.flashdlg.WaitRead()
+				elif self.mode.GetSelection() == 1:
+					self.device_state = DEVICE_STATE_WRITE_INIT
+					self.flashdlg.WaitWrite()
+				elif self.mode.GetSelection() == 2:
 					self.write_wait = time.time()
 					self.device_state = DEVICE_STATE_ERASE
 					print("Erasing ECU")
-		elif self.device_state == DEVICE_STATE_ERASE and time.time() > self.write_wait+12:
-			self.ecu.do_erase()
-			self.device_state = DEVICE_STATE_ERASE_WAIT
-		elif self.device_state == DEVICE_STATE_ERASE_WAIT:
-			info = self.ecu.send_command([0x7e], [0x01, 0x05], debug=True)
-			if info[2][1] == 0x00:
-				self.ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=True)
-				with open(self.writefpicker.GetPath(), "rb") as fbin:
-					self.byts, fcksum, ccksum, fixed = validate_checksum(bytearray(fbin.read(os.path.getsize(self.writefpicker.GetPath()))), int(self.checksums[self.checksum.GetSelection()], 16), self.fixchecksum.IsChecked())
-				self.initWrite(list(self.binsizes.values())[self.size.GetSelection()])
-				print("Writing ECU")
-				self.device_state = DEVICE_STATE_WRITE
-		elif self.device_state == DEVICE_STATE_WRITE:
-			if self.i < self.maxi:
-				bytstart = [s for s in struct.pack(">H",(8*self.i))]
-				if self.i+1 == self.maxi:
-					bytend = [s for s in struct.pack(">H",0)]
+					self.flashdlg.WaitWrite()
+			elif self.device_state == DEVICE_STATE_READ_SECURITY:
+				print("Security access")
+				self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=True)
+				self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=True)
+				self.initRead(list(self.binsizes.values())[self.size.GetSelection()])
+				self.file = open(self.readfpicker.GetPath(), "wb")
+				print("Reading ECU")
+				self.device_state = DEVICE_STATE_READ
+			elif self.device_state == DEVICE_STATE_READ:
+				if self.nbyte < self.maxbyte:
+					info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=True)
+					self.file.write(info[2])
+					self.file.flush()
+					self.nbyte += self.readsize
+					self.flashdlg.progress.SetValue(int(100*self.nbyte/self.maxbyte))
 				else:
-					bytend = [s for s in struct.pack(">H",(8*(self.i+1)))]
-				d = list(self.byts[((self.i+0)*128):((self.i+1)*128)])
-				x = bytstart + d + bytend
-				c1 = checksum8bit(x)
-				c2 = checksum8bitHonda(x)
-				x = [0x01, 0x06] + x + [c1, c2]
-				info = self.ecu.send_command([0x7e], x, debug=True)
-				if ord(info[1]) != 5:
-					self.device_state = DEVICE_STATE_ERROR
-				self.i += 1
-				if self.i % 2 == 0:
-					self.ecu.send_command([0x7e], [0x01, 0x08], debug=True)
-				self.flashdlg.progress.SetValue(int(100*self.i/self.maxi))
-			else:
-				self.device_state = DEVICE_STATE_WRITE_FINALIZE
-		elif self.device_state == DEVICE_STATE_WRITE_FINALIZE:
-			print("Finalizing write process")
-			self.ecu.do_post_write(debug=True)
-			self.device_state = DEVICE_STATE_READY
-			self.flashdlg.EndModal(1)
+					self.device_state = DEVICE_STATE_READY
+					self.file.close()
+					self.flashdlg.EndModal(1)
+			elif self.device_state == DEVICE_STATE_RECOVER_INIT:
+				self.ecu.do_init_recover(debug=True)
+				self.write_wait = time.time()
+				self.device_state = DEVICE_STATE_ERASE
+				print("Erasing ECU")
+			elif self.device_state == DEVICE_STATE_WRITE_INIT:
+				print("Initializing write process")
+				try:
+					self.ecu.do_init_write(debug=True)
+					self.write_wait = time.time()
+					self.device_state = DEVICE_STATE_ERASE
+					print("Erasing ECU")
+				except MaxRetriesException:
+					if self.initok:
+						print("Switching to recovery mode")
+						self.device_state = DEVICE_STATE_RECOVER_INIT
+					else:
+						self.write_wait = time.time()
+						self.device_state = DEVICE_STATE_ERASE
+						print("Erasing ECU")
+			elif self.device_state == DEVICE_STATE_ERASE and time.time() > self.write_wait+12:
+				self.ecu.do_erase()
+				self.device_state = DEVICE_STATE_ERASE_WAIT
+			elif self.device_state == DEVICE_STATE_ERASE_WAIT:
+				info = self.ecu.send_command([0x7e], [0x01, 0x05], debug=True)
+				if info[2][1] == 0x00:
+					self.ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=True)
+					with open(self.writefpicker.GetPath(), "rb") as fbin:
+						self.byts, fcksum, ccksum, fixed = validate_checksum(bytearray(fbin.read(os.path.getsize(self.writefpicker.GetPath()))), int(self.checksums[self.checksum.GetSelection()], 16), self.fixchecksum.IsChecked())
+					self.initWrite(list(self.binsizes.values())[self.size.GetSelection()])
+					print("Writing ECU")
+					self.device_state = DEVICE_STATE_WRITE
+			elif self.device_state == DEVICE_STATE_WRITE:
+				if self.i < self.maxi:
+					bytstart = [s for s in struct.pack(">H",(8*self.i))]
+					if self.i+1 == self.maxi:
+						bytend = [s for s in struct.pack(">H",0)]
+					else:
+						bytend = [s for s in struct.pack(">H",(8*(self.i+1)))]
+					d = list(self.byts[((self.i+0)*128):((self.i+1)*128)])
+					x = bytstart + d + bytend
+					c1 = checksum8bit(x)
+					c2 = checksum8bitHonda(x)
+					x = [0x01, 0x06] + x + [c1, c2]
+					info = self.ecu.send_command([0x7e], x, debug=True)
+					if ord(info[1]) != 5:
+						self.device_state = DEVICE_STATE_ERROR
+					self.i += 1
+					if self.i % 2 == 0:
+						self.ecu.send_command([0x7e], [0x01, 0x08], debug=True)
+					self.flashdlg.progress.SetValue(int(100*self.i/self.maxi))
+				else:
+					self.device_state = DEVICE_STATE_WRITE_FINALIZE
+			elif self.device_state == DEVICE_STATE_WRITE_FINALIZE:
+				print("Finalizing write process")
+				self.ecu.do_post_write(debug=True)
+				self.device_state = DEVICE_STATE_READY
+				self.flashdlg.EndModal(1)
+		except pylibftdi._base.FtdiError as e:
+			self.device_state = DEVICE_STATE_UNKNOWN
 		event.RequestMore()
 		#print(self.device_state)
 
