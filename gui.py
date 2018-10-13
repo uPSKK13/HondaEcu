@@ -137,9 +137,10 @@ class HondaECU_GUI(wx.Frame):
 		for device in self.ftdi_devices:
 			if not device in new_devices:
 				if device == self.ftdi_active:
-					self.ecu.dev.close()
-					del self.ecu
-					self.ecu = None
+					if self.ecu != None:
+						self.ecu.dev.close()
+						del self.ecu
+						self.ecu = None
 					print("Deactivating device (%s)" % self.ftdi_active)
 					self.ftdi_active = None
 				self.ftdi_devices.remove(device)
