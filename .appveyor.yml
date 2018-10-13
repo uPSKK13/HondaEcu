@@ -19,7 +19,9 @@ install:
   - sh: sudo apt-get install -y libpython3.6-dev libftdi1 libftdi1-dev
   - sh: pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 wxPython
   - ps: Start-FileDownload 'https://github.com/libusb/libusb/releases/download/v1.0.22/libusb-1.0.22.7z'
+  - ps: Invoke-WebRequest -Uri 'https://sourceforge.net/projects/picusb/files/libftdi1-1.4git_devkit_x86_x64_14June2018.zip/download?use_mirror=newcontinuum&r=&use_mirror=newcontinuum' -OutFile libftdi1-1.4git_devkit_x86_x64_14June2018.zip -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome
   - cmd: 7z x libusb-1.0.22.7z
+  - cmd: 7z x libftdi1-1.4git_devkit_x86_x64_14June2018.zip
   - cmd: pip install wxPython
   - pip install libusb1
   - pip install pylibftdi
@@ -27,7 +29,7 @@ install:
 
 build_script:
   - cmd: python -m PyInstaller --onefile --clean ecu.py --name HondaECU_old
-  - cmd: python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary MS32/dll/libusb-1.0.dll;. gui.py --name HondaECU --icon=honda.ico
+  - cmd: python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary MS32/dll/libusb-1.0.dll;. --add-binary libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll;. gui.py --name HondaECU --icon=honda.ico
 
 artifacts:
   - path: dist\*
