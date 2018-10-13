@@ -8,7 +8,7 @@ import platform
 import time
 import struct
 
-from ecu import HondaECU, validate_checksum, checksum8bit, checksum8bitHonda
+from ecu import HondaECU, MaxRetriesException, validate_checksum, checksum8bit, checksum8bitHonda
 
 DEVICE_STATE_ERROR = -2
 DEVICE_STATE_UNKNOWN = -1
@@ -364,11 +364,14 @@ class HondaECU_GUI(wx.Frame):
 		if self.usbhotplug:
 			self.usbcontext.handleEventsTimeout(0)
 		if self.device_state == DEVICE_STATE_SETUP:
-			if self.ecu.loopTest() and self.ecu.kline():
-				self.ecu.setup()
-				# if self.ecu.init(debug=True):
-				self.device_state = DEVICE_STATE_CONNECTED
-				# 	self.statusbar.SetStatusText("ECU connected!")
+			if self.ecu != None:
+				if self.ecu.loopTest() and self.ecu.kline():
+					self.ecu.setup()
+					# if self.ecu.init(debug=True):
+					self.device_state = DEVICE_STATE_CONNECTED
+					# 	self.statusbar.SetStatusText("ECU connected!")
+			else:
+				self.device_state = DEVICE_STATE_UNKNOWN
 		elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
 			self.ValidateModes()
 		elif self.device_state == DEVICE_STATE_POWER_OFF:
@@ -380,23 +383,31 @@ class HondaECU_GUI(wx.Frame):
 				self.device_state = DEVICE_STATE_INIT
 				self.init_wait = time.time()
 		elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
-			if True:#self.ecu.init(debug=True):
-				#self.ecu.send_command([0x72],[0x00, 0xf0], debug=True)
-				if self.mode.GetSelection() == 0:
-					self.device_state = DEVICE_STATE_READ_SECURITY
-					self.flashdlg.WaitRead()
-				elif self.mode.GetSelection() == 1:
-					self.device_state = DEVICE_STATE_WRITE_INIT
-					self.flashdlg.WaitWrite()
-				elif self.mode.GetSelection() == 2:
-					self.write_wait = time.time()
-					self.device_state = DEVICE_STATE_ERASE
-					self.flashdlg.WaitWrite()
+			try:
+				self.initok = self.ecu.init(debug=True)
+			except MaxRetriesException:
+				self.initok = False
+			if self.initok:
+				print("Entering diagnostic mode")
+				self.ecu.send_command([0x72],[0x00, 0xf0], debug=True)
+			if self.mode.GetSelection() == 0:
+				self.device_state = DEVICE_STATE_READ_SECURITY
+				self.flashdlg.WaitRead()
+			elif self.mode.GetSelection() == 1:
+				self.device_state = DEVICE_STATE_WRITE_INIT
+				self.flashdlg.WaitWrite()
+			elif self.mode.GetSelection() == 2:
+				self.write_wait = time.time()
+				self.device_state = DEVICE_STATE_ERASE
+				print("Erasing ECU")
+				self.flashdlg.WaitWrite()
 		elif self.device_state == DEVICE_STATE_READ_SECURITY:
+			print("Security access")
 			self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=True)
 			self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=True)
-			self.flashdlg.initRead(list(self.binsizes.values())[self.size.GetSelection()])
+			self.initRead(list(self.binsizes.values())[self.size.GetSelection()])
 			self.file = open(self.readfpicker.GetPath(), "wb")
+			print("Reading ECU")
 			self.device_state = DEVICE_STATE_READ
 		elif self.device_state == DEVICE_STATE_READ:
 			if self.nbyte < self.maxbyte:
@@ -411,12 +422,24 @@ class HondaECU_GUI(wx.Frame):
 				self.flashdlg.EndModal(1)
 		elif self.device_state == DEVICE_STATE_RECOVER_INIT:
 			self.ecu.do_init_recover(debug=True)
-			self.device_state = DEVICE_STATE_ERASE
 			self.write_wait = time.time()
+			self.device_state = DEVICE_STATE_ERASE
+			print("Erasing ECU")
 		elif self.device_state == DEVICE_STATE_WRITE_INIT:
-			self.ecu.do_init_write(debug=True)
-			self.device_state = DEVICE_STATE_ERASE
-			self.write_wait = time.time()
+			print("Initializing write process")
+			try:
+				self.ecu.do_init_write(debug=True)
+				self.write_wait = time.time()
+				self.device_state = DEVICE_STATE_ERASE
+				print("Erasing ECU")
+			except MaxRetriesException:
+				if self.initok:
+					print("Switching to recovery mode")
+					self.device_state = DEVICE_STATE_RECOVER_INIT
+				else:
+					self.write_wait = time.time()
+					self.device_state = DEVICE_STATE_ERASE
+					print("Erasing ECU")
 		elif self.device_state == DEVICE_STATE_ERASE and time.time() > self.write_wait+12:
 			self.ecu.do_erase()
 			self.device_state = DEVICE_STATE_ERASE_WAIT
@@ -427,6 +450,7 @@ class HondaECU_GUI(wx.Frame):
 				with open(self.writefpicker.GetPath(), "rb") as fbin:
 					self.byts, fcksum, ccksum, fixed = validate_checksum(bytearray(fbin.read(os.path.getsize(self.writefpicker.GetPath()))), int(self.checksums[self.checksum.GetSelection()], 16), self.fixchecksum.IsChecked())
 				self.initWrite(list(self.binsizes.values())[self.size.GetSelection()])
+				print("Writing ECU")
 				self.device_state = DEVICE_STATE_WRITE
 		elif self.device_state == DEVICE_STATE_WRITE:
 			if self.i < self.maxi:
@@ -450,6 +474,7 @@ class HondaECU_GUI(wx.Frame):
 			else:
 				self.device_state = DEVICE_STATE_WRITE_FINALIZE
 		elif self.device_state == DEVICE_STATE_WRITE_FINALIZE:
+			print("Finalizing write process")
 			self.ecu.do_post_write(debug=True)
 			self.device_state = DEVICE_STATE_READY
 			self.flashdlg.EndModal(1)
