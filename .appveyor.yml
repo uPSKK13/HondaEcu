@@ -1,18 +1,20 @@
 image:
-- Visual Studio 2017
-#- Ubuntu
+  - Visual Studio 2017
+  #- Ubuntu
 
 stack: python 3.6
 
 environment:
   PY_DIR: C:\Python36
 
-platform: x86
+platform:
+  - x86
+  - x64
 
 build: off
 
 init:
-- cmd: set PATH=%PY_DIR%;%PY_DIR%\Scripts;%PATH%
+  - cmd: set PATH=%PY_DIR%;%PY_DIR%\Scripts;%PATH%
 
 install:
   - sh: wget -q -O /tmp/libpng12.deb http://mirrors.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1_amd64.deb && dpkg -i /tmp/libpng12.deb && rm /tmp/libpng12.deb
@@ -29,7 +31,9 @@ install:
 
 build_script:
   - cmd: python -m PyInstaller --onefile --clean ecu.py --name HondaECU_old
-  - cmd: python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary MS32/dll/libusb-1.0.dll;. --add-binary libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll;. gui.py --name HondaECU --icon=honda.ico
+  matrix:
+    - cmd: python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary MS32/dll/libusb-1.0.dll;. --add-binary libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll;. gui.py --name HondaECU_x86 --icon=honda.ico
+    - cmd: python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary MS64/dll/libusb-1.0.dll;. --add-binary libftdi1-1.4git_devkit_x86_x64_14June2018/bin64/libftdi1.dll;. gui.py --name HondaECU_x64 --icon=honda.ico
 
 artifacts:
   - path: dist\*
