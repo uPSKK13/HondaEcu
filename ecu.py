@@ -9,16 +9,23 @@ import platform
 import os
 import argparse
 
+ECM_IDs = {
+	"\x01\x00\xf3\x04\x01": ("CBR1000RR","2012-2013","38770-MGP-A01"),
+	"\x01\x01\x83\x01\x01": ("CBR1000RR","2014-2016","38770-MGP-D62"),
+	"\x01\x01\x83\x04\x01": ("CBR1000RR","2014-2016","38770-MGP-A92"),
+	"\x01\x01\x25\x05\x01": ("CBR500R","2013-2014","38770-MGZ-A03"),
+}
+
 DTC = {
-	"01-01": "MAP sensor circuit low voltage (less than 0.2 V)",
-	"01-02": "MAP sensor circuit high voltage (more than 3.9 V)",
+	"01-01": "MAP sensor circuit low voltage",
+	"01-02": "MAP sensor circuit high voltage",
 	"02-01": "MAP sensor performance problem",
-	"07-01": "ECT sensor circuit low voltage (less than 0.07 V)",
-	"07-02": "ECT sensor circuit high voltage (more than 4.93 V)",
-	"08-01": "TP sensor circuit low voltage (less than 0.3 V)",
-	"08-02": "TP sensor circuit high voltage (more than 4.93 V)",
-	"09-01": "IAT sensor circuit low voltage (less than 0.07 V)",
-	"09-02": "IAT sensor circuit high voltage (more than 4.93 V)",
+	"07-01": "ECT sensor circuit low voltage",
+	"07-02": "ECT sensor circuit high voltage",
+	"08-01": "TP sensor circuit low voltage",
+	"08-02": "TP sensor circuit high voltage",
+	"09-01": "IAT sensor circuit low voltage",
+	"09-02": "IAT sensor circuit high voltage",
 	"11-01": "VS sensor no signal",
 	"12-01": "No.1 primary injector circuit malfunction",
 	"13-01": "No.2 primary injector circuit malfunction",
@@ -28,6 +35,8 @@ DTC = {
 	"17-01": "No.2 secondary injector circuit malfunction",
 	"18-01": "CMP sensor no signal",
 	"19-01": "CKP sensor no signal",
+	"21-01": "0₂ sensor malfunction",
+	"23-01": "0₂ sensor heater malfunction",
 	"25-02": "Knock sensor circuit malfunction",
 	"25-03": "Knock sensor circuit malfunction",
 	"29-01": "IACV circuit malfunction",
@@ -38,7 +47,10 @@ DTC = {
 	"48-01": "No.3 secondary injector circuit malfunction",
 	"49-01": "No.4 secondary injector circuit malfunction",
 	"51-01": "HESD linear solenoid malfunction",
-	"56-01": "Knock sensor IC malfunction"
+	"54-01": "Bank angle sensor circuit low voltage",
+	"54-02": "Bank angle sensor circuit high voltage",
+	"56-01": "Knock sensor IC malfunction",
+	"86-01": "Serial communication malfunction"
 }
 
 def checksum8bitHonda(data):
