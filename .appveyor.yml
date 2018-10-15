@@ -40,8 +40,7 @@ install:
   - '%PYTHON_HOME%\Scripts\pip install pyinstaller'
 
 build_script:
-  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean ecu.py --name HondaECU_old'
-  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary %LIBUSB%;. --add-binary %LIBFTDI%;. gui.py --name HondaECU_%SUFFIX% --icon=honda.ico'
+  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary waitoff.gif;. --add-binary waiton.gif;. --add-binary %LIBUSB%;. --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU_%SUFFIX% --icon=honda.ico'
 
 artifacts:
   - path: dist\*
