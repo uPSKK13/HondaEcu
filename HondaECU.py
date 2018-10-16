@@ -504,6 +504,7 @@ if __name__ == '__main__':
 	parser_write.add_argument('--checksum', default=default_checksum, type=Hex(), help="hex location of checksum in binfile")
 	parser_write.add_argument('--rom-size', default=default_romsize, type=int, help="size of ecu rom in kilobytes")
 	parser_write.add_argument('--fix-checksum', action='store_true', help="fix checksum before write")
+	parser_write.add_argument('--force', action='store_true', help="force write (old-school recovery)")
 
 	parser_recover = subparsers.add_parser('recover', help='recover ecu from binfile')
 	parser_recover.add_argument('binfile', help="name of input binfile")
@@ -565,107 +566,101 @@ if __name__ == '__main__':
 				sys.exit(-2)
 			ecu.setup()
 
-			if ecu.kline() and args.mode not in ["scan","log","faults"]:
-				print_header()
-				sys.stdout.write("Turn off bike\n")
-				while ecu.kline():
-					time.sleep(.1)
-			if not ecu.kline():
+			initok = False
+			if ecu.init(debug=args.debug):
+				if args.mode not in ["scan","log","faults"]:
+					print_header()
+					sys.stdout.write("Turn off bike\n")
+					while ecu.init(debug=args.debug):
+						time.sleep(.1)
+				else:
+					initok = True
+			if not initok:
 				sys.stdout.write("Turn on bike\n")
-				while not ecu.kline():
+				while not ecu.init(debug=args.debug):
 					time.sleep(.1)
 				time.sleep(.5)
+				initok = True
 
-			print_header()
-			sys.stdout.write("Wake-up ECU\n")
-			try:
-				initok = ecu.init(debug=args.debug)
+			if initok:
+				print_header()
+				sys.stdout.write("ECU connected\n")
 				print_header()
 				sys.stdout.write("Entering diagnostic mode\n")
 				ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
 				info = ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=args.debug)
 				sys.stdout.write("  ECM ID: %s\n" % " ".join(["%02x" % b for b in info[2][3:]]))
-			except MaxRetriesException:
-				initok = False
-			except:
-				sys.exit(-1)
 
-			if args.mode == "scan":
-				print_header()
-				sys.stdout.write("HDS Tables\n")
-				for j in range(256):
-					info = ecu.send_command([0x72], [0x71, j], debug=args.debug)
-					if info and len(info[2][2:]) > 0:
-						sys.stdout.write(" %s\t%s\n" % (hex(j), repr([b for b in info[2][2:]])))
-
-			elif args.mode == "faults":
-				if args.clear:
+				if args.mode == "scan":
 					print_header()
-					sys.stdout.write("Clearing fault codes\n")
-					while True:
-						info = ecu.send_command([0x72],[0x60, 0x03], debug=args.debug)[2]
-						if info[1] == 0x00:
+					sys.stdout.write("HDS Tables\n")
+					for j in range(256):
+						info = ecu.send_command([0x72], [0x71, j], debug=args.debug)
+						if info and len(info[2][2:]) > 0:
+							sys.stdout.write(" %s\t%s\n" % (hex(j), repr([b for b in info[2][2:]])))
+
+				elif args.mode == "faults":
+					if args.clear:
+						print_header()
+						sys.stdout.write("Clearing fault codes\n")
+						while True:
+							info = ecu.send_command([0x72],[0x60, 0x03], debug=args.debug)[2]
+							if info[1] == 0x00:
+								break
+					print_header()
+					sys.stdout.write("Fault codes\n")
+					faults = {'past':[], 'current':[]}
+					for i in range(1,0x0c):
+						info_current = ecu.send_command([0x72],[0x74, i], debug=args.debug)[2]
+						for j in [3,5,7]:
+							if info_current[j] != 0:
+								faults['current'].append("%02d-%02d" % (info_current[j],info_current[j+1]))
+						if info_current[2] == 0:
 							break
-				print_header()
-				sys.stdout.write("Fault codes\n")
-				faults = {'past':[], 'current':[]}
-				for i in range(1,0x0c):
-					info_current = ecu.send_command([0x72],[0x74, i], debug=args.debug)[2]
-					for j in [3,5,7]:
-						if info_current[j] != 0:
-							faults['current'].append("%02d-%02d" % (info_current[j],info_current[j+1]))
-					if info_current[2] == 0:
-						break
-				for i in range(1,0x0c):
-					info_past = ecu.send_command([0x72],[0x73, i], debug=args.debug)[2]
-					for j in [3,5,7]:
-						if info_past[j] != 0:
-							faults['past'].append("%02d-%02d" % (info_past[j],info_past[j+1]))
-					if info_past[2] == 0:
-						break
-				if len(faults['current']) > 0:
-					sys.stdout.write("  Current:\n")
-					for code in faults['current']:
-						sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
-				if len(faults['past']) > 0:
-					sys.stdout.write("  Past:\n")
-					for code in faults['past']:
-						sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
+					for i in range(1,0x0c):
+						info_past = ecu.send_command([0x72],[0x73, i], debug=args.debug)[2]
+						for j in [3,5,7]:
+							if info_past[j] != 0:
+								faults['past'].append("%02d-%02d" % (info_past[j],info_past[j+1]))
+						if info_past[2] == 0:
+							break
+					if len(faults['current']) > 0:
+						sys.stdout.write("  Current:\n")
+						for code in faults['current']:
+							sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
+					if len(faults['past']) > 0:
+						sys.stdout.write("  Past:\n")
+						for code in faults['past']:
+							sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
 
 
-			elif args.mode == "read":
-				print_header()
-				sys.stdout.write("Security access\n")
-				ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
-				ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
+				elif args.mode == "read":
+					print_header()
+					sys.stdout.write("Security access\n")
+					ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=args.debug)
+					ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=args.debug)
 
-				print_header()
-				sys.stdout.write("Reading ECU\n")
-				do_read_flash(ecu, binfile, args.rom_size, debug=args.debug)
-				do_validation(binfile, args.checksum)
+					print_header()
+					sys.stdout.write("Reading ECU\n")
+					do_read_flash(ecu, binfile, args.rom_size, debug=args.debug)
+					do_validation(binfile, args.checksum)
 
-			else:
-				if args.mode == "write":
+				elif args.mode == "write":
 					print_header()
 					sys.stdout.write("Initializing write process\n")
-					try:
-						ecu.do_init_write(debug=args.debug)
-					except MaxRetriesException:
-						args.mode = "recover"
-						sys.stdout.write("Switching to recovery mode\n")
-					except:
-						sys.exit(-1)
+					ecu.do_init_write(debug=args.debug)
 
-				if args.mode == "recover":
-					if initok:
-						print_header()
-						sys.stdout.write("Initializing recovery process\n")
-						ecu.do_init_recover(debug=args.debug)
+				elif args.mode == "recover":
+					print_header()
+					sys.stdout.write("Initializing recovery process\n")
+					ecu.do_init_recover(debug=args.debug)
 
-						print_header()
-						sys.stdout.write("Entering enhanced diagnostic mode\n")
-						ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
-						ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
+					print_header()
+					sys.stdout.write("Entering enhanced diagnostic mode\n")
+					ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
+					ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
+
+			if args.mode in ["write", "recover"] and (initok or args.force):
 
 				print_header()
 				sys.stdout.write("Erasing ECU\n")
