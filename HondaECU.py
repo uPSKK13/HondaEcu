@@ -38,10 +38,8 @@ class FlashDialog(wx.Dialog):
 		self.msgon = wx.StaticText(self, wx.ID_ANY, "Turn on ECU", style=wx.ALIGN_CENTRE)
 		self.msgread = wx.StaticText(self, wx.ID_ANY, "Reading ECU", style=wx.ALIGN_CENTRE)
 		self.msgwrite = wx.StaticText(self, wx.ID_ANY, "Writing ECU", style=wx.ALIGN_CENTRE)
-		self.offactivity = wx.adv.AnimationCtrl(self, wx.ID_ANY)
-		self.onactivity = wx.adv.AnimationCtrl(self, wx.ID_ANY)
-		self.offactivity.LoadFile(self.parent.waitoffgif)
-		self.onactivity.LoadFile(self.parent.waitongif)
+		self.offimage = wx.StaticBitmap(self, wx.ID_ANY, wx.Image(self.parent.offpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+		self.onimage = wx.StaticBitmap(self, wx.ID_ANY, wx.Image(self.parent.onpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
 		self.progress = wx.Gauge(self, wx.ID_ANY)
 		self.progress.SetRange(100)
 		self.progress.SetValue(0)
@@ -49,13 +47,13 @@ class FlashDialog(wx.Dialog):
 		mainbox.Add(self.msgon, 0, wx.ALIGN_CENTER|wx.TOP, 40)
 		mainbox.Add(self.msgread, 0, wx.ALIGN_CENTER|wx.TOP, 40)
 		mainbox.Add(self.msgwrite, 0, wx.ALIGN_CENTER|wx.TOP, 40)
-		mainbox.Add(self.offactivity, 0, wx.ALIGN_CENTER, 0)
-		mainbox.Add(self.onactivity, 0, wx.ALIGN_CENTER, 0)
+		mainbox.Add(self.offimage, 0, wx.ALIGN_CENTER|wx.TOP, 10)
+		mainbox.Add(self.onimage, 0, wx.ALIGN_CENTER|wx.TOP, 10)
 		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.ALL, 40)
 		self.msgon.Show(False)
 		self.msgread.Show(False)
 		self.msgwrite.Show(False)
-		self.offactivity.Show(False)
+		self.offimage.Show(False)
 		self.SetSizer(mainbox)
 		self.Layout()
 		self.Center()
@@ -66,10 +64,8 @@ class FlashDialog(wx.Dialog):
 		self.msgread.Show(False)
 		self.msgwrite.Show(False)
 		self.progress.Show(False)
-		self.onactivity.Show(False)
-		self.offactivity.Show(True)
-		self.onactivity.Stop()
-		self.offactivity.Play()
+		self.onimage.Show(False)
+		self.offimage.Show(True)
 		self.Layout()
 
 	def WaitOn(self):
@@ -78,10 +74,8 @@ class FlashDialog(wx.Dialog):
 		self.msgread.Show(False)
 		self.msgwrite.Show(False)
 		self.progress.Show(False)
-		self.onactivity.Show(True)
-		self.offactivity.Show(False)
-		self.onactivity.Play()
-		self.offactivity.Stop()
+		self.onimage.Show(True)
+		self.offimage.Show(False)
 		self.Layout()
 
 	def WaitRead(self):
@@ -90,10 +84,8 @@ class FlashDialog(wx.Dialog):
 		self.msgread.Show(True)
 		self.msgwrite.Show(False)
 		self.progress.Show(True)
-		self.onactivity.Show(False)
-		self.offactivity.Show(False)
-		self.onactivity.Stop()
-		self.offactivity.Stop()
+		self.onimage.Show(False)
+		self.offimage.Show(False)
 		self.Layout()
 
 	def WaitWrite(self):
@@ -102,10 +94,8 @@ class FlashDialog(wx.Dialog):
 		self.msgread.Show(False)
 		self.msgwrite.Show(True)
 		self.progress.Show(True)
-		self.onactivity.Show(False)
-		self.offactivity.Show(False)
-		self.onactivity.Stop()
-		self.offactivity.Stop()
+		self.onimage.Show(False)
+		self.offimage.Show(False)
 		self.Layout()
 
 class HondaECU_GUI(wx.Frame):
@@ -180,6 +170,7 @@ class HondaECU_GUI(wx.Frame):
 	def __init__(self, usbcontext):
 		self.init_wait = -1
 		self.write_wait = -1
+		self.ecu = None
 		self.device_state = DEVICE_STATE_UNKNOWN
 		self.ftdi_devices = []
 		self.ftdi_active = None
@@ -196,8 +187,8 @@ class HondaECU_GUI(wx.Frame):
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
 		ip = os.path.join(self.basepath,"honda.ico")
-		self.waitoffgif = os.path.join(self.basepath, "waitoff.gif")
-		self.waitongif = os.path.join(self.basepath, "waiton.gif")
+		self.offpng = os.path.join(self.basepath, "power_off.png")
+		self.onpng = os.path.join(self.basepath, "power_on.png")
 
 		ib = wx.IconBundle()
 		ib.AddIcon(ip)
@@ -244,7 +235,7 @@ class HondaECU_GUI(wx.Frame):
 		self.flashpsizer.Add(self.checksum, pos=(2,4), flag=wx.TOP, border=5)
 		self.flashpsizer.Add(self.fixchecksum, pos=(2,5), flag=wx.TOP|wx.LEFT|wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL, border=5)
 		self.gobutton = wx.Button(flashp, wx.ID_ANY, "Start")
-		#self.gobutton.Disable()
+		self.gobutton.Disable()
 		self.flashpsizer.Add(self.gobutton, pos=(4,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.BOTTOM|wx.RIGHT, border=10)
 		self.flashpsizer.AddGrowableRow(3,1)
 		self.flashpsizer.AddGrowableCol(5,1)
@@ -282,16 +273,13 @@ class HondaECU_GUI(wx.Frame):
 			self.usbpolltimer.Start(250)
 
 	def OnGo(self, event):
-		if self.ecu.kline():
-			self.device_state = DEVICE_STATE_POWER_OFF
-			self.flashdlg.WaitOff()
-		else:
-			self.device_state = DEVICE_STATE_POWER_ON
-			self.flashdlg.WaitOn()
+		self.device_state = DEVICE_STATE_POWER_OFF
+		self.flashdlg.WaitOff()
 		if self.flashdlg.ShowModal() == 1:
-			print('All good')
+			pass
 		else:
-			print('Abort')
+			self.device_state = DEVICE_STATE_UNKNOWN
+			self.statusbar.SetStatusText("")
 
 	def OnModeChange(self, event):
 		if self.mode.GetSelection() == 0:
@@ -316,14 +304,17 @@ class HondaECU_GUI(wx.Frame):
 					del self.ecu
 					self.ecu = None
 		self.ftdi_active = newdevice
-		print("Activating device (%s)" % self.ftdi_active)
 		try:
 			self.device_state = DEVICE_STATE_UNKNOWN
+			self.statusbar.SetStatusText("")
 			self.ecu = HondaECU(device_id=self.ftdi_active.getSerialNumber())
+			print("Activating device (%s)" % self.ftdi_active)
 			self.device_state = DEVICE_STATE_SETUP
 		except usb1.USBErrorNotSupported as e:
 			self.ecu = None
 			self.statusbar.SetStatusText("Incorrect driver for device, install libusbK with Zadig!")
+		except usb1.USBErrorBusy:
+			self.ecu = None
 
 	def UpdateDeviceList(self):
 		self.m_devices.Clear()
@@ -332,6 +323,8 @@ class HondaECU_GUI(wx.Frame):
 			try:
 				n += " | " + d.getSerialNumber()
 			except usb1.USBErrorNotSupported:
+				pass
+			except usb1.USBErrorBusy:
 				pass
 			self.m_devices.Append(n)
 			if self.ftdi_active == d:
@@ -354,42 +347,51 @@ class HondaECU_GUI(wx.Frame):
 			p = self.writefpicker.GetPath()
 		if len(p) == 0:
 			ready = False
-		# if ready:
-		# 	self.device_state = DEVICE_STATE_READY
-		# 	self.gobutton.Enable()
-		# else:
-		# 	self.device_state = DEVICE_STATE_CONNECTED
-		# 	self.gobutton.Disable()
+		if ready:
+			self.device_state = DEVICE_STATE_READY
+			self.gobutton.Enable()
+		else:
+			self.device_state = DEVICE_STATE_CONNECTED
+			self.gobutton.Disable()
 		return ready
 
 	def OnIdle(self, event):
 		if self.usbhotplug:
 			self.usbcontext.handleEventsTimeout(0)
 		try:
-			if self.device_state == DEVICE_STATE_SETUP:
+			if self.device_state == DEVICE_STATE_UNKNOWN:
+				self.gobutton.Disable()
 				if self.ecu != None:
-					if self.ecu.loopTest() and self.ecu.kline():
-						self.ecu.setup()
-						# if self.ecu.init(debug=True):
+					self.ecu.dev.close()
+					del self.ecu
+					self.ecu = None
+				self.ftdi_active = None
+				self.UpdateDeviceList()
+			elif self.device_state == DEVICE_STATE_SETUP:
+				if self.ecu != None:
+					if self.ecu.init(debug=True):
 						self.device_state = DEVICE_STATE_CONNECTED
-						# 	self.statusbar.SetStatusText("ECU connected!")
+						self.statusbar.SetStatusText("ECU connected!")
+					else:
+						self.statusbar.SetStatusText("Cannot connect to ECU, check connections and power cycle ECU!")
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
-				self.ValidateModes()
+				info = self.ecu.send_command([0x72],[0x00, 0xf0], debug=True, retries=0)
+				if info!=None and info[2]==b"\x00":
+					self.ValidateModes()
+				else:
+					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state == DEVICE_STATE_POWER_OFF:
-				if not self.ecu.kline():
+				if not self.ecu.init(debug=True):
 					self.device_state = DEVICE_STATE_POWER_ON
 					self.flashdlg.WaitOn()
 			elif self.device_state == DEVICE_STATE_POWER_ON:
-				if self.ecu.kline():
+				if self.ecu.init(debug=True):
 					self.device_state = DEVICE_STATE_INIT
 					self.init_wait = time.time()
 			elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
-				try:
-					self.initok = self.ecu.init(debug=True)
-				except MaxRetriesException:
-					self.initok = False
+				self.initok = self.ecu.init(debug=True)
 				if self.initok:
 					print("Entering diagnostic mode")
 					self.ecu.send_command([0x72],[0x00, 0xf0], debug=True)
@@ -415,10 +417,15 @@ class HondaECU_GUI(wx.Frame):
 			elif self.device_state == DEVICE_STATE_READ:
 				if self.nbyte < self.maxbyte:
 					info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=True)
-					self.file.write(info[2])
-					self.file.flush()
-					self.nbyte += self.readsize
-					self.flashdlg.progress.SetValue(int(100*self.nbyte/self.maxbyte))
+					if info != None:
+						self.file.write(info[2])
+						self.file.flush()
+						self.nbyte += self.readsize
+						self.flashdlg.progress.SetValue(int(100*self.nbyte/self.maxbyte))
+					else:
+						self.flashdlg.EndModal(-1)
+						self.device_state = DEVICE_STATE_UNKNOWN
+						self.statusbar.SetStatusText("")
 				else:
 					self.device_state = DEVICE_STATE_READY
 					self.file.close()
@@ -481,8 +488,12 @@ class HondaECU_GUI(wx.Frame):
 				self.ecu.do_post_write(debug=True)
 				self.device_state = DEVICE_STATE_READY
 				self.flashdlg.EndModal(1)
-		except pylibftdi._base.FtdiError as e:
+		except pylibftdi._base.FtdiError:
 			self.device_state = DEVICE_STATE_UNKNOWN
+			self.statusbar.SetStatusText("")
+		except usb1.USBErrorPipe:
+			self.device_state = DEVICE_STATE_UNKNOWN
+			self.statusbar.SetStatusText("")
 		event.RequestMore()
 		#print(self.device_state)
 
@@ -564,7 +575,6 @@ if __name__ == '__main__':
 			except FtdiError:
 				sys.stderr.write("No flash adapters detected!\n")
 				sys.exit(-2)
-			ecu.setup()
 
 			initok = False
 			if ecu.init(debug=args.debug):

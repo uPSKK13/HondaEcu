@@ -82,9 +82,6 @@ class Hex(object):
 	def __call__(self, value):
 		return int(value, 16)
 
-class MaxRetriesException(Exception):
-	pass
-
 class HondaECU(object):
 
 	def __init__(self, device_id=None):
@@ -101,6 +98,7 @@ class HondaECU(object):
 			self.dev = None
 
 		self.dev = Device(self.device_id, auto_detach=(platform.system()!="Windows"))
+		self.setup()
 		self.starttime = time.time()
 
 	def time(self):
@@ -203,7 +201,7 @@ class HondaECU(object):
 			rdl = ord(rml) - 2 - len(rmtype)
 			rdata = resp[(ml+1):-1]
 			return (rmtype, rml, rdata, rdl)
-		raise MaxRetriesException()
+		return None
 
 	def do_init_recover(self, debug=False):
 		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
