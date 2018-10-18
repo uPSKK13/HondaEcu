@@ -326,14 +326,14 @@ class HondaECU_GUI(wx.Frame):
 
 	def OnModeChange(self, event):
 		if self.flashp.mode.GetSelection() == 0:
+			self.flashp.fixchecksum.Show(False)
 			self.flashp.writefpicker.Show(False)
 			self.flashp.readfpicker.Show(True)
-			self.flashp.fixchecksum.Show(False)
 		else:
-			self.flashp.readfpicker.Show(False)
-			self.flashp.writefpicker.Show(True)
 			self.flashp.fixchecksum.Show(True)
-		self.panel.Layout()
+			self.flashp.writefpicker.Show(True)
+			self.flashp.readfpicker.Show(False)
+		self.flashp.Layout()
 
 	def OnDeviceSelected(self, event):
 		self.statusbar.SetStatusText("")
