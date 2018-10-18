@@ -371,7 +371,10 @@ class HondaECU_GUI(wx.Frame):
 		for i,d in enumerate(self.ftdi_devices):
 			n = str(d)
 			try:
-				n += " | " + d.getSerialNumber()
+				s = d.getSerialNumber()
+				if s == None:
+					pass
+				n += " | " + s
 			except usb1.USBErrorNotSupported:
 				pass
 			except usb1.USBErrorBusy:
