@@ -107,6 +107,17 @@ class FlashPanel(wx.Panel):
 		self.mode.Bind(wx.EVT_RADIOBOX, gui.OnModeChange)
 		self.gobutton.Bind(wx.EVT_BUTTON, gui.OnGo)
 
+	def setEmergency(self, emergency):
+		if emergency:
+			self.mode.EnableItem(0, False)
+			self.mode.EnableItem(1, False)
+			self.mode.EnableItem(2, True)
+			self.mode.SetSelection(2)
+		else:
+			self.mode.EnableItem(0, True)
+			self.mode.EnableItem(1, True)
+			self.mode.EnableItem(2, True)
+
 class FlashDialog(wx.Dialog):
 
 	def __init__(self, parent):
@@ -163,6 +174,15 @@ class FlashDialog(wx.Dialog):
 	def WaitWrite(self):
 		self.progress.SetValue(0)
 		self.msg.SetLabel("Writing ECU")
+		self.msg2.SetLabel("")
+		self.image.SetBitmap(wx.NullBitmap)
+		self.image.Show(False)
+		self.progress.Show(True)
+		self.Layout()
+
+	def WaitRecover(self):
+		self.progress.SetValue(0)
+		self.msg.SetLabel("Recovering ECU")
 		self.msg2.SetLabel("")
 		self.image.SetBitmap(wx.NullBitmap)
 		self.image.Show(False)
@@ -398,6 +418,16 @@ class HondaECU_GUI(wx.Frame):
 			d.close()
 		self.Destroy()
 
+	def startErase(self):
+		self.write_wait = time.time()
+		self.device_state = DEVICE_STATE_ERASE
+		self.flashdlg.msg2.SetLabel("Waiting")
+		self.flashdlg.progress.SetRange(12)
+		self.flashdlg.progress.SetValue(12)
+		self.flashdlg.Layout()
+		if self.args.debug:
+			sys.stderr.write("Waiting\n")
+
 	def ValidateModes(self):
 		ready = (self.flashp.size.GetSelection() > -1) and (self.flashp.checksum.GetSelection() > -1)
 		if self.flashp.mode.GetSelection() == 0:
@@ -423,8 +453,12 @@ class HondaECU_GUI(wx.Frame):
 					self.deactivateDevice()
 				self.UpdateDeviceList()
 			elif self.device_state == DEVICE_STATE_SETUP:
-				if self.ecu != None:
-					if self.ecu.kline() and self.ecu.init(debug=self.args.debug):
+				self.emergency = False
+				self.flashp.setEmergency(self.emergency)
+				if not self.ecu.kline():
+					self.statusbar.SetStatusText("Turn on ECU!")
+				elif self.ecu != None:
+					if self.ecu.init(debug=self.args.debug):
 						self.statusbar.SetStatusText("ECU connected!")
 						self.device_state = DEVICE_STATE_CONNECTED
 						info = self.ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=args.debug, retries=0)
@@ -435,12 +469,18 @@ class HondaECU_GUI(wx.Frame):
 							self.infop.flashcount.SetLabel(str(int(info[2][4])))
 						self.infop.Layout()
 					else:
-						self.statusbar.SetStatusText("Cannot connect to ECU, check connections and power cycle ECU!")
+						if self.ecu.send_command([0x7e], [0x01, 0x02], debug=args.debug) != None:
+							self.emergency = True
+							self.flashp.setEmergency(self.emergency)
+							self.OnModeChange(None)
+							self.device_state = DEVICE_STATE_CONNECTED
+							self.statusbar.SetStatusText("ECU connected!")
+						else:
+							self.statusbar.SetStatusText("Cannot connect to ECU, check connections and power cycle ECU!")
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
-				info = self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0)
-				if info!=None and info[2]==b"\x00":
+				if self.ecu.kline() and (self.emergency or self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0)!=None):
 					self.ValidateModes()
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
@@ -450,7 +490,11 @@ class HondaECU_GUI(wx.Frame):
 					self.flashdlg.WaitOn()
 			elif self.device_state == DEVICE_STATE_POWER_ON:
 				if self.ecu.kline():
-					self.device_state = DEVICE_STATE_INIT
+					if self.emergency:
+						self.flashdlg.WaitRecover()
+						self.startErase()
+					else:
+						self.device_state = DEVICE_STATE_INIT
 					self.init_wait = time.time()
 			elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
 				self.initok = self.ecu.init(debug=self.args.debug)
@@ -504,41 +548,20 @@ class HondaECU_GUI(wx.Frame):
 					sys.stdout.write("Entering enhanced diagnostic mode\n")
 				self.ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
 				self.ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
-				self.write_wait = time.time()
-				self.device_state = DEVICE_STATE_ERASE
-				self.flashdlg.msg2.SetLabel("Waiting")
-				self.flashdlg.progress.SetRange(12)
-				self.flashdlg.progress.SetValue(12)
-				self.flashdlg.Layout()
-				if self.args.debug:
-					sys.stderr.write("Waiting\n")
+				self.startErase()
 			elif self.device_state == DEVICE_STATE_WRITE_INIT:
 				if self.args.debug:
 					sys.stderr.write("Initializing write process\n")
 				try:
 					self.ecu.do_init_write(debug=self.args.debug)
-					self.write_wait = time.time()
-					self.device_state = DEVICE_STATE_ERASE
-					self.flashdlg.msg2.SetLabel("Waiting")
-					self.flashdlg.progress.SetRange(12)
-					self.flashdlg.progress.SetValue(12)
-					self.flashdlg.Layout()
-					if self.args.debug:
-						sys.stderr.write("Waiting\n")
+					self.startErase()
 				except MaxRetriesException:
 					if self.initok:
 						if self.args.debug:
 							sys.stderr.write("Switching to recovery mode\n")
 						self.device_state = DEVICE_STATE_RECOVER_INIT
 					else:
-						self.write_wait = time.time()
-						self.device_state = DEVICE_STATE_ERASE
-						self.flashdlg.msg2.SetLabel("Waiting")
-						self.flashdlg.progress.SetRange(12)
-						self.flashdlg.progress.SetValue(12)
-						self.flashdlg.Layout()
-						if self.args.debug:
-							sys.stderr.write("Waiting\n")
+						self.startErase()
 			elif self.device_state == DEVICE_STATE_ERASE:
 				if time.time() > self.write_wait+12:
 					self.eraseinc = 0
@@ -607,7 +630,7 @@ class HondaECU_GUI(wx.Frame):
 			self.device_state = DEVICE_STATE_UNKNOWN
 			self.statusbar.SetStatusText("")
 		event.RequestMore()
-		#print(self.device_state)
+		# print(self.device_state)
 
 if __name__ == '__main__':
 
@@ -700,11 +723,11 @@ if __name__ == '__main__':
 				time.sleep(.5)
 
 
+			print_header()
+			sys.stdout.write("Initializing ECU\n")
 			initok = ecu.init(debug=args.debug)
 
 			if initok:
-				print_header()
-				sys.stdout.write("ECU connected\n")
 				print_header()
 				sys.stdout.write("Entering diagnostic mode\n")
 				ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
@@ -783,7 +806,7 @@ if __name__ == '__main__':
 
 				print_header()
 				sys.stdout.write("Erasing ECU\n")
-				time.sleep(14)
+				time.sleep(12)
 				ecu.do_erase(debug=args.debug)
 				ecu.do_erase_wait(debug=args.debug)
 

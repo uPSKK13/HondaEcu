@@ -139,14 +139,6 @@ class HondaECU(object):
 		self.dev._write(b"\xff")
 		return self.dev._read(1) == b"\xff"
 
-	def loopTest(self, timeout=.5):
-		self.dev.flush()
-		self.dev._write(b"\x00")
-		to = time.time()
-		while not self.dev._read(1):
-			if time.time() - to > timeout: return False
-		return True
-
 	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()
 		msg = "".join([chr(b) for b in buf]).encode("latin1")
