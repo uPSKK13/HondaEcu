@@ -480,7 +480,7 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
-				if self.ecu.kline() and (self.emergency or self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0)!=None):
+				if self.ecu.kline():
 					self.ValidateModes()
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
@@ -679,7 +679,7 @@ if __name__ == '__main__':
 	if args.mode == None:
 
 		usbcontext = usb1.USBContext()
-		app = wx.App(redirect=False)
+		app = wx.App(redirect=not args.debug,filename=os.devnull)
 		gui = HondaECU_GUI(args, usbcontext)
 		gui.Show()
 		app.MainLoop()
