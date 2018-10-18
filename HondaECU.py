@@ -383,6 +383,8 @@ class HondaECU_GUI(wx.Frame):
 				continue
 			except usb1.USBErrorIO:
 				continue
+			except usb1.USBErrorPipe:
+				continue
 			self.m_devices.Append(n)
 			if self.ftdi_active == d:
 				self.m_devices.SetSelection(i)
