@@ -124,10 +124,10 @@ class FlashDialog(wx.Dialog):
 		self.progress.SetValue(0)
 
 		mainbox = wx.BoxSizer(wx.VERTICAL)
-		mainbox.Add(self.msg, 0, wx.ALIGN_CENTER|wx.EXPAND|wx.TOP, 30)
+		mainbox.Add(self.msg, 0, wx.ALIGN_CENTER|wx.TOP, 30)
 		mainbox.Add(self.image, 0, wx.ALIGN_CENTER|wx.TOP, 10)
-		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.ALL, 40)
-		mainbox.Add(self.msg2, 0, wx.ALIGN_CENTER|wx.EXPAND, 0)
+		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALL, 40)
+		mainbox.Add(self.msg2, 0, wx.ALIGN_CENTER, 0)
 		self.SetSizer(mainbox)
 
 		self.Layout()
@@ -172,29 +172,32 @@ class FlashDialog(wx.Dialog):
 class HondaECU_GUI(wx.Frame):
 
 	def PollUSBDevices(self, event):
-		new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
-		for device in new_devices:
-			if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
-				if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
-					if not device in self.ftdi_devices:
+		try:
+			new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
+			for device in new_devices:
+				if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
+					if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
+						if not device in self.ftdi_devices:
+							if self.args.debug:
+								sys.stderr.write("Adding device (%s) to list\n" % device)
+							self.ftdi_devices.append(device)
+							self.UpdateDeviceList()
+			for device in self.ftdi_devices:
+				if not device in new_devices:
+					if device == self.ftdi_active:
+						if self.ecu != None:
+							self.ecu.dev.close()
+							del self.ecu
+							self.ecu = None
 						if self.args.debug:
-							sys.stderr.write("Adding device (%s) to list\n" % device)
-						self.ftdi_devices.append(device)
-						self.UpdateDeviceList()
-		for device in self.ftdi_devices:
-			if not device in new_devices:
-				if device == self.ftdi_active:
-					if self.ecu != None:
-						self.ecu.dev.close()
-						del self.ecu
-						self.ecu = None
+							sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
+						self.ftdi_active = None
+					self.ftdi_devices.remove(device)
+					self.UpdateDeviceList()
 					if self.args.debug:
-						sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
-					self.ftdi_active = None
-				self.ftdi_devices.remove(device)
-				self.UpdateDeviceList()
-				if self.args.debug:
-					sys.stderr.write("Removing device (%s) from list\n" % device)
+						sys.stderr.write("Removing device (%s) from list\n" % device)
+		except OSError:
+			pass
 
 	def hotplug_callback(self, context, device, event):
 		if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
@@ -288,6 +291,7 @@ class HondaECU_GUI(wx.Frame):
 		mainbox = wx.BoxSizer(wx.VERTICAL)
 		mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
 		mainbox.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
+		self.notebook.Layout()
 		self.panel.SetSizer(mainbox)
 		self.panel.Layout()
 		self.Centre()
