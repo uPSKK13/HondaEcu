@@ -28,93 +28,148 @@ DEVICE_STATE_ERASE_WAIT = 11
 DEVICE_STATE_WRITE = 12
 DEVICE_STATE_WRITE_FINALIZE = 13
 
+binsizes = {
+	"56k":56,
+	"256k":256,
+	"512k":512,
+	"1024k":1024
+}
+checksums = [
+	"0xDFEF",
+	"0x18FFE",
+	"0x19FFE",
+	"0x1FFFA",
+	"0x3FFF8",
+	"0x7FFF8",
+	"0xFFFF8"
+]
+
+class InfoPanel(wx.Panel):
+
+	def __init__(self, gui):
+		wx.Panel.__init__(self, gui.notebook)
+
+		self.ecmidl = wx.StaticText(self, label="ECM ID:")
+		self.ecmid = wx.StaticText(self, label="")
+		self.statusl = wx.StaticText(self, label="Status:")
+		self.status = wx.StaticText(self, label="")
+		self.flashcountl = wx.StaticText(self,label="Flash count:")
+		self.flashcount = wx.StaticText(self, label="")
+
+		self.infopsizer = wx.GridBagSizer(0,0)
+		self.infopsizer.Add(self.ecmidl, pos=(0,0), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=10)
+		self.infopsizer.Add(self.ecmid, pos=(0,1), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=10)
+		self.infopsizer.Add(self.statusl, pos=(1,0), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=10)
+		self.infopsizer.Add(self.status, pos=(1,1), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=10)
+		self.infopsizer.Add(self.flashcountl, pos=(2,0), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=10)
+		self.infopsizer.Add(self.flashcount, pos=(2,1), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=10)
+		self.infopsizer.AddGrowableCol(1,1)
+		self.SetSizer(self.infopsizer)
+
+class FlashPanel(wx.Panel):
+
+	def __init__(self, gui):
+		wx.Panel.__init__(self, gui.notebook)
+
+		self.mode = wx.RadioBox(self, label="Mode", choices=["Read","Write","Recover"])
+		self.wfilel = wx.StaticText(self, label="File")
+		self.wsizel = wx.StaticText(self, label="Size")
+		self.wchecksuml = wx.StaticText(self,label="Checksum")
+		self.readfpicker = wx.FilePickerCtrl(self, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+		self.writefpicker = wx.FilePickerCtrl(self,wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+		self.fixchecksum = wx.CheckBox(self, label="Fix")
+		self.size = wx.Choice(self, choices=list(binsizes.keys()))
+		self.checksum = wx.Choice(self, choices=list(checksums))
+		self.gobutton = wx.Button(self, label="Start")
+
+		self.writefpicker.Show(False)
+		self.fixchecksum.Show(False)
+		self.gobutton.Disable()
+
+		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
+		self.fpickerbox.Add(self.readfpicker, 1)
+		self.fpickerbox.Add(self.writefpicker, 1)
+
+		self.flashpsizer = wx.GridBagSizer(0,0)
+		self.flashpsizer.Add(self.mode, pos=(0,0), span=(1,6), flag=wx.ALL|wx.ALIGN_CENTER, border=20)
+		self.flashpsizer.Add(self.wfilel, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+		self.flashpsizer.Add(self.fpickerbox, pos=(1,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT, border=10)
+		self.flashpsizer.Add(self.wsizel, pos=(2,0), flag=wx.TOP|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+		self.flashpsizer.Add(self.size, pos=(2,1), span=(1,1), flag=wx.TOP, border=5)
+		self.flashpsizer.Add(self.wchecksuml, pos=(2,3), flag=wx.TOP|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
+		self.flashpsizer.Add(self.checksum, pos=(2,4), flag=wx.TOP, border=5)
+		self.flashpsizer.Add(self.fixchecksum, pos=(2,5), flag=wx.TOP|wx.LEFT|wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL, border=5)
+		self.flashpsizer.Add(self.gobutton, pos=(4,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.BOTTOM|wx.RIGHT, border=10)
+		self.flashpsizer.AddGrowableRow(3,1)
+		self.flashpsizer.AddGrowableCol(5,1)
+		self.SetSizer(self.flashpsizer)
+
+		self.mode.Bind(wx.EVT_RADIOBOX, gui.OnModeChange)
+		self.gobutton.Bind(wx.EVT_BUTTON, gui.OnGo)
+
 class FlashDialog(wx.Dialog):
 
 	def __init__(self, parent):
 		wx.Dialog.__init__(self, parent, size=(280,230))
 		self.parent = parent
-		mainbox = wx.BoxSizer(wx.VERTICAL)
-		self.msgoff = wx.StaticText(self, wx.ID_ANY, "Turn off ECU", style=wx.ALIGN_CENTRE)
-		self.msgon = wx.StaticText(self, wx.ID_ANY, "Turn on ECU", style=wx.ALIGN_CENTRE)
-		self.msgread = wx.StaticText(self, wx.ID_ANY, "Reading ECU", style=wx.ALIGN_CENTRE)
-		self.msgwrite = wx.StaticText(self, wx.ID_ANY, "Writing ECU", style=wx.ALIGN_CENTRE)
-		self.offimage = wx.StaticBitmap(self, wx.ID_ANY, wx.Image(self.parent.offpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
-		self.onimage = wx.StaticBitmap(self, wx.ID_ANY, wx.Image(self.parent.onpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap())
-		self.progress = wx.Gauge(self, wx.ID_ANY)
+
+		self.offimg = wx.Image(self.parent.offpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		self.onimg = wx.Image(self.parent.onpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+
+		self.msg = wx.StaticText(self, label="", style=wx.ALIGN_CENTRE)
+		self.msg2 = wx.StaticText(self, label="", style=wx.ALIGN_CENTRE)
+		self.image = wx.StaticBitmap(self)
+		self.progress = wx.Gauge(self)
 		self.progress.SetRange(100)
 		self.progress.SetValue(0)
-		mainbox.Add(self.msgoff, 0, wx.ALIGN_CENTER|wx.TOP, 40)
-		mainbox.Add(self.msgon, 0, wx.ALIGN_CENTER|wx.TOP, 40)
-		mainbox.Add(self.msgread, 0, wx.ALIGN_CENTER|wx.TOP, 40)
-		mainbox.Add(self.msgwrite, 0, wx.ALIGN_CENTER|wx.TOP, 40)
-		mainbox.Add(self.offimage, 0, wx.ALIGN_CENTER|wx.TOP, 10)
-		mainbox.Add(self.onimage, 0, wx.ALIGN_CENTER|wx.TOP, 10)
+
+		mainbox = wx.BoxSizer(wx.VERTICAL)
+		mainbox.Add(self.msg, 0, wx.ALIGN_CENTER|wx.EXPAND|wx.TOP, 30)
+		mainbox.Add(self.image, 0, wx.ALIGN_CENTER|wx.TOP, 10)
 		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.ALL, 40)
-		self.msgon.Show(False)
-		self.msgread.Show(False)
-		self.msgwrite.Show(False)
-		self.offimage.Show(False)
+		mainbox.Add(self.msg2, 0, wx.ALIGN_CENTER|wx.EXPAND, 0)
 		self.SetSizer(mainbox)
+
 		self.Layout()
 		self.Center()
 
 	def WaitOff(self):
-		self.msgon.Show(False)
-		self.msgoff.Show(True)
-		self.msgread.Show(False)
-		self.msgwrite.Show(False)
+		self.progress.SetValue(0)
+		self.msg.SetLabel("Turn off ECU")
+		self.msg2.SetLabel("")
+		self.image.SetBitmap(self.offimg)
+		self.image.Show(True)
 		self.progress.Show(False)
-		self.onimage.Show(False)
-		self.offimage.Show(True)
 		self.Layout()
 
 	def WaitOn(self):
-		self.msgon.Show(True)
-		self.msgoff.Show(False)
-		self.msgread.Show(False)
-		self.msgwrite.Show(False)
+		self.progress.SetValue(0)
+		self.msg.SetLabel("Turn on ECU")
+		self.msg2.SetLabel("")
+		self.image.SetBitmap(self.onimg)
+		self.image.Show(True)
 		self.progress.Show(False)
-		self.onimage.Show(True)
-		self.offimage.Show(False)
 		self.Layout()
 
 	def WaitRead(self):
-		self.msgon.Show(False)
-		self.msgoff.Show(False)
-		self.msgread.Show(True)
-		self.msgwrite.Show(False)
+		self.progress.SetValue(0)
+		self.msg.SetLabel("Reading ECU")
+		self.msg2.SetLabel("")
+		self.image.SetBitmap(wx.NullBitmap)
+		self.image.Show(False)
 		self.progress.Show(True)
-		self.onimage.Show(False)
-		self.offimage.Show(False)
 		self.Layout()
 
 	def WaitWrite(self):
-		self.msgon.Show(False)
-		self.msgoff.Show(False)
-		self.msgread.Show(False)
-		self.msgwrite.Show(True)
+		self.progress.SetValue(0)
+		self.msg.SetLabel("Writing ECU")
+		self.msg2.SetLabel("")
+		self.image.SetBitmap(wx.NullBitmap)
+		self.image.Show(False)
 		self.progress.Show(True)
-		self.onimage.Show(False)
-		self.offimage.Show(False)
 		self.Layout()
 
 class HondaECU_GUI(wx.Frame):
-
-	binsizes = {
-		"56k":56,
-		"256k":256,
-		"512k":512,
-		"1024k":1024
-	}
-	checksums = [
-		"0xDFEF",
-		"0x18FFE",
-		"0x19FFE",
-		"0x1FFFA",
-		"0x3FFF8",
-		"0x7FFF8",
-		"0xFFFF8"
-	]
 
 	def PollUSBDevices(self, event):
 		new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
@@ -122,7 +177,8 @@ class HondaECU_GUI(wx.Frame):
 			if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
 				if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
 					if not device in self.ftdi_devices:
-						print("Adding device (%s) to list" % device)
+						if self.args.debug:
+							sys.stderr.write("Adding device (%s) to list\n" % device)
 						self.ftdi_devices.append(device)
 						self.UpdateDeviceList()
 		for device in self.ftdi_devices:
@@ -132,17 +188,20 @@ class HondaECU_GUI(wx.Frame):
 						self.ecu.dev.close()
 						del self.ecu
 						self.ecu = None
-					print("Deactivating device (%s)" % self.ftdi_active)
+					if self.args.debug:
+						sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
 					self.ftdi_active = None
 				self.ftdi_devices.remove(device)
 				self.UpdateDeviceList()
-				print("Removing device (%s) from list" % device)
+				if self.args.debug:
+					sys.stderr.write("Removing device (%s) from list\n" % device)
 
 	def hotplug_callback(self, context, device, event):
 		if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
 			if event == usb1.HOTPLUG_EVENT_DEVICE_ARRIVED:
 				if not device in self.ftdi_devices:
-					print("Adding device (%s) to list" % device)
+					if self.args.debug:
+						sys.stderr.write("Adding device (%s) to list\n" % device)
 					self.ftdi_devices.append(device)
 					self.UpdateDeviceList()
 			elif event == usb1.HOTPLUG_EVENT_DEVICE_LEFT:
@@ -151,11 +210,13 @@ class HondaECU_GUI(wx.Frame):
 						self.ecu.dev.close()
 						del self.ecu
 						self.ecu = None
-						print("Deactivating device (%s)" % self.ftdi_active)
+						if self.args.debug:
+							sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
 						self.ftdi_active = None
 					self.ftdi_devices.remove(device)
 					self.UpdateDeviceList()
-					print("Removing device (%s) from list" % device)
+					if self.args.debug:
+						sys.stderr.write("Removing device (%s) from list\n" % device)
 
 	def initRead(self, rom_size):
 		self.maxbyte = 1024 * rom_size
@@ -167,7 +228,8 @@ class HondaECU_GUI(wx.Frame):
 		self.maxi = len(self.byts)/128
 		self.writesize = 128
 
-	def __init__(self, usbcontext):
+	def __init__(self, args, usbcontext):
+		self.args = args
 		self.init_wait = -1
 		self.write_wait = -1
 		self.ecu = None
@@ -201,46 +263,18 @@ class HondaECU_GUI(wx.Frame):
 		menuBar.Append(menu, "&File")
 		self.SetMenuBar(menuBar)
 
-		panel = wx.Panel(self)
-		mainbox = wx.BoxSizer(wx.VERTICAL)
-		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, panel, "FTDI Devices")
+		self.panel = wx.Panel(self)
 
-		self.m_devices = wx.Choice(panel, wx.ID_ANY)
+		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
+		self.m_devices = wx.Choice(self.panel, wx.ID_ANY)
 		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
 
-		self.notebook = wx.Notebook(panel, wx.ID_ANY)
+		self.notebook = wx.Notebook(self.panel, wx.ID_ANY)
+		self.infop = InfoPanel(self)
+		self.flashp = FlashPanel(self)
 
-		flashp = wx.Panel(self.notebook)
-		self.flashpsizer = wx.GridBagSizer(0,0)
-		self.mode = wx.RadioBox(flashp, wx.ID_ANY, "Mode", choices=["Read","Write","Recover"])
-		self.flashpsizer.Add(self.mode, pos=(0,0), span=(1,6), flag=wx.ALL|wx.ALIGN_CENTER, border=20)
-		wfilel = wx.StaticText(flashp, wx.ID_ANY, "File")
-		self.readfpicker = wx.FilePickerCtrl(flashp, wx.ID_ANY, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
-		self.writefpicker = wx.FilePickerCtrl(flashp, wx.ID_ANY, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
-		self.writefpicker.Show(False)
-		self.flashpsizer.Add(wfilel, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
-		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
-		self.fpickerbox.Add(self.readfpicker, 1)
-		self.fpickerbox.Add(self.writefpicker, 1)
-		self.flashpsizer.Add(self.fpickerbox, pos=(1,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT, border=10)
-		wsizel = wx.StaticText(flashp, wx.ID_ANY, "Size")
-		self.size = wx.Choice(flashp, wx.ID_ANY, choices=list(self.binsizes.keys()))
-		self.flashpsizer.Add(wsizel, pos=(2,0), flag=wx.TOP|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-		self.flashpsizer.Add(self.size, pos=(2,1), span=(1,1), flag=wx.TOP, border=5)
-		wchecksuml = wx.StaticText(flashp, wx.ID_ANY, "Checksum")
-		self.checksum = wx.Choice(flashp, wx.ID_ANY, choices=list(self.checksums))
-		self.fixchecksum = wx.CheckBox(flashp, wx.ID_ANY, "Fix")
-		self.fixchecksum.Show(False)
-		self.flashpsizer.Add(wchecksuml, pos=(2,3), flag=wx.TOP|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL, border=5)
-		self.flashpsizer.Add(self.checksum, pos=(2,4), flag=wx.TOP, border=5)
-		self.flashpsizer.Add(self.fixchecksum, pos=(2,5), flag=wx.TOP|wx.LEFT|wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL, border=5)
-		self.gobutton = wx.Button(flashp, wx.ID_ANY, "Start")
-		self.gobutton.Disable()
-		self.flashpsizer.Add(self.gobutton, pos=(4,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.BOTTOM|wx.RIGHT, border=10)
-		self.flashpsizer.AddGrowableRow(3,1)
-		self.flashpsizer.AddGrowableCol(5,1)
-		flashp.SetSizer(self.flashpsizer)
-		self.notebook.AddPage(flashp, "Flash Operations")
+		self.notebook.AddPage(self.infop, "ECU Info")
+		self.notebook.AddPage(self.flashp, "Flash Operations", select=True)
 
 		datap = wx.Panel(self.notebook)
 		self.notebook.AddPage(datap, "Diagnostic Tables")
@@ -248,29 +282,38 @@ class HondaECU_GUI(wx.Frame):
 		errorp = wx.Panel(self.notebook)
 		self.notebook.AddPage(errorp, "Error Codes")
 
+		# self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
+		# self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
+
+		mainbox = wx.BoxSizer(wx.VERTICAL)
 		mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
 		mainbox.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
-
-		panel.SetSizer(mainbox)
-		panel.Layout()
+		self.panel.SetSizer(mainbox)
+		self.panel.Layout()
 		self.Centre()
 
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
-		self.mode.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
-		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
 
 		self.flashdlg = FlashDialog(self)
 
 		if self.usbhotplug:
-			print('Registering hotplug callback...')
+			if self.args.debug:
+				sys.stderr.write('Registering hotplug callback...\n')
 			self.usbcontext.hotplugRegisterCallback(self.hotplug_callback, vendor_id=pylibftdi.driver.FTDI_VENDOR_ID)
-			print('Callback registered. Monitoring events.')
+			if self.args.debug:
+				sys.stderr.write('Callback registered. Monitoring events.\n')
 		else:
 			self.usbpolltimer = wx.Timer(self, wx.ID_ANY)
 			self.Bind(wx.EVT_TIMER, self.PollUSBDevices)
 			self.usbpolltimer.Start(250)
+
+	def OnPageChanged(self, event):
+		event.Skip()
+
+	def OnPageChanging(self, event):
+		event.Skip()
 
 	def OnGo(self, event):
 		self.device_state = DEVICE_STATE_POWER_OFF
@@ -282,23 +325,23 @@ class HondaECU_GUI(wx.Frame):
 			self.statusbar.SetStatusText("")
 
 	def OnModeChange(self, event):
-		if self.mode.GetSelection() == 0:
-			self.writefpicker.Show(False)
-			self.readfpicker.Show(True)
-			self.fixchecksum.Show(False)
+		if self.flashp.mode.GetSelection() == 0:
+			self.flashp.writefpicker.Show(False)
+			self.flashp.readfpicker.Show(True)
+			self.flashp.fixchecksum.Show(False)
 		else:
-			self.readfpicker.Show(False)
-			self.writefpicker.Show(True)
-			self.fixchecksum.Show(True)
-		self.fpickerbox.Layout()
-		self.flashpsizer.Layout()
+			self.flashp.readfpicker.Show(False)
+			self.flashp.writefpicker.Show(True)
+			self.flashp.fixchecksum.Show(True)
+		self.panel.Layout()
 
 	def OnDeviceSelected(self, event):
 		self.statusbar.SetStatusText("")
 		newdevice = self.ftdi_devices[self.m_devices.GetSelection()]
 		if self.ftdi_active != None:
 			if self.ftdi_active != newdevice:
-				print("Deactivating device (%s)" % self.ftdi_active)
+				if self.args.debug:
+					sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
 				if self.ecu != None:
 					self.ecu.dev.close()
 					del self.ecu
@@ -308,7 +351,8 @@ class HondaECU_GUI(wx.Frame):
 			self.device_state = DEVICE_STATE_UNKNOWN
 			self.statusbar.SetStatusText("")
 			self.ecu = HondaECU(device_id=self.ftdi_active.getSerialNumber())
-			print("Activating device (%s)" % self.ftdi_active)
+			if self.args.debug:
+				sys.stderr.write("Activating device (%s)\n" % self.ftdi_active)
 			self.device_state = DEVICE_STATE_SETUP
 		except usb1.USBErrorNotSupported as e:
 			self.ecu = None
@@ -340,19 +384,19 @@ class HondaECU_GUI(wx.Frame):
 		self.Destroy()
 
 	def ValidateModes(self):
-		ready = (self.size.GetSelection() > -1) and (self.checksum.GetSelection() > -1)
-		if self.mode.GetSelection() == 0:
-			p = self.readfpicker.GetPath()
+		ready = (self.flashp.size.GetSelection() > -1) and (self.flashp.checksum.GetSelection() > -1)
+		if self.flashp.mode.GetSelection() == 0:
+			p = self.flashp.readfpicker.GetPath()
 		else:
-			p = self.writefpicker.GetPath()
+			p = self.flashp.writefpicker.GetPath()
 		if len(p) == 0:
 			ready = False
 		if ready:
 			self.device_state = DEVICE_STATE_READY
-			self.gobutton.Enable()
+			self.flashp.gobutton.Enable()
 		else:
 			self.device_state = DEVICE_STATE_CONNECTED
-			self.gobutton.Disable()
+			self.flashp.gobutton.Disable()
 		return ready
 
 	def OnIdle(self, event):
@@ -360,7 +404,7 @@ class HondaECU_GUI(wx.Frame):
 			self.usbcontext.handleEventsTimeout(0)
 		try:
 			if self.device_state == DEVICE_STATE_UNKNOWN:
-				self.gobutton.Disable()
+				self.flashp.gobutton.Disable()
 				if self.ecu != None:
 					self.ecu.dev.close()
 					del self.ecu
@@ -369,59 +413,69 @@ class HondaECU_GUI(wx.Frame):
 				self.UpdateDeviceList()
 			elif self.device_state == DEVICE_STATE_SETUP:
 				if self.ecu != None:
-					if self.ecu.init(debug=True):
+					if self.ecu.init(debug=self.args.debug):
 						self.device_state = DEVICE_STATE_CONNECTED
+						info = self.ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=args.debug, retries=0)
+						self.infop.ecmid.SetLabel("%s" % " ".join(["%02x" % b for b in info[2][3:]]))
+						info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03], debug=args.debug, retries=0)
+						if info!=None:
+							self.infop.status.SetLabel("dirty" if info[2][2] == 0xff else "clean")
+							self.infop.flashcount.SetLabel(str(int(info[2][4])))
 						self.statusbar.SetStatusText("ECU connected!")
 					else:
 						self.statusbar.SetStatusText("Cannot connect to ECU, check connections and power cycle ECU!")
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
-				info = self.ecu.send_command([0x72],[0x00, 0xf0], debug=True, retries=0)
+				info = self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0)
 				if info!=None and info[2]==b"\x00":
 					self.ValidateModes()
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state == DEVICE_STATE_POWER_OFF:
-				if not self.ecu.init(debug=True):
+				if not self.ecu.init(debug=self.args.debug):
 					self.device_state = DEVICE_STATE_POWER_ON
 					self.flashdlg.WaitOn()
 			elif self.device_state == DEVICE_STATE_POWER_ON:
-				if self.ecu.init(debug=True):
+				if self.ecu.init(debug=self.args.debug):
 					self.device_state = DEVICE_STATE_INIT
 					self.init_wait = time.time()
 			elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
-				self.initok = self.ecu.init(debug=True)
+				self.initok = self.ecu.init(debug=self.args.debug)
 				if self.initok:
-					print("Entering diagnostic mode")
-					self.ecu.send_command([0x72],[0x00, 0xf0], debug=True)
-				if self.mode.GetSelection() == 0:
+					if self.args.debug:
+						sys.stderr.write("Entering diagnostic mode\n")
+					self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
+				if self.flashp.mode.GetSelection() == 0:
 					self.device_state = DEVICE_STATE_READ_SECURITY
 					self.flashdlg.WaitRead()
-				elif self.mode.GetSelection() == 1:
+				elif self.flashp.mode.GetSelection() == 1:
 					self.device_state = DEVICE_STATE_WRITE_INIT
 					self.flashdlg.WaitWrite()
-				elif self.mode.GetSelection() == 2:
+				elif self.flashp.mode.GetSelection() == 2:
 					self.write_wait = time.time()
-					self.device_state = DEVICE_STATE_ERASE
-					print("Erasing ECU")
+					self.device_state = DEVICE_STATE_RECOVER_INIT
 					self.flashdlg.WaitWrite()
 			elif self.device_state == DEVICE_STATE_READ_SECURITY:
-				print("Security access")
-				self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=True)
-				self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=True)
-				self.initRead(list(self.binsizes.values())[self.size.GetSelection()])
-				self.file = open(self.readfpicker.GetPath(), "wb")
-				print("Reading ECU")
+				if self.args.debug:
+					sys.stderr.write("Security access\n")
+				self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=self.args.debug)
+				self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=self.args.debug)
+				self.initRead(list(binsizes.values())[self.flashp.size.GetSelection()])
+				self.file = open(self.flashp.readfpicker.GetPath(), "wb")
+				if self.args.debug:
+					sys.stderr.write("Reading ECU\n")
 				self.device_state = DEVICE_STATE_READ
 			elif self.device_state == DEVICE_STATE_READ:
 				if self.nbyte < self.maxbyte:
-					info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=True)
+					info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=self.args.debug)
 					if info != None:
 						self.file.write(info[2])
 						self.file.flush()
 						self.nbyte += self.readsize
 						self.flashdlg.progress.SetValue(int(100*self.nbyte/self.maxbyte))
+						self.flashdlg.msg2.SetLabel("%dB of %dB" % (self.nbyte, self.maxbyte))
+						self.flashdlg.Layout()
 					else:
 						self.flashdlg.EndModal(-1)
 						self.device_state = DEVICE_STATE_UNKNOWN
@@ -431,37 +485,80 @@ class HondaECU_GUI(wx.Frame):
 					self.file.close()
 					self.flashdlg.EndModal(1)
 			elif self.device_state == DEVICE_STATE_RECOVER_INIT:
-				self.ecu.do_init_recover(debug=True)
+				if self.args.debug:
+					sys.stdout.write("Initializing recovery process\n")
+				self.ecu.do_init_recover(debug=self.args.debug)
+				if self.args.debug:
+					sys.stdout.write("Entering enhanced diagnostic mode\n")
+				self.ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
+				self.ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
 				self.write_wait = time.time()
 				self.device_state = DEVICE_STATE_ERASE
-				print("Erasing ECU")
+				self.flashdlg.msg2.SetLabel("Waiting")
+				self.flashdlg.progress.SetRange(12)
+				self.flashdlg.progress.SetValue(12)
+				self.flashdlg.Layout()
+				if self.args.debug:
+					sys.stderr.write("Waiting\n")
 			elif self.device_state == DEVICE_STATE_WRITE_INIT:
-				print("Initializing write process")
+				if self.args.debug:
+					sys.stderr.write("Initializing write process\n")
 				try:
-					self.ecu.do_init_write(debug=True)
+					self.ecu.do_init_write(debug=self.args.debug)
 					self.write_wait = time.time()
 					self.device_state = DEVICE_STATE_ERASE
-					print("Erasing ECU")
+					self.flashdlg.msg2.SetLabel("Waiting")
+					self.flashdlg.progress.SetRange(12)
+					self.flashdlg.progress.SetValue(12)
+					self.flashdlg.Layout()
+					if self.args.debug:
+						sys.stderr.write("Waiting\n")
 				except MaxRetriesException:
 					if self.initok:
-						print("Switching to recovery mode")
+						if self.args.debug:
+							sys.stderr.write("Switching to recovery mode\n")
 						self.device_state = DEVICE_STATE_RECOVER_INIT
 					else:
 						self.write_wait = time.time()
 						self.device_state = DEVICE_STATE_ERASE
-						print("Erasing ECU")
-			elif self.device_state == DEVICE_STATE_ERASE and time.time() > self.write_wait+12:
-				self.ecu.do_erase()
-				self.device_state = DEVICE_STATE_ERASE_WAIT
+						self.flashdlg.msg2.SetLabel("Waiting")
+						self.flashdlg.progress.SetRange(12)
+						self.flashdlg.progress.SetValue(12)
+						self.flashdlg.Layout()
+						if self.args.debug:
+							sys.stderr.write("Waiting\n")
+			elif self.device_state == DEVICE_STATE_ERASE:
+				if time.time() > self.write_wait+12:
+					self.eraseinc = 0
+					self.flashdlg.msg2.SetLabel("Erasing ECU")
+					self.flashdlg.progress.SetRange(180)
+					self.flashdlg.progress.SetValue(0)
+					self.flashdlg.Layout()
+					if self.args.debug:
+						sys.stderr.write("Erasing ECU\n")
+					self.ecu.do_erase()
+					self.device_state = DEVICE_STATE_ERASE_WAIT
+				else:
+					self.flashdlg.progress.SetValue(int(12-round(time.time()-self.write_wait)))
 			elif self.device_state == DEVICE_STATE_ERASE_WAIT:
-				info = self.ecu.send_command([0x7e], [0x01, 0x05], debug=True)
+				info = self.ecu.send_command([0x7e], [0x01, 0x05], debug=self.args.debug)
 				if info[2][1] == 0x00:
-					self.ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=True)
-					with open(self.writefpicker.GetPath(), "rb") as fbin:
-						self.byts, fcksum, ccksum, fixed = validate_checksum(bytearray(fbin.read(os.path.getsize(self.writefpicker.GetPath()))), int(self.checksums[self.checksum.GetSelection()], 16), self.fixchecksum.IsChecked())
-					self.initWrite(list(self.binsizes.values())[self.size.GetSelection()])
-					print("Writing ECU")
+					self.ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=self.args.debug)
+					with open(self.flashp.writefpicker.GetPath(), "rb") as fbin:
+						self.byts, fcksum, ccksum, fixed = validate_checksum(bytearray(fbin.read(os.path.getsize(self.flashp.writefpicker.GetPath()))), int(checksums[self.flashp.checksum.GetSelection()], 16), self.flashp.fixchecksum.IsChecked())
+					self.initWrite(list(binsizes.values())[self.flashp.size.GetSelection()])
+					if self.args.debug:
+						sys.stderr.write("Writing ECU\n")
 					self.device_state = DEVICE_STATE_WRITE
+					self.flashdlg.progress.SetRange(100)
+					self.flashdlg.progress.SetValue(0)
+					self.flashdlg.msg2.SetLabel("")
+					self.flashdlg.Layout()
+				else:
+					self.eraseinc += 1
+					if self.eraseinc > 180:
+						self.eraseinc = 180
+					self.flashdlg.progress.SetValue(self.eraseinc)
 			elif self.device_state == DEVICE_STATE_WRITE:
 				if self.i < self.maxi:
 					bytstart = [s for s in struct.pack(">H",(8*self.i))]
@@ -474,18 +571,21 @@ class HondaECU_GUI(wx.Frame):
 					c1 = checksum8bit(x)
 					c2 = checksum8bitHonda(x)
 					x = [0x01, 0x06] + x + [c1, c2]
-					info = self.ecu.send_command([0x7e], x, debug=True)
+					info = self.ecu.send_command([0x7e], x, debug=self.args.debug)
 					if ord(info[1]) != 5:
 						self.device_state = DEVICE_STATE_ERROR
 					self.i += 1
 					if self.i % 2 == 0:
-						self.ecu.send_command([0x7e], [0x01, 0x08], debug=True)
+						self.ecu.send_command([0x7e], [0x01, 0x08], debug=self.args.debug)
 					self.flashdlg.progress.SetValue(int(100*self.i/self.maxi))
+					self.flashdlg.msg2.SetLabel("%dB of %dB" % (self.i*128, list(binsizes.values())[self.flashp.size.GetSelection()]*1024))
+					self.flashdlg.Layout()
 				else:
 					self.device_state = DEVICE_STATE_WRITE_FINALIZE
 			elif self.device_state == DEVICE_STATE_WRITE_FINALIZE:
-				print("Finalizing write process")
-				self.ecu.do_post_write(debug=True)
+				if self.args.debug:
+					sys.stderr.write("Finalizing write process\n")
+				self.ecu.do_post_write(debug=self.args.debug)
 				self.device_state = DEVICE_STATE_READY
 				self.flashdlg.EndModal(1)
 		except pylibftdi._base.FtdiError:
@@ -545,7 +645,7 @@ if __name__ == '__main__':
 
 		usbcontext = usb1.USBContext()
 		app = wx.App(redirect=False)
-		gui = HondaECU_GUI(usbcontext)
+		gui = HondaECU_GUI(args, usbcontext)
 		gui.Show()
 		app.MainLoop()
 
@@ -643,7 +743,6 @@ if __name__ == '__main__':
 						for code in faults['past']:
 							sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
 
-
 				elif args.mode == "read":
 					print_header()
 					sys.stdout.write("Security access\n")
@@ -674,7 +773,7 @@ if __name__ == '__main__':
 
 				print_header()
 				sys.stdout.write("Erasing ECU\n")
-				time.sleep(12)
+				time.sleep(14)
 				ecu.do_erase(debug=args.debug)
 				ecu.do_erase_wait(debug=args.debug)
 
