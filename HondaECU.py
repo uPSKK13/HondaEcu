@@ -277,7 +277,7 @@ class HondaECU_GUI(wx.Frame):
 		self.flashp = FlashPanel(self)
 
 		self.notebook.AddPage(self.infop, "ECU Info")
-		self.notebook.AddPage(self.flashp, "Flash Operations", select=True)
+		self.notebook.AddPage(self.flashp, "Flash Operations")
 
 		datap = wx.Panel(self.notebook)
 		self.notebook.AddPage(datap, "Diagnostic Tables")
@@ -285,7 +285,7 @@ class HondaECU_GUI(wx.Frame):
 		errorp = wx.Panel(self.notebook)
 		self.notebook.AddPage(errorp, "Error Codes")
 
-		# self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
+		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
 		# self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
 
 		mainbox = wx.BoxSizer(wx.VERTICAL)
@@ -374,6 +374,8 @@ class HondaECU_GUI(wx.Frame):
 				pass
 			except usb1.USBErrorBusy:
 				pass
+			except usb1.USBErrorNoDevice:
+				continue
 			self.m_devices.Append(n)
 			if self.ftdi_active == d:
 				self.m_devices.SetSelection(i)
@@ -425,6 +427,7 @@ class HondaECU_GUI(wx.Frame):
 						if info!=None:
 							self.infop.status.SetLabel("dirty" if info[2][2] == 0xff else "clean")
 							self.infop.flashcount.SetLabel(str(int(info[2][4])))
+						self.infop.Layout()
 						self.statusbar.SetStatusText("ECU connected!")
 					else:
 						self.statusbar.SetStatusText("Cannot connect to ECU, check connections and power cycle ECU!")
