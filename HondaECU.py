@@ -185,13 +185,11 @@ class HondaECU_GUI(wx.Frame):
 			for device in self.ftdi_devices:
 				if not device in new_devices:
 					if device == self.ftdi_active:
-						if self.ecu != None:
-							self.ecu.dev.close()
-							del self.ecu
-							self.ecu = None
-						if self.args.debug:
-							sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
-						self.ftdi_active = None
+						self.deactivateDevice()
+						self.infop.ecmid.SetLabel("")
+						self.infop.status.SetLabel("")
+						self.infop.flashcount.SetLabel("")
+						self.infop.Layout()
 					self.ftdi_devices.remove(device)
 					self.UpdateDeviceList()
 					if self.args.debug:
@@ -210,16 +208,25 @@ class HondaECU_GUI(wx.Frame):
 			elif event == usb1.HOTPLUG_EVENT_DEVICE_LEFT:
 				if device in self.ftdi_devices:
 					if device == self.ftdi_active:
-						self.ecu.dev.close()
-						del self.ecu
-						self.ecu = None
-						if self.args.debug:
-							sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
-						self.ftdi_active = None
+						self.deactivateDevice()
 					self.ftdi_devices.remove(device)
 					self.UpdateDeviceList()
 					if self.args.debug:
 						sys.stderr.write("Removing device (%s) from list\n" % device)
+
+	def deactivateDevice(self):
+		if self.ecu != None:
+			self.ecu.dev.close()
+			del self.ecu
+			self.ecu = None
+		if self.args.debug:
+			sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
+		self.ftdi_active = None
+		self.flashp.gobutton.Disable()
+		self.infop.ecmid.SetLabel("")
+		self.infop.status.SetLabel("")
+		self.infop.flashcount.SetLabel("")
+		self.infop.Layout()
 
 	def initRead(self, rom_size):
 		self.maxbyte = 1024 * rom_size
@@ -344,12 +351,7 @@ class HondaECU_GUI(wx.Frame):
 		newdevice = self.ftdi_devices[self.m_devices.GetSelection()]
 		if self.ftdi_active != None:
 			if self.ftdi_active != newdevice:
-				if self.args.debug:
-					sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
-				if self.ecu != None:
-					self.ecu.dev.close()
-					del self.ecu
-					self.ecu = None
+				self.deactivateDevice()
 		self.ftdi_active = newdevice
 		try:
 			self.device_state = DEVICE_STATE_UNKNOWN
@@ -375,6 +377,8 @@ class HondaECU_GUI(wx.Frame):
 			except usb1.USBErrorBusy:
 				pass
 			except usb1.USBErrorNoDevice:
+				continue
+			except usb1.USBErrorIO:
 				continue
 			self.m_devices.Append(n)
 			if self.ftdi_active == d:
@@ -410,12 +414,8 @@ class HondaECU_GUI(wx.Frame):
 			self.usbcontext.handleEventsTimeout(0)
 		try:
 			if self.device_state == DEVICE_STATE_UNKNOWN:
-				self.flashp.gobutton.Disable()
-				if self.ecu != None:
-					self.ecu.dev.close()
-					del self.ecu
-					self.ecu = None
-				self.ftdi_active = None
+				if self.ftdi_active != None:
+					self.deactivateDevice()
 				self.UpdateDeviceList()
 			elif self.device_state == DEVICE_STATE_SETUP:
 				if self.ecu != None:
