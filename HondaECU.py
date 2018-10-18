@@ -424,7 +424,8 @@ class HondaECU_GUI(wx.Frame):
 				self.UpdateDeviceList()
 			elif self.device_state == DEVICE_STATE_SETUP:
 				if self.ecu != None:
-					if self.ecu.init(debug=self.args.debug):
+					if self.ecu.kline() and self.ecu.init(debug=self.args.debug):
+						self.statusbar.SetStatusText("ECU connected!")
 						self.device_state = DEVICE_STATE_CONNECTED
 						info = self.ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=args.debug, retries=0)
 						self.infop.ecmid.SetLabel("%s" % " ".join(["%02x" % b for b in info[2][3:]]))
@@ -433,7 +434,6 @@ class HondaECU_GUI(wx.Frame):
 							self.infop.status.SetLabel("dirty" if info[2][2] == 0xff else "clean")
 							self.infop.flashcount.SetLabel(str(int(info[2][4])))
 						self.infop.Layout()
-						self.statusbar.SetStatusText("ECU connected!")
 					else:
 						self.statusbar.SetStatusText("Cannot connect to ECU, check connections and power cycle ECU!")
 				else:
@@ -445,11 +445,11 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state == DEVICE_STATE_POWER_OFF:
-				if not self.ecu.init(debug=self.args.debug):
+				if not self.ecu.kline():
 					self.device_state = DEVICE_STATE_POWER_ON
 					self.flashdlg.WaitOn()
 			elif self.device_state == DEVICE_STATE_POWER_ON:
-				if self.ecu.init(debug=self.args.debug):
+				if self.ecu.kline():
 					self.device_state = DEVICE_STATE_INIT
 					self.init_wait = time.time()
 			elif self.device_state == DEVICE_STATE_INIT and time.time() > self.init_wait+.5:
@@ -688,21 +688,19 @@ if __name__ == '__main__':
 				sys.stderr.write("No flash adapters detected!\n")
 				sys.exit(-2)
 
-			initok = False
-			if ecu.init(debug=args.debug):
-				if args.mode not in ["scan","log","faults"]:
-					print_header()
-					sys.stdout.write("Turn off bike\n")
-					while ecu.init(debug=args.debug):
-						time.sleep(.1)
-				else:
-					initok = True
-			if not initok:
+			if args.mode not in ["scan","log","faults"] and ecu.kline():
+				print_header()
+				sys.stdout.write("Turn off bike\n")
+				while ecu.kline():
+					time.sleep(.1)
+			if not ecu.kline():
 				sys.stdout.write("Turn on bike\n")
-				while not ecu.init(debug=args.debug):
+				while not ecu.kline():
 					time.sleep(.1)
 				time.sleep(.5)
-				initok = True
+
+
+			initok = ecu.init(debug=args.debug)
 
 			if initok:
 				print_header()

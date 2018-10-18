@@ -135,9 +135,9 @@ class HondaECU(object):
 		return ret
 
 	def kline(self):
-		b = create_string_buffer(2)
-		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
-		return b.raw[1] & 16 == 0
+		self.dev.flush()
+		self.dev._write(b"\xff")
+		return self.dev._read(1) == b"\xff"
 
 	def loopTest(self, timeout=.5):
 		self.dev.flush()
