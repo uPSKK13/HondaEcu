@@ -770,11 +770,11 @@ if __name__ == '__main__':
 					if len(faults['current']) > 0:
 						sys.stdout.write("  Current:\n")
 						for code in faults['current']:
-							sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
+							sys.stdout.write("    %s: %s\n" % (code, DTC[code] if code in DTC else "Unknown"))
 					if len(faults['past']) > 0:
 						sys.stdout.write("  Past:\n")
 						for code in faults['past']:
-							sys.stdout.write("    %s: %s\n" % (code, DTC[code]))
+							sys.stdout.write("    %s: %s\n" % (code, DTC[code] if code in DTC else "Unknown"))
 
 				elif args.mode == "read":
 					print_header()
