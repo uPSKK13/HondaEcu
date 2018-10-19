@@ -136,11 +136,6 @@ class HondaECU(object):
 
 	def kline(self):
 		self.dev.flush()
-		self.dev._write(b"\xff")
-		return self.dev._read(1) == b"\xff"
-
-	def kline2(self):
-		self.dev.flush()
 		self.dev._write(b"\x00")
 		return self.dev._read(1) == b"\x00"
 

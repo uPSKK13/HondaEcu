@@ -670,8 +670,6 @@ if __name__ == '__main__':
 
 	parser_log = subparsers.add_parser('log', help='log engine data')
 
-	parser_kline = subparsers.add_parser('kline')
-
 	#subparsers.required = True
 
 	db_grp = parser.add_argument_group('debugging options')
@@ -681,7 +679,7 @@ if __name__ == '__main__':
 	if args.mode == None:
 
 		usbcontext = usb1.USBContext()
-		app = wx.App(redirect=not args.debug,filename=os.devnull)
+		app = wx.App()
 		gui = HondaECU_GUI(args, usbcontext)
 		gui.Show()
 		app.MainLoop()
@@ -691,7 +689,7 @@ if __name__ == '__main__':
 		offset = 0
 		binfile = None
 		ret = 1
-		if not args.mode in ["faults", "scan", "log", "read", "kline"]:
+		if not args.mode in ["faults", "scan", "log", "read"]:
 			if os.path.isabs(args.binfile):
 				binfile = args.binfile
 			else:
@@ -713,20 +711,17 @@ if __name__ == '__main__':
 				sys.stderr.write("No flash adapters detected!\n")
 				sys.exit(-2)
 
-			if args.mode == "kline":
-				while True:
-				    print(ecu.kline(),ecu.kline2())
-			else:
-				if args.mode not in ["scan","log","faults"] and ecu.kline():
-					print_header()
-					sys.stdout.write("Turn off bike\n")
-					while ecu.kline():
-						time.sleep(.1)
-				if not ecu.kline():
-					sys.stdout.write("Turn on bike\n")
-					while not ecu.kline():
-						time.sleep(.1)
-					time.sleep(.5)
+			if args.mode not in ["scan","log","faults"] and ecu.kline():
+				print_header()
+				sys.stdout.write("Turn off bike\n")
+				while ecu.kline():
+					time.sleep(.1)
+			if not ecu.kline():
+				sys.stdout.write("Turn on bike\n")
+				while not ecu.kline():
+					time.sleep(.1)
+				time.sleep(.5)
+
 
 			print_header()
 			sys.stdout.write("Initializing ECU\n")
