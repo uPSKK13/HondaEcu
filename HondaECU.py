@@ -28,6 +28,7 @@ DEVICE_STATE_ERASE = 10
 DEVICE_STATE_ERASE_WAIT = 11
 DEVICE_STATE_WRITE = 12
 DEVICE_STATE_WRITE_FINALIZE = 13
+DEVICE_STATE_CLEAR_CODES = 14
 
 binsizes = {
 	"56k":56,
@@ -62,9 +63,14 @@ class ErrorPanel(wx.Panel):
 		self.errorlist.InsertColumn(2,"Description",format=wx.LIST_FORMAT_CENTER,width=-1)
 		self.errorlist.InsertColumn(3,"Occurance",format=wx.LIST_FORMAT_CENTER,width=80)
 
+		self.resetbutton = wx.Button(self, label="Clear Codes")
+
 		self.errorsizer = wx.BoxSizer(wx.VERTICAL)
 		self.errorsizer.Add(self.errorlist, 1, flag=wx.EXPAND|wx.ALL, border=10)
+		self.errorsizer.Add(self.resetbutton, 0, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.RIGHT, border=10)
 		self.SetSizer(self.errorsizer)
+
+		self.Bind(wx.EVT_BUTTON, gui.OnClearCodes)
 
 class InfoPanel(wx.Panel):
 
@@ -364,16 +370,29 @@ class HondaECU_GUI(wx.Frame):
 
 	def OnPageChanged(self, event):
 		if self.notebook.GetSelection() == 3:
+			faultcount = 0
+			self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
 			faults = self.ecu.get_faults(debug=args.debug)
 			self.errorp.errorlist.DeleteAllItems()
 			for code in faults['current']:
 				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
+				faultcount += 1
 			for code in faults['past']:
 				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
+				faultcount += 1
+			self.errorp.resetbutton.Enable(faultcount > 0)
 			self.errorp.Layout()
+		event.Skip()
 
 	def OnPageChanging(self, event):
 		event.Skip()
+
+	def OnClearCodes(self, event):
+		self.errorp.resetbutton.Enable(False)
+		if self.args.debug:
+			sys.stderr.write('Clearing codes\n')
+		self.device_state = DEVICE_STATE_CLEAR_CODES
+		self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
 
 	def OnGo(self, event):
 		self.device_state = DEVICE_STATE_POWER_OFF
@@ -445,7 +464,8 @@ class HondaECU_GUI(wx.Frame):
 	def OnClose(self, event):
 		for d in self.ftdi_devices:
 			d.close()
-		self.Destroy()
+		for w in wx.GetTopLevelWindows():
+			w.Destroy()
 
 	def startErase(self):
 		self.write_wait = time.time()
@@ -553,6 +573,14 @@ class HondaECU_GUI(wx.Frame):
 				if self.args.debug:
 					sys.stderr.write("Reading ECU\n")
 				self.device_state = DEVICE_STATE_READ
+			elif self.device_state == DEVICE_STATE_CLEAR_CODES:
+				info = self.ecu.send_command([0x72],[0x60, 0x03], debug=args.debug, retries=0)
+				if info != None:
+					if info[2][1] == 0x00:
+						self.device_state = DEVICE_STATE_CONNECTED
+				else:
+					sys.stderr.write("Failed to clear codes\n")
+					self.device_state = DEVICE_STATE_CONNECTED
 			elif self.device_state == DEVICE_STATE_READ:
 				if self.nbyte < self.maxbyte:
 					info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=self.args.debug)
@@ -602,6 +630,7 @@ class HondaECU_GUI(wx.Frame):
 					self.flashdlg.Layout()
 					if self.args.debug:
 						sys.stderr.write("Erasing ECU\n")
+					self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
 					self.ecu.do_erase()
 					self.device_state = DEVICE_STATE_ERASE_WAIT
 				else:
@@ -705,13 +734,16 @@ if __name__ == '__main__':
 
 	db_grp = parser.add_argument_group('debugging options')
 	db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
+	db_grp.add_argument('--noredirect', action='store_true', help="dont redirect stdout/stderr")
 	args = parser.parse_args()
 
 	if args.mode == None:
 
 		usbcontext = usb1.USBContext()
-		app = wx.App(redirect=True)
+		app = wx.App(redirect=not args.noredirect)
 		gui = HondaECU_GUI(args, usbcontext)
+		if args.debug:
+			sys.stderr.write("HondaECU\n-----------------\n")
 		gui.Show()
 		app.MainLoop()
 
