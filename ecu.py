@@ -249,6 +249,24 @@ class HondaECU(object):
 		self.send_command([0x7e], [0x01, 0x0d], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
+	def get_faults(self, debug=False):
+		faults = {'past':[], 'current':[]}
+		for i in range(1,0x0c):
+			info_current = self.send_command([0x72],[0x74, i], debug=debug)[2]
+			for j in [3,5,7]:
+				if info_current[j] != 0:
+					faults['current'].append("%02d-%02d" % (info_current[j],info_current[j+1]))
+			if info_current[2] == 0:
+				break
+		for i in range(1,0x0c):
+			info_past = self.send_command([0x72],[0x73, i], debug=debug)[2]
+			for j in [3,5,7]:
+				if info_past[j] != 0:
+					faults['past'].append("%02d-%02d" % (info_past[j],info_past[j+1]))
+			if info_past[2] == 0:
+				break
+		return faults
+
 ##################################################
 
 def print_header():

@@ -4,6 +4,7 @@ import usb1
 import pylibftdi
 import wx
 import wx.adv
+from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 import platform
 import time
 import struct
@@ -43,6 +44,27 @@ checksums = [
 	"0x7FFF8",
 	"0xFFFF8"
 ]
+
+class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
+	def __init__(self, parent, ID, pos=wx.DefaultPosition,
+				 size=wx.DefaultSize, style=0):
+		wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
+		ListCtrlAutoWidthMixin.__init__(self)
+		self.setResizeColumn(2)
+
+class ErrorPanel(wx.Panel):
+
+	def __init__(self, gui):
+		wx.Panel.__init__(self, gui.notebook)
+
+		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT)
+		self.errorlist.InsertColumn(1,"DTC",format=wx.LIST_FORMAT_CENTER,width=50)
+		self.errorlist.InsertColumn(2,"Description",format=wx.LIST_FORMAT_CENTER,width=-1)
+		self.errorlist.InsertColumn(3,"Occurance",format=wx.LIST_FORMAT_CENTER,width=80)
+
+		self.errorsizer = wx.BoxSizer(wx.VERTICAL)
+		self.errorsizer.Add(self.errorlist, 1, flag=wx.EXPAND|wx.ALL, border=10)
+		self.SetSizer(self.errorsizer)
 
 class InfoPanel(wx.Panel):
 
@@ -309,8 +331,8 @@ class HondaECU_GUI(wx.Frame):
 		datap = wx.Panel(self.notebook)
 		self.notebook.AddPage(datap, "Diagnostic Tables")
 
-		errorp = wx.Panel(self.notebook)
-		self.notebook.AddPage(errorp, "Error Codes")
+		self.errorp = ErrorPanel(self)
+		self.notebook.AddPage(self.errorp, "Error Codes")
 
 		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
 		# self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.OnPageChanging)
@@ -341,7 +363,14 @@ class HondaECU_GUI(wx.Frame):
 			self.usbpolltimer.Start(250)
 
 	def OnPageChanged(self, event):
-		event.Skip()
+		if self.notebook.GetSelection() == 3:
+			faults = self.ecu.get_faults(debug=args.debug)
+			self.errorp.errorlist.DeleteAllItems()
+			for code in faults['current']:
+				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
+			for code in faults['past']:
+				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
+			self.errorp.Layout()
 
 	def OnPageChanging(self, event):
 		event.Skip()
@@ -480,8 +509,10 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state in [DEVICE_STATE_CONNECTED, DEVICE_STATE_READY]:
+				# This runs too often, be nicer
 				if self.ecu.kline():
-					self.ValidateModes()
+					if self.notebook.GetSelection() == 1:
+						self.ValidateModes()
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state == DEVICE_STATE_POWER_OFF:
@@ -679,7 +710,7 @@ if __name__ == '__main__':
 	if args.mode == None:
 
 		usbcontext = usb1.USBContext()
-		app = wx.App()
+		app = wx.App(redirect=True)
 		gui = HondaECU_GUI(args, usbcontext)
 		gui.Show()
 		app.MainLoop()
@@ -751,22 +782,8 @@ if __name__ == '__main__':
 							if info[1] == 0x00:
 								break
 					print_header()
+					faults = ecu.get_faults(debug=args.debug)
 					sys.stdout.write("Fault codes\n")
-					faults = {'past':[], 'current':[]}
-					for i in range(1,0x0c):
-						info_current = ecu.send_command([0x72],[0x74, i], debug=args.debug)[2]
-						for j in [3,5,7]:
-							if info_current[j] != 0:
-								faults['current'].append("%02d-%02d" % (info_current[j],info_current[j+1]))
-						if info_current[2] == 0:
-							break
-					for i in range(1,0x0c):
-						info_past = ecu.send_command([0x72],[0x73, i], debug=args.debug)[2]
-						for j in [3,5,7]:
-							if info_past[j] != 0:
-								faults['past'].append("%02d-%02d" % (info_past[j],info_past[j+1]))
-						if info_past[2] == 0:
-							break
 					if len(faults['current']) > 0:
 						sys.stdout.write("  Current:\n")
 						for code in faults['current']:
