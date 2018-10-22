@@ -12,6 +12,8 @@ import argparse
 
 from ecu import *
 
+__VERSION__ = "2.0.0_beta1"
+
 DEVICE_STATE_ERROR = -2
 DEVICE_STATE_UNKNOWN = -1
 DEVICE_STATE_SETUP = 0
