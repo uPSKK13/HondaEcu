@@ -611,12 +611,14 @@ class HondaECU_GUI(wx.Frame):
 			except OSError:
 				pass
 		if self.device_state == DEVICE_STATE_CONNECTED:
-			if self.ecu.kline():
-				if len(self.idle_actions[self.notebook.GetSelection()]) > 0:
-					self.idle_actions[self.notebook.GetSelection()][self.device_state_index]()
-					self.device_state_index = (self.device_state_index + 1) % len(self.idle_actions[self.notebook.GetSelection()])
+			if len(self.idle_actions[self.notebook.GetSelection()]) > 0:
+				self.idle_actions[self.notebook.GetSelection()][self.device_state_index]()
+				self.device_state_index = (self.device_state_index + 1) % len(self.idle_actions[self.notebook.GetSelection()])
+			if self.emergency:
+				pass
 			else:
-				self.device_state = DEVICE_STATE_ERROR
+				if not self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0):
+					self.device_state = DEVICE_STATE_ERROR
 		elif self.device_state == DEVICE_STATE_POST_READ:
 			pass
 		elif self.device_state == DEVICE_STATE_POST_WRITE:
