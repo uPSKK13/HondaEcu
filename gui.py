@@ -585,62 +585,49 @@ class FlashDialog(wx.Dialog):
 class HondaECU_GUI(wx.Frame):
 
 	def TimerActions(self, event):
-		if not self.usbhotplug:
-			try:
-				new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
-				for device in new_devices:
-					if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
-						if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
-							if not device in self.ftdi_devices:
-								if self.args.debug:
-									sys.stderr.write("Adding device (%s) to list\n" % device)
-								self.ftdi_devices.append(device)
-								self.UpdateDeviceList()
-				for device in self.ftdi_devices:
-					if not device in new_devices:
-						if device == self.ftdi_active:
-							self.deactivateDevice()
-							self.infop.ecmid.SetLabel("")
-							self.infop.status.SetLabel("")
-							self.infop.flashcount.SetLabel("")
-							self.infop.Layout()
-						self.ftdi_devices.remove(device)
-						self.UpdateDeviceList()
-						if self.args.debug:
-							sys.stderr.write("Removing device (%s) from list\n" % device)
-			except OSError:
-				pass
-		if self.device_state == DEVICE_STATE_CONNECTED:
-			if len(self.idle_actions[self.notebook.GetSelection()]) > 0:
-				self.idle_actions[self.notebook.GetSelection()][self.device_state_index]()
-				self.device_state_index = (self.device_state_index + 1) % len(self.idle_actions[self.notebook.GetSelection()])
-			if self.emergency:
-				pass
-			else:
-				if not self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0):
-					self.device_state = DEVICE_STATE_ERROR
-		elif self.device_state == DEVICE_STATE_POST_READ:
-			pass
-		elif self.device_state == DEVICE_STATE_POST_WRITE:
-			if not self.ecu.kline():
-				self.device_state = DEVICE_STATE_ERROR
-
-	def hotplug_callback(self, context, device, event):
-		if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
-			if event == usb1.HOTPLUG_EVENT_DEVICE_ARRIVED:
-				if not device in self.ftdi_devices:
-					if self.args.debug:
-						sys.stderr.write("Adding device (%s) to list\n" % device)
-					self.ftdi_devices.append(device)
-					self.UpdateDeviceList()
-			elif event == usb1.HOTPLUG_EVENT_DEVICE_LEFT:
-				if device in self.ftdi_devices:
+		print(self.device_state)
+		try:
+			new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
+			for device in new_devices:
+				if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
+					if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
+						if not device in self.ftdi_devices:
+							if self.args.debug:
+								sys.stderr.write("Adding device (%s) to list\n" % device)
+							self.ftdi_devices.append(device)
+							self.UpdateDeviceList()
+			for device in self.ftdi_devices:
+				if not device in new_devices:
 					if device == self.ftdi_active:
 						self.deactivateDevice()
+						self.infop.ecmid.SetLabel("")
+						self.infop.status.SetLabel("")
+						self.infop.flashcount.SetLabel("")
+						self.infop.Layout()
 					self.ftdi_devices.remove(device)
 					self.UpdateDeviceList()
 					if self.args.debug:
 						sys.stderr.write("Removing device (%s) from list\n" % device)
+		except OSError:
+			pass
+		try:
+			if self.device_state == DEVICE_STATE_CONNECTED:
+				if len(self.idle_actions[self.notebook.GetSelection()]) > 0:
+					self.idle_actions[self.notebook.GetSelection()][self.device_state_index]()
+					self.device_state_index = (self.device_state_index + 1) % len(self.idle_actions[self.notebook.GetSelection()])
+				if self.emergency:
+					pass
+				else:
+					if not self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0):
+						self.device_state = DEVICE_STATE_ERROR
+			elif self.device_state == DEVICE_STATE_POST_READ:
+				pass
+			elif self.device_state == DEVICE_STATE_POST_WRITE:
+				if not self.ecu.kline():
+					self.device_state = DEVICE_STATE_ERROR
+		except pylibftdi._base.FtdiError:
+			self.device_state = DEVICE_STATE_SETUP
+
 
 	def deactivateDevice(self):
 		if self.ecu != None:
@@ -649,6 +636,8 @@ class HondaECU_GUI(wx.Frame):
 			self.ecu = None
 		if self.args.debug:
 			sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
+		self.device_state = DEVICE_STATE_SETUP
+		self.statusbar.SetStatusText("")
 		self.ftdi_active = None
 		self.flashp.gobutton.Disable()
 		self.infop.ecmid.SetLabel("")
@@ -683,7 +672,6 @@ class HondaECU_GUI(wx.Frame):
 		self.ftdi_active = None
 		self.file = None
 		self.usbcontext = usb1.USBContext()
-		self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 		self.flashop = False
 
 		wx.Frame.__init__(self, None, title=title)
@@ -764,13 +752,6 @@ class HondaECU_GUI(wx.Frame):
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
 		self.flashdlg = FlashDialog(self)
-
-		if self.usbhotplug:
-			if self.args.debug:
-				sys.stderr.write('Registering hotplug callback...\n')
-			self.usbcontext.hotplugRegisterCallback(self.hotplug_callback, vendor_id=pylibftdi.driver.FTDI_VENDOR_ID)
-			if self.args.debug:
-				sys.stderr.write('Callback registered. Monitoring events.\n')
 
 		self.idletimer = wx.Timer(self, wx.ID_ANY)
 		self.Bind(wx.EVT_TIMER, self.TimerActions)
@@ -866,7 +847,7 @@ class HondaECU_GUI(wx.Frame):
 				self.deactivateDevice()
 		self.ftdi_active = newdevice
 		try:
-			self.device_state = DEVICE_STATE_ERROR
+			self.device_state = DEVICE_STATE_SETUP
 			self.statusbar.SetStatusText("")
 			self.ecu = HondaECU(device_id=self.ftdi_active.getSerialNumber())
 			if self.args.debug:
@@ -883,6 +864,7 @@ class HondaECU_GUI(wx.Frame):
 		for i,d in enumerate(self.ftdi_devices):
 			n = str(d)
 			try:
+				time.sleep(.1)
 				s = d.getSerialNumber()
 				if s == None:
 					pass
@@ -962,15 +944,18 @@ class HondaECU_GUI(wx.Frame):
 
 	def OnIdle(self, event):
 		#print(self.device_state)
-		if self.usbhotplug:
-			self.usbcontext.handleEventsTimeout(0)
 		try:
 			if self.device_state == DEVICE_STATE_ERROR:
-				if self.ecu.kline():
-					self.device_state = DEVICE_STATE_INIT_A
-					self.state_delay = time.time()
-				else:
-					self.statusbar.SetStatusText("Turn on ECU!")
+				if self.ecu:
+					if self.args.debug:
+						sys.stderr.write("STATE ERROR\n")
+					if self.ecu.kline():
+						self.device_state = DEVICE_STATE_INIT_A
+						self.state_delay = time.time()
+					else:
+						self.statusbar.SetStatusText("Turn on ECU!")
+						if self.args.debug:
+							sys.stderr.write("INIT Part A\n")
 			elif self.device_state == DEVICE_STATE_INIT_A and time.time() > self.state_delay+.5:
 				self.SetEmergency(False)
 				if self.ecu.kline():
@@ -980,6 +965,8 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_ERROR
 			elif self.device_state == DEVICE_STATE_INIT_B and time.time() > self.state_delay+.130:
+				if self.args.debug:
+					sys.stderr.write("INIT Part B\n")
 				info = self.ecu.send_command([0xfe],[0x72], debug=self.args.debug, retries=0)
 				if info and info[2][0] == 0x72:
 					self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
