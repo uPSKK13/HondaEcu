@@ -668,9 +668,10 @@ class HondaECU_GUI(wx.Frame):
 		self.writesize = 128
 
 	def __init__(self, args, version):
+		title = "HondaECU %s" % (version)
 		if args.debug:
-			sys.stderr.write("HondaECU %s\n" % (version))
-			sys.stderr.write("-------------------------\n")
+			sys.stderr.write(title)
+			sys.stderr.write("\n-------------------------\n")
 		self.args = args
 		self.state_delay = time.time()
 		self.ecu = None
@@ -683,7 +684,7 @@ class HondaECU_GUI(wx.Frame):
 		self.usbhotplug = self.usbcontext.hasCapability(usb1.CAP_HAS_HOTPLUG)
 		self.flashop = False
 
-		wx.Frame.__init__(self, None, title="HondaECU")
+		wx.Frame.__init__(self, None, title=title)
 		self.SetMinSize(wx.Size(700,550))
 
 		self.statusbar = self.CreateStatusBar(1)
