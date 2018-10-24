@@ -636,14 +636,9 @@ class HondaECU_GUI(wx.Frame):
 			self.ecu = None
 		if self.args.debug:
 			sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
-		self.device_state = DEVICE_STATE_SETUP
-		self.statusbar.SetStatusText("")
 		self.ftdi_active = None
-		self.flashp.gobutton.Disable()
-		self.infop.ecmid.SetLabel("")
-		self.infop.status.SetLabel("")
-		self.infop.flashcount.SetLabel("")
-		self.infop.Layout()
+		self.device_state = DEVICE_STATE_SETUP
+		self.Clean()
 
 	def initRead(self, rom_size):
 		self.maxbyte = 1024 * rom_size
@@ -942,20 +937,25 @@ class HondaECU_GUI(wx.Frame):
 		self.flashp.setEmergency(self.emergency)
 		self.OnModeChange(None)
 
+	def Clear(self):
+		self.statusbar.SetStatusText("")
+		self.flashp.gobutton.Disable()
+		self.infop.ecmid.SetLabel("")
+		self.infop.status.SetLabel("")
+		self.infop.flashcount.SetLabel("")
+		self.infop.Layout()
+
 	def OnIdle(self, event):
 		#print(self.device_state)
 		try:
 			if self.device_state == DEVICE_STATE_ERROR:
+				self.Clear()
 				if self.ecu:
-					if self.args.debug:
-						sys.stderr.write("STATE ERROR\n")
 					if self.ecu.kline():
 						self.device_state = DEVICE_STATE_INIT_A
 						self.state_delay = time.time()
 					else:
 						self.statusbar.SetStatusText("Turn on ECU!")
-						if self.args.debug:
-							sys.stderr.write("INIT Part A\n")
 			elif self.device_state == DEVICE_STATE_INIT_A and time.time() > self.state_delay+.5:
 				self.SetEmergency(False)
 				if self.ecu.kline():
@@ -965,8 +965,6 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_ERROR
 			elif self.device_state == DEVICE_STATE_INIT_B and time.time() > self.state_delay+.130:
-				if self.args.debug:
-					sys.stderr.write("INIT Part B\n")
 				info = self.ecu.send_command([0xfe],[0x72], debug=self.args.debug, retries=0)
 				if info and info[2][0] == 0x72:
 					self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
