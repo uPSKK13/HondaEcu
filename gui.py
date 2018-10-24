@@ -585,7 +585,7 @@ class FlashDialog(wx.Dialog):
 class HondaECU_GUI(wx.Frame):
 
 	def TimerActions(self, event):
-		print(self.device_state)
+		#print(self.device_state)
 		try:
 			new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
 			for device in new_devices:
