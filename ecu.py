@@ -7,6 +7,7 @@ import binascii
 import sys
 import platform
 import os
+import math
 
 ECM_IDs = {
 	"\x01\x00\x2b\x01\x01": ("CBR1000RR","2006-2007","38770-MEL-D21"),
@@ -63,16 +64,21 @@ def checksum8bitHonda(data):
 def checksum8bit(data):
 	return 0xff - ((sum(bytearray(data))-1) >> 8)
 
-def validate_checksum(byts, cksum, fix=False):
+def validate_checksum(byts, cksum):
 	fcksum = byts[cksum]
 	ccksum = checksum8bitHonda(byts[:cksum]+byts[(cksum+1):])
-	fixed = False
-	if fix:
-		if fcksum != ccksum:
-			fixed = True
-			byts[cksum] = ccksum
-	return byts, fcksum, ccksum, fixed
+	return fcksum, ccksum
 
+def do_validation(byts, cksum, fix=False):
+	status = "bad"
+	fcksum, ccksum = validate_checksum(byts, cksum)
+	if fcksum != ccksum:
+		if fix:
+			byts[cksum] = ccksum
+			status = "fixed"
+	else:
+		status = "good"
+	return byts, status
 
 def format_message(mtype, data):
 	ml = len(mtype)
@@ -82,10 +88,6 @@ def format_message(mtype, data):
 	msg += [checksum8bitHonda(msg)]
 	assert(msg[ml] == len(msg))
 	return msg, ml, dl
-
-class Hex(object):
-	def __call__(self, value):
-		return int(value, 16)
 
 class HondaECU(object):
 
@@ -123,12 +125,11 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
 
-	def init(self, debug=False):
+	def init(self, debug=False, retries=0):
 		ret = False
 		self._break(.070)
 		time.sleep(.130)
-		self.dev.flush()
-		info = self.send_command([0xfe],[0x72], debug=debug, retries=0) # 0xfe <- KWP2000 fast init all nodes ?
+		info = self.send_command([0xfe],[0x72], debug=debug, retries=retries)
 		if info != None and ord(info[0]) > 0:
 			if ord(info[2]) == 0x72:
 				ret = True
@@ -165,9 +166,7 @@ class HondaECU(object):
 
 	def send_command(self, mtype, data=[], retries=10, debug=False):
 		msg, ml, dl = format_message(mtype, data)
-		first = True
-		while first or retries > 0:
-			first = False
+		while retries >= 0:
 			if debug:
 				sys.stderr.write("[%s] > [%s]" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % m for m in msg])))
 			resp = self.send(msg, ml)
@@ -272,33 +271,19 @@ class HondaECU(object):
 def print_header():
 	sys.stdout.write("===================================================\n")
 
-def do_validation(binfile, cksum, fix=False):
-	print_header()
-	if fix:
-		sys.stdout.write("Fixing bin file checksum\n")
+def do_read_flash(ecu, binfile, rom_size=-1, offset=0, debug=False):
+	if rom_size < 0:
+		maxbyte = math.inf
 	else:
-		sys.stdout.write("Validating bin file checksum\n")
-	with open(binfile, "rb") as fbin:
-		byts, fcksum, ccksum, fixed = validate_checksum(bytearray(fbin.read(os.path.getsize(binfile))), cksum, fix)
-		if fixed:
-			status = "fixed"
-		elif fcksum == ccksum:
-			status = "good"
-		else:
-			status = "bad"
-		sys.stdout.write("  file checksum: %s\n" % fcksum)
-		sys.stdout.write("  calculated checksum: %s\n" % ccksum)
-		sys.stdout.write("  status: %s\n" % status)
-		return byts, fcksum, ccksum, fixed
-
-def do_read_flash(ecu, binfile, rom_size, debug=False):
-	maxbyte = 1024 * rom_size
-	nbyte = 0
+		maxbyte = 1024 * rom_size
+	nbyte = offset
 	readsize = 8
 	with open(binfile, "wb") as fbin:
 		t = time.time()
 		while nbyte < maxbyte:
-			info = ecu.send_command([0x82, 0x82, 0x00], [int(nbyte/65536)] + [b for b in struct.pack("<H", nbyte % 65536)] + [readsize], debug=args.debug)
+			info = ecu.send_command([0x82, 0x82, 0x00], [int(nbyte/65536)] + [b for b in struct.pack("<H", nbyte % 65536)] + [readsize], debug=debug)
+			if info == None:
+				break
 			fbin.write(info[2])
 			fbin.flush()
 			nbyte += readsize
