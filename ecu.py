@@ -147,7 +147,7 @@ class HondaECU(object):
 
 	def kline_alt(self):
 		self.dev.flush()
-		self.dev._write(b"\ff")
+		self.dev._write(b"\xff")
 		return self.dev._read(1) == b"\xff"
 
 	def kline_old(self):
