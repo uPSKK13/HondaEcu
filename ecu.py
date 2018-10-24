@@ -145,6 +145,11 @@ class HondaECU(object):
 		self.dev._write(b"\x00")
 		return self.dev._read(1) == b"\x00"
 
+	def kline_alt(self):
+		self.dev.flush()
+		self.dev._write(b"\ff")
+		return self.dev._read(1) == b"\xff"
+
 	def kline_old(self):
 		b = create_string_buffer(2)
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)

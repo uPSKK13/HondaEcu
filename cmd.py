@@ -55,7 +55,7 @@ def HondaECU_CmdLine(args, version):
             sys.exit(-2)
 
         if args.mode == "kline":
-            f = [ecu.kline, ecu.kline_old, ecu.kline_new][args.type]
+            f = [ecu.kline, ecu.kline_old, ecu.kline_new, ecu.kline_alt][args.type]
             while True:
                 print(f())
             sys.exit(1)
