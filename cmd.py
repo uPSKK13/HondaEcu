@@ -54,6 +54,12 @@ def HondaECU_CmdLine(args, version):
             sys.stderr.write("No flash adapters detected!\n")
             sys.exit(-2)
 
+        if args.mode == "kline":
+            f = [ecu.kline, ecu.kline_old, ecu.kline_new][args.type]
+            while True:
+                print(f())
+            sys.exit(1)
+
         if args.mode in ["read","write","recover"] and ecu.kline():
             print_header()
             sys.stdout.write("Turn off bike\n")

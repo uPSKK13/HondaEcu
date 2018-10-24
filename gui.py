@@ -55,7 +55,7 @@ class ErrorPanel(wx.Panel):
 	def __init__(self, gui):
 		wx.Panel.__init__(self, gui.notebook)
 
-		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT)
+		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT|wx.LC_HRULES)
 		self.errorlist.InsertColumn(1,"DTC",format=wx.LIST_FORMAT_CENTER,width=50)
 		self.errorlist.InsertColumn(2,"Description",format=wx.LIST_FORMAT_CENTER,width=-1)
 		self.errorlist.InsertColumn(3,"Occurance",format=wx.LIST_FORMAT_CENTER,width=80)

@@ -135,10 +135,20 @@ class HondaECU(object):
 				ret = True
 		return ret
 
+	def kline_new(self):
+		pin_byte = c_ubyte()
+		self.dev.ftdi_fn.ftdi_read_pins(byref(pin_byte))
+		return (pin_byte.value == 0xff)
+
 	def kline(self):
 		self.dev.flush()
 		self.dev._write(b"\x00")
 		return self.dev._read(1) == b"\x00"
+
+	def kline_old(self):
+		b = create_string_buffer(2)
+		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
+		return b.raw[1] & 16 == 0
 
 	def send(self, buf, ml, timeout=.5):
 		self.dev.flush()

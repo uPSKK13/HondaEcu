@@ -52,6 +52,9 @@ if __name__ == '__main__':
 
 	parser_log = subparsers.add_parser('log', help='log engine data')
 
+	parser_recover = subparsers.add_parser('kline', help='kline tests')
+	parser_recover.add_argument('--type', default=0, type=int, choices=[0,1,2], help="kline test type")
+
 	db_grp = parser.add_argument_group('debugging options')
 	db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
 	db_grp.add_argument('--noredirect', action='store_true', help="dont redirect stdout/stderr")
