@@ -279,22 +279,22 @@ class DataPanel(wx.Panel):
 		self.datapsizer.Add(self.o2heat1l, pos=(16,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
 		self.datapsizer.Add(self.sttrim1l, pos=(17,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.BOTTOM, border=10)
 
-		self.datapsizer.Add(enginespeedlu, pos=(0,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.TOP, border=10)
-		self.datapsizer.Add(vehiclespeedlu, pos=(1,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(ectsensorlu, pos=(2,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(iatsensorlu, pos=(3,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(mapsensorlu, pos=(4,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(tpsensorlu, pos=(5,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(batteryvoltagelu, pos=(6,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(injectorlu, pos=(7,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(advancelu, pos=(8,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(iacvplu, pos=(9,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(iacvclu, pos=(10,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(eotsensorlu, pos=(11,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(tcpsensorlu, pos=(12,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(apsensorlu, pos=(13,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(racvalvelu, pos=(14,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
-		self.datapsizer.Add(o2volt1lu, pos=(15,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
+		self.datapsizer.Add(enginespeedlu, pos=(0,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.TOP, border=10)
+		self.datapsizer.Add(vehiclespeedlu, pos=(1,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(ectsensorlu, pos=(2,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(iatsensorlu, pos=(3,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(mapsensorlu, pos=(4,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(tpsensorlu, pos=(5,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(batteryvoltagelu, pos=(6,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(injectorlu, pos=(7,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(advancelu, pos=(8,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(iacvplu, pos=(9,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(iacvclu, pos=(10,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(eotsensorlu, pos=(11,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(tcpsensorlu, pos=(12,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(apsensorlu, pos=(13,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(racvalvelu, pos=(14,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
+		self.datapsizer.Add(o2volt1lu, pos=(15,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=0)
 
 		self.datapsizer.Add(o2volt2l, pos=(0,4), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.TOP, border=10)
 		self.datapsizer.Add(o2heat2l, pos=(1,4), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=0)
@@ -722,7 +722,9 @@ class HondaECU_GUI(wx.Frame):
 			[
 				self.ValidateModes
 			],
-			[],
+			[
+				self.GetTable11
+			],
 			[
 				self.Get_Current_Faults,
 				self.Get_Past_Faults,
@@ -751,6 +753,25 @@ class HondaECU_GUI(wx.Frame):
 		self.idletimer = wx.Timer(self, wx.ID_ANY)
 		self.Bind(wx.EVT_TIMER, self.TimerActions)
 		self.idletimer.Start(250)
+
+	def GetTable11(self):
+		if not self.emergency:
+			info = self.ecu.send_command([0x72], [0x71, 0x11], debug=self.args.debug, retries=0)
+			if info[3] == 22:
+				data = struct.unpack(">H18B", info[2][2:])
+				print(data[17]/255.*5,data[18]/255.*5)
+				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
+				self.datap.tpsensorl.SetLabel("%d" % (data[2]))
+				self.datap.ectsensorl.SetLabel("%d" % (-40 + data[4]))
+				self.datap.iatsensorl.SetLabel("%d" % (-40 + data[6]))
+				self.datap.mapsensorl.SetLabel("%d" % (data[8]))
+				self.datap.batteryvoltagel.SetLabel("%.02f" % (data[11]/10))
+				self.datap.vehiclespeedl.SetLabel("%.02f" % (data[12]))
+				self.datap.injectorl.SetLabel("%d" % (data[13]))
+				self.datap.advancel.SetLabel("%d" % (data[14]))
+				self.datap.iacvcl.SetLabel("%.03f" % (data[15]/255.*5/10))
+				self.datap.iacvpl.SetLabel("%d" % (data[16]))
+				self.datap.Layout()
 
 	def Get_Info(self):
 		if not self.emergency:
