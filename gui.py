@@ -809,7 +809,7 @@ class HondaECU_GUI(wx.Frame):
 				self.datap.egcvil.SetLabel("%.03f" % (data[5]/255*5))
 				self.datap.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
 				self.datap.egcvll.SetLabel("%d" % (data[7]))
-			 	self.datap.Layout()
+				self.datap.Layout()
 
 	def Get_Info(self):
 		if not self.emergency:
