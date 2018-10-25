@@ -760,7 +760,6 @@ class HondaECU_GUI(wx.Frame):
 	def GetTable10(self):
 		if not self.emergency:
 			info = self.ecu.send_command([0x72], [0x71, 0x10], debug=self.args.debug, retries=0)
-			#print(info)
 			if info[3] == 19:
 				data = struct.unpack(">H15B", info[2][2:])
 				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
@@ -770,10 +769,8 @@ class HondaECU_GUI(wx.Frame):
 				self.datap.mapsensorl.SetLabel("%d" % (data[8]))
 				self.datap.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
 				self.datap.vehiclespeedl.SetLabel("%d" % (data[12]))
-				self.datap.injectorl.SetLabel("%.03f" % (data[13]))
-				self.datap.advancel.SetLabel("%d" % (data[14]))
-				# self.datap.iacvpl.SetLabel("%d" % (data[16]))
-				# self.datap.iacvcl.SetLabel("%.03f" % (data[17]/127))
+				self.datap.advancel.SetLabel("%.03f" % (data[13]))
+				self.datap.injectorl.SetLabel("%d" % (data[14]))
 				self.datap.Layout()
 
 	def GetTable11(self):
@@ -788,8 +785,8 @@ class HondaECU_GUI(wx.Frame):
 				self.datap.mapsensorl.SetLabel("%d" % (data[8]))
 				self.datap.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
 				self.datap.vehiclespeedl.SetLabel("%d" % (data[12]))
-				self.datap.injectorl.SetLabel("%.03f" % (data[13]))
-				self.datap.advancel.SetLabel("%d" % (data[14]))
+				self.datap.advancel.SetLabel("%.03f" % (data[13]))
+				self.datap.injectorl.SetLabel("%d" % (data[14]))
 				self.datap.iacvpl.SetLabel("%d" % (data[16]))
 				self.datap.iacvcl.SetLabel("%.03f" % (data[17]/127))
 				self.datap.Layout()
@@ -809,13 +806,10 @@ class HondaECU_GUI(wx.Frame):
 			info = self.ecu.send_command([0x72], [0x71, 0xd0], debug=self.args.debug, retries=0)
 			if info[3] == 16:
 				data = struct.unpack(">7Bb6B", info[2][2:])
-				print(data)
 				self.datap.egcvil.SetLabel("%.03f" % (data[5]/255*5))
 				self.datap.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
 				self.datap.egcvll.SetLabel("%d" % (data[7]))
-			# 	self.datap.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
-			# 	self.datap.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
-			# 	self.datap.Layout()
+			 	self.datap.Layout()
 
 	def Get_Info(self):
 		if not self.emergency:
