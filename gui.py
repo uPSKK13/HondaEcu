@@ -723,7 +723,8 @@ class HondaECU_GUI(wx.Frame):
 				self.ValidateModes
 			],
 			[
-				self.GetTable11
+				self.GetTable11,
+				self.GetTable20
 			],
 			[
 				self.Get_Current_Faults,
@@ -759,7 +760,6 @@ class HondaECU_GUI(wx.Frame):
 			info = self.ecu.send_command([0x72], [0x71, 0x11], debug=self.args.debug, retries=0)
 			if info[3] == 22:
 				data = struct.unpack(">H18B", info[2][2:])
-				print(data[17]/255.*5,data[18]/255.*5)
 				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
 				self.datap.tpsensorl.SetLabel("%d" % (data[2]))
 				self.datap.ectsensorl.SetLabel("%d" % (-40 + data[4]))
@@ -769,8 +769,18 @@ class HondaECU_GUI(wx.Frame):
 				self.datap.vehiclespeedl.SetLabel("%.02f" % (data[12]))
 				self.datap.injectorl.SetLabel("%d" % (data[13]))
 				self.datap.advancel.SetLabel("%d" % (data[14]))
-				self.datap.iacvcl.SetLabel("%.03f" % (data[15]/255.*5/10))
 				self.datap.iacvpl.SetLabel("%d" % (data[16]))
+				self.datap.iacvcl.SetLabel("%.03f" % (data[17]/127))
+				self.datap.Layout()
+
+	def GetTable20(self):
+		if not self.emergency:
+			info = self.ecu.send_command([0x72], [0x71, 0x20], debug=self.args.debug, retries=0)
+			if info[3] == 5:
+				data = struct.unpack(">3B", info[2][2:])
+				self.datap.o2volt1l.SetLabel("%.02f" % (data[0]/255*5))
+				self.datap.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
+				self.datap.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
 				self.datap.Layout()
 
 	def Get_Info(self):
