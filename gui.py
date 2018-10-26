@@ -618,7 +618,7 @@ class HondaECU_GUI(wx.Frame):
 				if self.emergency:
 					pass
 				else:
-					if not self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug, retries=0):
+					if not self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug):
 						self.device_state = DEVICE_STATE_ERROR
 			elif self.device_state == DEVICE_STATE_POST_READ:
 				pass
@@ -759,7 +759,7 @@ class HondaECU_GUI(wx.Frame):
 
 	def GetTable10(self):
 		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0x10], debug=self.args.debug, retries=0)
+			info = self.ecu.send_command([0x72], [0x71, 0x10], debug=self.args.debug)
 			if info[3] == 19:
 				data = struct.unpack(">H15B", info[2][2:])
 				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
@@ -775,7 +775,7 @@ class HondaECU_GUI(wx.Frame):
 
 	def GetTable11(self):
 		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0x11], debug=self.args.debug, retries=0)
+			info = self.ecu.send_command([0x72], [0x71, 0x11], debug=self.args.debug)
 			if info[3] == 22:
 				data = struct.unpack(">H18B", info[2][2:])
 				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
@@ -793,7 +793,7 @@ class HondaECU_GUI(wx.Frame):
 
 	def GetTable20(self):
 		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0x20], debug=self.args.debug, retries=0)
+			info = self.ecu.send_command([0x72], [0x71, 0x20], debug=self.args.debug)
 			if info[3] == 5:
 				data = struct.unpack(">3B", info[2][2:])
 				self.datap.o2volt1l.SetLabel("%.03f" % (data[0]/255*5))
@@ -803,7 +803,7 @@ class HondaECU_GUI(wx.Frame):
 
 	def GetTabled0(self):
 		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0xd0], debug=self.args.debug, retries=0)
+			info = self.ecu.send_command([0x72], [0x71, 0xd0], debug=self.args.debug)
 			if info[3] == 16:
 				data = struct.unpack(">7Bb6B", info[2][2:])
 				self.datap.egcvil.SetLabel("%.03f" % (data[5]/255*5))
@@ -813,10 +813,10 @@ class HondaECU_GUI(wx.Frame):
 
 	def Get_Info(self):
 		if not self.emergency:
-			info = self.ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=self.args.debug, retries=0)
+			info = self.ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=self.args.debug)
 			if info:
 				self.infop.ecmid.SetLabel("%s" % " ".join(["%02x" % b for b in info[2][3:]]))
-			info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03], debug=self.args.debug, retries=0)
+			info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03], debug=self.args.debug)
 			if info:
 				self.infop.status.SetLabel("dirty" if info[2][2] == 0xff else "clean")
 				self.infop.flashcount.SetLabel(str(int(info[2][4])))
@@ -1024,7 +1024,7 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_ERROR
 			elif self.device_state == DEVICE_STATE_INIT_B and time.time() > self.state_delay+.130:
-				info = self.ecu.send_command([0xfe],[0x72], debug=self.args.debug, retries=0)
+				info = self.ecu.send_command([0xfe],[0x72], debug=self.args.debug)
 				if info and info[2][0] == 0x72:
 					self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
 					self.statusbar.SetStatusText("ECU connected!")
@@ -1045,7 +1045,7 @@ class HondaECU_GUI(wx.Frame):
 				else:
 					self.device_state = DEVICE_STATE_UNKNOWN
 			elif self.device_state == DEVICE_STATE_UNKNOWN:
-				if self.ecu.send_command([0x7e], [0x01, 0x02], debug=self.args.debug, retries=0) != None:
+				if self.ecu.send_command([0x7e], [0x01, 0x02], debug=self.args.debug) != None:
 					self.statusbar.SetStatusText("ECU connected (emergency)!")
 					self.SetEmergency(True)
 					self.device_state = DEVICE_STATE_CONNECTED
@@ -1054,7 +1054,7 @@ class HondaECU_GUI(wx.Frame):
 			elif self.device_state == DEVICE_STATE_CLEAR_CODES:
 				self.errorp.errorlist.DeleteAllItems()
 				self.errorp.Layout()
-				info = self.ecu.send_command([0x72],[0x60, 0x03], debug=self.args.debug, retries=0)
+				info = self.ecu.send_command([0x72],[0x60, 0x03], debug=self.args.debug)
 				if info and info[2][1] == 0x00:
 					self.statusbar.SetStatusText("ECU connected!")
 					self.device_state = DEVICE_STATE_CONNECTED

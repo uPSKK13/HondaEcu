@@ -119,7 +119,7 @@ def HondaECU_CmdLine(args, version):
 
                 print_header()
                 sys.stdout.write("Reading ECU\n")
-                do_read_flash(ecu, binfile, args.rom_size, args.offset, debug=args.debug)
+                do_read_flash(ecu, binfile, debug=args.debug)
                 print_header()
                 sys.stdout.write("Validating checksum\n")
                 with open(binfile, "rb") as fbin:

@@ -58,6 +58,10 @@ DTC = {
 	"86-01": "Serial communication malfunction"
 }
 
+def format_read(location):
+	tmp = struct.unpack(">4B",struct.pack(">I",location))
+	return [tmp[1], tmp[3], tmp[2]]
+
 def checksum8bitHonda(data):
 	return ((sum(bytearray(data)) ^ 0xFF) + 1) & 0xFF
 
@@ -125,15 +129,16 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_set_bitmode(0, 0x00)
 		self.dev.flush()
 
-	def init(self, debug=False, retries=0):
-		ret = False
+	def wakeup(self):
 		self._break(.070)
 		time.sleep(.130)
-		info = self.send_command([0xfe],[0x72], debug=debug, retries=retries)
-		if info != None and ord(info[0]) > 0:
-			if ord(info[2]) == 0x72:
-				ret = True
-		return ret
+
+	def ping(self, debug=False):
+		return self.send_command([0xfe],[0x72], debug=debug)!=None
+
+	def init(self, debug=False):
+		self.wakeup()
+		return self.ping(debug)
 
 	def kline_new(self):
 		pin_byte = c_ubyte()
@@ -155,72 +160,49 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
 		return b.raw[1] & 16 == 0
 
-	def send(self, buf, ml, timeout=.5):
+	def send(self, buf, ml):
 		self.dev.flush()
 		msg = "".join([chr(b) for b in buf]).encode("latin1")
 		self.dev._write(msg)
-		r = len(msg)
-		to = time.time()
-		while r > 0:
-			r -= len(self.dev._read(r))
-			if time.time() - to > timeout: return None
+		self.dev._read(len(msg))
 		buf = bytearray()
-		r = ml+1
-		while r > 0:
-			tmp = self.dev._read(r)
-			r -= len(tmp)
-			buf.extend(tmp)
-			if time.time() - to > timeout: return None
-		r = buf[-1]-ml-1
-		while r > 0:
-			tmp = self.dev._read(r)
-			r -= len(tmp)
-			buf.extend(tmp)
-			if time.time() - to > timeout: return None
-		return buf
+		buf.extend(self.dev._read(ml+1))
+		if len(buf) > 0:
+			buf.extend(self.dev._read(buf[-1]-ml-1))
+			if buf[-1] == checksum8bitHonda([r for r in buf[:-1]]):
+				return buf
 
-	def send_command(self, mtype, data=[], retries=10, debug=False):
+	def send_command(self, mtype, data=[], debug=False, retries=1):
 		msg, ml, dl = format_message(mtype, data)
 		while retries >= 0:
+			retries -= 1
 			if debug:
 				sys.stderr.write("[%s] > [%s]" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % m for m in msg])))
+				sys.stderr.flush()
 			resp = self.send(msg, ml)
-			if resp == None:
+			if resp:
 				if debug:
-					sys.stderr.write(" !%d \n" % (retries))
-				retries -= 1
-				time.sleep(0)
-				continue
+					sys.stderr.write("\n[%s] < [%s]\n" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % r for r in resp])))
+					sys.stderr.flush()
+				rmtype = resp[:ml]
+				rml = resp[ml:(ml+1)]
+				rdl = ord(rml) - 2 - len(rmtype)
+				rdata = resp[(ml+1):-1]
+				return (rmtype, rml, rdata, rdl)
 			else:
 				if debug:
-					sys.stderr.write("\n")
-			if debug:
-				sys.stderr.write("[%s] < [%s]" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % r for r in resp])))
-			invalid = (resp[-1] != checksum8bitHonda([r for r in resp[:-1]]))
-			if invalid:
-				if debug:
-					sys.stderr.write(" !%d \n" % (retries))
-				retries -= 1
-				time.sleep(0)
-				continue
-			else:
-				if debug:
-					sys.stderr.write("\n")
-			sys.stderr.flush()
-			rmtype = resp[:ml]
-			rml = resp[ml:(ml+1)]
-			rdl = ord(rml) - 2 - len(rmtype)
-			rdata = resp[(ml+1):-1]
-			return (rmtype, rml, rdata, rdl)
-		return None
+					sys.stderr.write(" !\n")
+					sys.stderr.flush()
 
 	def do_init_recover(self, debug=False):
+		self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x03], debug=debug)
 		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17], debug=debug)
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13], debug=debug)
 
 	def do_init_write(self, debug=False):
+		self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
 		self.send_command([0x7d], [0x01, 0x01, 0x03], debug=debug)
 		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d], debug=debug)
@@ -285,41 +267,43 @@ class HondaECU(object):
 def print_header():
 	sys.stdout.write("===================================================\n")
 
-def do_read_flash(ecu, binfile, rom_size=-1, offset=0, debug=False):
-	if rom_size < 0:
-		maxbyte = math.inf
-	else:
-		maxbyte = 1024 * rom_size
-	nbyte = offset
-	readsize = 8
+def do_read_flash(ecu, binfile, debug=False):
+	readsize = 12
+	location = 0
 	with open(binfile, "wb") as fbin:
 		t = time.time()
-		while nbyte < maxbyte:
-			info = ecu.send_command([0x82, 0x82, 0x00], [int(nbyte/65536)] + [b for b in struct.pack("<H", nbyte % 65536)] + [readsize], debug=debug)
-			if info == None:
-				break
-			fbin.write(info[2])
-			fbin.flush()
-			nbyte += readsize
-			if nbyte % 256 == 0:
-				sys.stdout.write(".")
-			if nbyte % 8192 == 0:
+		size = location
+		rate = 0
+		while True:
+			info = ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize], debug=debug)
+			if not info:
+				readsize -= 1
+				if readsize < 1:
+					break
+			else:
+				fbin.write(info[2])
+				fbin.flush()
+				location += readsize
 				n = time.time()
-				sys.stdout.write(" %dkB %.02fBps\n" % (int(nbyte/1024),8192/(n-t)))
-				t = n
-			sys.stdout.flush()
+				if not debug:
+					sys.stdout.write(u"\r\u001b[K  %.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+					sys.stdout.flush()
+					if n-t > 1:
+						rate = (location-size)/(n-t)
+						t = n
+						size = location
 
 def do_write_flash(ecu, byts, debug=False, offset=0):
 	writesize = 128
 	maxi = len(byts)/128
-	i = offset
+	i = 0
 	t = time.time()
 	while i < maxi:
-		bytstart = [s for s in struct.pack(">H",(8*i))]
+		bytstart = [s for s in struct.pack(">H",offset+(8*i))]
 		if i+1 == maxi:
-			bytend = [s for s in struct.pack(">H",0)]
+			bytend = [s for s in struct.pack(">H",offset)]
 		else:
-			bytend = [s for s in struct.pack(">H",(8*(i+1)))]
+			bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
 		d = list(byts[((i+0)*128):((i+1)*128)])
 		x = bytstart + d + bytend
 		c1 = checksum8bit(x)
