@@ -618,7 +618,7 @@ class HondaECU_GUI(wx.Frame):
 				if self.emergency:
 					pass
 				else:
-					if not self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug):
+					if not self.ecu.ping():
 						self.device_state = DEVICE_STATE_ERROR
 			elif self.device_state == DEVICE_STATE_POST_READ:
 				pass

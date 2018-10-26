@@ -160,17 +160,29 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_poll_modem_status(b)
 		return b.raw[1] & 16 == 0
 
-	def send(self, buf, ml):
+	def send(self, buf, ml, timeout=.1):
 		self.dev.flush()
 		msg = "".join([chr(b) for b in buf]).encode("latin1")
 		self.dev._write(msg)
-		self.dev._read(len(msg))
+		r = len(msg)
+		to = time.time()
+		while r > 0:
+			r -= len(self.dev._read(r))
+			if time.time() - to > timeout: return None
 		buf = bytearray()
-		buf.extend(self.dev._read(ml+1))
-		if len(buf) > 0:
-			buf.extend(self.dev._read(buf[-1]-ml-1))
-			if buf[-1] == checksum8bitHonda([r for r in buf[:-1]]):
-				return buf
+		r = ml+1
+		while r > 0:
+			tmp = self.dev._read(r)
+			r -= len(tmp)
+			buf.extend(tmp)
+			if time.time() - to > timeout: return None
+		r = buf[-1]-ml-1
+		while r > 0:
+			tmp = self.dev._read(r)
+			r -= len(tmp)
+			buf.extend(tmp)
+			if time.time() - to > timeout: return None
+		return buf
 
 	def send_command(self, mtype, data=[], debug=False, retries=1):
 		msg, ml, dl = format_message(mtype, data)
