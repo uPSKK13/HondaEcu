@@ -65,6 +65,7 @@ def HondaECU_CmdLine(args, version):
             sys.stdout.write("Turn off bike\n")
             while ecu.kline():
                 time.sleep(.1)
+            time.sleep(.5)
         if not ecu.kline():
             sys.stdout.write("Turn on bike\n")
             while not ecu.kline():
@@ -140,13 +141,14 @@ def HondaECU_CmdLine(args, version):
                 print_header()
                 sys.stdout.write("Entering enhanced diagnostic mode\n")
                 ecu.send_command([0x72],[0x00, 0xf1], debug=args.debug)
-                ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=args.debug)
+                time.sleep(1)
+                ecu.send_command([0x27],[0x00, 0x01, 0x00], debug=args.debug)
 
         if args.mode in ["write", "recover"] and (initok or args.force):
 
             print_header()
             sys.stdout.write("Erasing ECU\n")
-            time.sleep(12)
+            time.sleep(14)
             ecu.do_erase(debug=args.debug)
             ecu.do_erase_wait(debug=args.debug)
 
