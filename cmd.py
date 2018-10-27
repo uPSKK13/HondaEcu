@@ -60,29 +60,28 @@ def HondaECU_CmdLine(args, version):
                 print(f())
             sys.exit(1)
 
-        if args.mode in ["read","write","recover"] and ecu.kline():
+        if args.mode in ["read"] and ecu.kline():
             print_header()
             sys.stdout.write("Turn off bike\n")
             while ecu.kline():
-                time.sleep(.1)
-            time.sleep(.5)
+                time.sleep(0)
+            time.sleep(1)
         if not ecu.kline():
             sys.stdout.write("Turn on bike\n")
             while not ecu.kline():
-                time.sleep(.1)
-            time.sleep(.5)
+                time.sleep(0)
+            time.sleep(1)
 
         print_header()
-        sys.stdout.write("Initializing ECU\n")
-        initok = ecu.init(debug=args.debug)
+        sys.stdout.write("Waking-up ECU\n")
+        ecu.wakeup()
 
-        if initok:
-            print_header()
-            sys.stdout.write("Entering diagnostic mode\n")
-            ecu.send_command([0x72],[0x00, 0xf0], debug=args.debug)
-            info = ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=args.debug)
-            sys.stdout.write("  ECM ID: %s\n" % " ".join(["%02x" % b for b in info[2][3:]]))
+        print_header()
+        sys.stdout.write("Detecting ECU state\n")
+        state, m = ecu.detect_ecu_state(debug=args.debug)
+        sys.stdout.write("  state: %s\n" % (m))
 
+        if (state in [1,2,3]):
             if args.mode == "scan":
                 print_header()
                 sys.stdout.write("HDS Tables\n")
@@ -144,7 +143,7 @@ def HondaECU_CmdLine(args, version):
                 time.sleep(1)
                 ecu.send_command([0x27],[0x00, 0x01, 0x00], debug=args.debug)
 
-        if args.mode in ["write", "recover"] and (initok or args.force):
+        if args.mode in ["write", "recover"] and (state in [1,2,3]):
 
             print_header()
             sys.stdout.write("Erasing ECU\n")

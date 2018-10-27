@@ -8,6 +8,7 @@ import sys
 import platform
 import os
 import math
+import code
 
 ECM_IDs = {
 	"\x01\x00\x2b\x01\x01": ("CBR1000RR","2006-2007","38770-MEL-D21"),
@@ -206,6 +207,48 @@ class HondaECU(object):
 					sys.stderr.write(" !\n")
 					sys.stderr.flush()
 
+	def detect_ecu_state(self, debug=False):
+		states = [
+			"unknown",				# 0
+			"ok",					# 1
+			"recover",				# 2
+			"recover (old)",		# 3
+			"init",					# 4
+			"unlock",				# 5
+			"erase",				# 6
+			"write",				# 7
+			"finalize",				# 8
+			"reset"					# 9
+		]
+		state = 0
+		if self.ping(debug=debug):
+			rinfo = self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
+			winfo = self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
+			if winfo:
+				state = 1
+			else:
+				state = 2
+		else:
+			einfo = self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+			if einfo:
+				if einfo[2][1] == 0x00:
+					state = 3
+				elif einfo[2][1] == 0x10:
+					state = 4
+				elif einfo[2][1] == 0x20:
+					state = 5
+				elif einfo[2][1] == 0x30:
+					state = 6
+				elif einfo[2][1] == 0x40:
+					state = 7
+				elif einfo[2][1] == 0x50:
+					state = 8
+				elif einfo[2][1] == 0x0f:
+					state = 9
+				else:
+					print(einfo[2][1])
+		return state, states[state]
+
 	def do_init_recover(self, debug=False):
 		self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
 		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
@@ -221,40 +264,31 @@ class HondaECU(object):
 		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49], debug=debug)
 
 	def do_erase(self, debug=False):
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 		self.send_command([0x7e], [0x01, 0x02], debug=debug)
 		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
 		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
 		self.send_command([0x7e], [0x01, 0x0e, 0x01, 0x90], debug=debug)
 		self.send_command([0x7e], [0x01, 0x01, 0x01], debug=debug)
 		self.send_command([0x7e], [0x01, 0x04, 0xff], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
 	def do_erase_wait(self, debug=False):
-		while True:
+		cont = 1
+		while cont:
 			info = self.send_command([0x7e], [0x01, 0x05], debug=debug)
-			if info[2][1] == 0x00:
-				break
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+			if info:
+				if info[2][1] == 0x00:
+					cont = 0
+			else:
+				cont = -1
+		if cont == 0:
+			into = self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
 	def do_post_write(self, debug=False):
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
 		self.send_command([0x7e], [0x01, 0x09], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
 		self.send_command([0x7e], [0x01, 0x0a], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
+		time.sleep(1)
 		self.send_command([0x7e], [0x01, 0x0c], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
-
 		self.send_command([0x7e], [0x01, 0x0d], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
 
 	def get_faults(self, debug=False):
 		faults = {'past':[], 'current':[]}
