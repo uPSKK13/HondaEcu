@@ -344,7 +344,7 @@ def do_read_flash(ecu, binfile, debug=False):
 				location += readsize
 				n = time.time()
 				if not debug:
-					sys.stdout.write(u"\r\u001b[K  %.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+					sys.stdout.write(u"\r  %.02fKB @ %s        " % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
 					sys.stdout.flush()
 					nl = True
 					if n-t > 1:
@@ -381,7 +381,7 @@ def do_write_flash(ecu, byts, debug=False, offset=0):
 			sys.exit(1)
 		n = time.time()
 		if not debug:
-			sys.stdout.write(u"\r\u001b[K  %.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+			sys.stdout.write(u"\r  %.02fKB @ %s        " % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
 			sys.stdout.flush()
 			nl = True
 			if n-t > 1:
