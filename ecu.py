@@ -218,8 +218,9 @@ class HondaECU(object):
 			"erase",				# 6
 			"write",				# 7
 			"finalize",				# 8
-			"reset",				# 9
-			"read"					# 10
+			"incomplete",			# 9
+			"reset",				# 10
+			"read"					# 11
 		]
 		state = 0
 		if self.ping(debug=debug):
@@ -244,14 +245,16 @@ class HondaECU(object):
 					state = 7
 				elif einfo[2][1] == 0x50:
 					state = 8
-				elif einfo[2][1] == 0x0f:
+				elif einfo[2][1] == 0x0d:
 					state = 9
+				elif einfo[2][1] == 0x0f:
+					state = 10
 				else:
 					print(einfo[2][1])
 			else:
 				dinfo = self.send_command([0x82, 0x82, 0x00], [], debug=debug)
 				if dinfo:
-					state = 10
+					state = 11
 		return state, states[state]
 
 	def do_init_recover(self, debug=False):
@@ -290,10 +293,13 @@ class HondaECU(object):
 
 	def do_post_write(self, debug=False):
 		self.send_command([0x7e], [0x01, 0x09], debug=debug)
+		time.sleep(.5)
 		self.send_command([0x7e], [0x01, 0x0a], debug=debug)
-		time.sleep(1)
+		time.sleep(.5)
 		self.send_command([0x7e], [0x01, 0x0c], debug=debug)
-		self.send_command([0x7e], [0x01, 0x0d], debug=debug)
+		time.sleep(.5)
+		info = self.send_command([0x7e], [0x01, 0x0d], debug=debug)
+		if info: return (info[2][1] == 0x0f)
 
 	def get_faults(self, debug=False):
 		faults = {'past':[], 'current':[]}
@@ -321,6 +327,7 @@ def print_header():
 def do_read_flash(ecu, binfile, debug=False):
 	readsize = 12
 	location = 0
+	nl = False
 	with open(binfile, "wb") as fbin:
 		t = time.time()
 		size = location
@@ -339,17 +346,25 @@ def do_read_flash(ecu, binfile, debug=False):
 				if not debug:
 					sys.stdout.write(u"\r\u001b[K  %.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
 					sys.stdout.flush()
+					nl = True
 					if n-t > 1:
 						rate = (location-size)/(n-t)
 						t = n
 						size = location
+	if nl:
+		sys.stdout.write("\n")
+		sys.stdout.flush()
 
 def do_write_flash(ecu, byts, debug=False, offset=0):
 	writesize = 128
 	maxi = len(byts)/128
 	i = 0
 	t = time.time()
+	rate = 0
+	size = 0
+	nl = False
 	while i < maxi:
+		w = (i*writesize)
 		bytstart = [s for s in struct.pack(">H",offset+(8*i))]
 		if i+1 == maxi:
 			bytend = [s for s in struct.pack(">H",offset)]
@@ -364,14 +379,18 @@ def do_write_flash(ecu, byts, debug=False, offset=0):
 		if ord(info[1]) != 5:
 			sys.stdout.write(" error\n")
 			sys.exit(1)
+		n = time.time()
+		if not debug:
+			sys.stdout.write(u"\r\u001b[K  %.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+			sys.stdout.flush()
+			nl = True
+			if n-t > 1:
+				rate = (w-size)/(n-t)
+				t = n
+				size = w
 		i += 1
 		if i % 2 == 0:
 			ecu.send_command([0x7e], [0x01, 0x08], debug=debug)
-		if i % 4 == 0:
-			sys.stdout.write(".")
-		if i % 128 == 0:
-			n = time.time()
-			w = (i*writesize)
-			sys.stdout.write(" %4dkB %.02fBps\n" % (int(w/1024),(128*128)/(n-t)))
-			t = n
+	if nl:
+		sys.stdout.write("\n")
 		sys.stdout.flush()

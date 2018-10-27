@@ -157,7 +157,11 @@ def HondaECU_CmdLine(args, version):
 
             print_header()
             sys.stdout.write("Finalizing write process\n")
-            ecu.do_post_write(debug=args.debug)
+            ret = ecu.do_post_write(debug=args.debug)
+            status = "bad"
+            if ret:
+                status = "good"
+            sys.stdout.write("  status: %s\n" % status)
 
     print_header()
     sys.exit(ret)
