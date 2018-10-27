@@ -218,7 +218,8 @@ class HondaECU(object):
 			"erase",				# 6
 			"write",				# 7
 			"finalize",				# 8
-			"reset"					# 9
+			"reset",				# 9
+			"read"					# 10
 		]
 		state = 0
 		if self.ping(debug=debug):
@@ -247,6 +248,10 @@ class HondaECU(object):
 					state = 9
 				else:
 					print(einfo[2][1])
+			else:
+				dinfo = self.send_command([0x82, 0x82, 0x00], [], debug=debug)
+				if dinfo:
+					state = 10
 		return state, states[state]
 
 	def do_init_recover(self, debug=False):
