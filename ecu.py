@@ -96,12 +96,13 @@ def format_message(mtype, data):
 
 class HondaECU(object):
 
-	def __init__(self, device_id=None, dprint=None):
+	def __init__(self, device_id=None, dprint=None, latency=None):
 		super(HondaECU, self).__init__()
 		self.device_id = device_id
 		self.dev = None
 		self.error = 0
 		self.resets = 0
+		self.latency = latency
 		if not dprint:
 			self.dprint = self.__dprint
 		else:
@@ -130,6 +131,11 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_usb_purge_buffers()
 		self.dev.ftdi_fn.ftdi_set_line_property(8, 1, 0)
 		self.dev.baudrate = 10400
+		if self.latency:
+			self.dev.ftdi_fn.ftdi_set_latency_timer(self.latency)
+		latency = c_ubyte()
+		self.dev.ftdi_fn.ftdi_get_latency_timer(byref(latency))
+		print(latency.value)
 
 	def _break(self, ms, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
