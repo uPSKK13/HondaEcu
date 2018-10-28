@@ -81,7 +81,7 @@ def HondaECU_CmdLine(args, version):
 
         print_header()
         sys.stdout.write("Detecting ECU state\n")
-        state, m = ecu.detect_ecu_state(debug=args.debug)
+        state, m = ecu.detect_ecu_state()
         sys.stdout.write("  state: %s\n" % (m))
 
         if (state in [1,2,3]):
