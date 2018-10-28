@@ -19,26 +19,30 @@ class USBMonitor(Thread):
 	def run(self):
 		while self.parent.run:
 			time.sleep(.5)
-			try:
-				new_devices = {}
-				for device in self.usbcontext.getDeviceList(skip_on_error=True):
+			new_devices = {}
+			for device in self.usbcontext.getDeviceList(skip_on_error=True):
+				try:
 					if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID and device.getProductID() in pylibftdi.driver.USB_PID_LIST:
-						serial = device.getSerialNumber()
-						new_devices[serial] = device
-						if not serial in self.ftdi_devices:
+						serial = None
+						try:
+							serial = device.getSerialNumber()
+						except usb1.USBErrorNotSupported:
+							pass
+						new_devices[device] = serial
+						if not device in self.ftdi_devices.keys():
 							wx.CallAfter(pub.sendMessage, "USBMonitor", action="add", device=str(device), serial=serial)
-				for serial in self.ftdi_devices:
-					if not serial in new_devices:
-						wx.CallAfter(pub.sendMessage, "USBMonitor", action="remove", device=str(device), serial=serial)
-				self.ftdi_devices = new_devices
-			except usb1.USBErrorPipe:
-				pass
-			except usb1.USBErrorNoDevice:
-				pass
-			except usb1.USBErrorIO:
-				pass
-			except usb1.USBErrorBusy:
-				pass
+				except usb1.USBErrorPipe:
+					pass
+				except usb1.USBErrorNoDevice:
+					pass
+				except usb1.USBErrorIO:
+					pass
+				except usb1.USBErrorBusy:
+					pass
+			for device in self.ftdi_devices.keys():
+				if not device in new_devices.keys():
+					wx.CallAfter(pub.sendMessage, "USBMonitor", action="remove", device=str(device), serial=self.ftdi_devices[device])
+			self.ftdi_devices = new_devices
 
 class KlineWorker(Thread):
 
@@ -51,23 +55,29 @@ class KlineWorker(Thread):
 		pub.subscribe(self.DeviceHandler, "HondaECU.device")
 		Thread.__init__(self)
 
+	def __cleanup(self):
+		if self.ecu:
+			self.ecu.dev.close()
+			del self.ecu
+		self.ecu = None
+		self.ready = False
+		self.state = 0
+		self.tables = None
+
 	def DeviceHandler(self, action, device, serial):
+		print(action, device, serial)
 		if action == "deactivate":
 			if self.ecu:
 				wx.LogVerbose("Deactivating device (%s | %s)" % (device, serial))
-				self.ecu.dev.close()
-				del self.ecu
-				self.ecu = None
-				self.ready = False
-				self.state = 0
-				self.tables = None
+				self.__cleanup()
 		elif action == "activate":
 			wx.LogVerbose("Activating device (%s | %s)" % (device, serial))
+			self.ready = False
+			self.state = 0
+			self.tables = None
 			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug)
 			self.ecu.setup()
 			self.ready = True
-			self.state = 0
-			self.tables = None
 
 	def run(self):
 		while self.parent.run:
@@ -91,7 +101,8 @@ class KlineWorker(Thread):
 					pass
 				except AttributeError:
 					pass
-
+				except OSError:
+					pass
 
 class HondaECU_GUI(wx.Frame):
 
@@ -149,6 +160,11 @@ class HondaECU_GUI(wx.Frame):
 		self.usbmonitor.start()
 		self.klineworker.start()
 
+	def __deactivate(self):
+		self.active_device = None
+		self.statusbar.SetStatusText("", 0)
+		self.statusbar.SetStatusText("", 1)
+
 	def OnClose(self, event):
 		self.run = False
 		self.usbmonitor.join()
@@ -157,39 +173,47 @@ class HondaECU_GUI(wx.Frame):
 			w.Destroy()
 
 	def OnDeviceSelected(self, event):
-		serial = list(self.devices.keys())[self.m_devices.GetSelection()]
-		if serial != self.active_device:
+		device = list(self.devices.keys())[self.m_devices.GetSelection()]
+		serial = self.devices[device]
+		if device != self.active_device:
+			self.statusbar.SetStatusText("", 1)
 			if self.active_device:
-				pub.sendMessage("HondaECU.device", action="deactivate", device=self.devices[self.active_device], serial=self.active_device)
-			self.active_device = serial
-			pub.sendMessage("HondaECU.device", action="activate", device=self.devices[self.active_device], serial=self.active_device)
+				pub.sendMessage("HondaECU.device", action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+				self.__deactivate()
+			if self.devices[device]:
+				self.active_device = device
+				pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=serial)
+			else:
+				self.statusbar.SetStatusText("Incorrect usb driver for selected device, install libusbK with Zadig!", 1)
 
 	def USBMonitorHandler(self, action, device, serial):
 		dirty = False
 		if action == "add":
 			wx.LogVerbose("Adding device (%s | %s)" % (device, serial))
-			if not serial in self.devices:
-				self.devices[serial] = device
+			if not device in self.devices:
+				self.devices[device] = serial
 				dirty = True
 		elif action =="remove":
 			wx.LogVerbose("Removing device (%s | %s)" % (device, serial))
-			if serial in self.devices:
-				if serial == self.active_device:
-					pub.sendMessage("HondaECU.device", action="deactivate", device=self.devices[self.active_device], serial=self.active_device)
-					self.active_device = None
-					self.statusbar.SetStatusText("", 0)
-				del self.devices[serial]
+			if device in self.devices:
+				if device == self.active_device:
+					pub.sendMessage("HondaECU.device", action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+					self.__deactivate()
+				del self.devices[device]
 				dirty = True
-		if not self.active_device and len(self.devices) > 0:
-			self.active_device = list(self.devices.keys())[0]
-			pub.sendMessage("HondaECU.device", action="activate", device=self.devices[self.active_device], serial=self.active_device)
-			dirty = True
+		# if not self.active_device and len(self.devices) > 0:
+		# 	self.active_device = list(self.devices.keys())[0]
+		# 	pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=self.devices[self.active_device])
+		# 	dirty = True
 		if dirty:
 			self.m_devices.Clear()
-			for serial in self.devices:
-				self.m_devices.Append(self.devices[serial] + " | " + serial)
-		if self.active_device:
-			self.m_devices.SetSelection(list(self.devices.keys()).index(serial))
+			for device in self.devices:
+				t = device
+				if self.devices[device]:
+					t += " | " + self.devices[device]
+				self.m_devices.Append(t)
+		# if self.active_device:
+		# 	self.m_devices.SetSelection(list(self.devices.keys()).index(self.active_device))
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "state":
