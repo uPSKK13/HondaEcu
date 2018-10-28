@@ -26,10 +26,10 @@ class USBMonitor(Thread):
 						serial = device.getSerialNumber()
 						new_devices[serial] = device
 						if not serial in self.ftdi_devices:
-							pub.sendMessage("USBMonitor", action="add", device=str(device), serial=serial)
+							wx.CallAfter(pub.sendMessage, "USBMonitor", action="add", device=str(device), serial=serial)
 				for serial in self.ftdi_devices:
 					if not serial in new_devices:
-						pub.sendMessage("USBMonitor", action="remove", device=str(device), serial=serial)
+						wx.CallAfter(pub.sendMessage, "USBMonitor", action="remove", device=str(device), serial=serial)
 				self.ftdi_devices = new_devices
 			except usb1.USBErrorPipe:
 				pass
@@ -46,6 +46,8 @@ class KlineWorker(Thread):
 		self.parent = parent
 		self.ecu = None
 		self.ready = False
+		self.state = 0
+		self.tables = None
 		pub.subscribe(self.DeviceHandler, "HondaECU.device")
 		Thread.__init__(self)
 
@@ -58,22 +60,33 @@ class KlineWorker(Thread):
 				self.ecu = None
 				self.ready = False
 				self.state = 0
+				self.tables = None
 		elif action == "activate":
 			wx.LogVerbose("Activating device (%s | %s)" % (device, serial))
 			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug)
 			self.ecu.setup()
 			self.ready = True
 			self.state = 0
+			self.tables = None
 
 	def run(self):
 		while self.parent.run:
 			if self.ready and self.ecu:
 				try:
-					self.state, status = self.ecu.detect_ecu_state()
-					wx.LogVerbose("ECU state: %s" % (status))
-					if self.state == 1:
-						tables = " ".join([hex(x) for x in self.ecu.probe_tables()])
-						wx.LogVerbose("HDS tables: %s" % tables)
+					if self.state in [0,12]:
+						self.state, status = self.ecu.detect_ecu_state()
+						wx.CallAfter(pub.sendMessage, "KlineWorker", info="state", value=(self.state,status))
+						wx.LogVerbose("ECU state: %s" % (status))
+					elif self.state == 1:
+						if self.ecu.ping():
+							if not self.tables:
+								tables = self.ecu.probe_tables()
+								if len(tables) > 0:
+									self.tables = tables
+									tables = " ".join([hex(x) for x in self.tables])
+									wx.LogVerbose("HDS tables: %s" % tables)
+						else:
+							self.state = 0
 				except pylibftdi._base.FtdiError:
 					pass
 				except AttributeError:
@@ -109,6 +122,10 @@ class HondaECU_GUI(wx.Frame):
 		ib.AddIcon(ip)
 		self.SetIcons(ib)
 
+		self.statusbar = self.CreateStatusBar(2)
+		self.statusbar.SetStatusWidths([140,-1])
+		self.statusbar.SetStatusStyles([wx.SB_SUNKEN,wx.SB_SUNKEN])
+
 		self.panel = wx.Panel(self)
 
 		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
@@ -124,6 +141,7 @@ class HondaECU_GUI(wx.Frame):
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
 		pub.subscribe(self.USBMonitorHandler, "USBMonitor")
+		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
 
 		# Post GUI-setup actions
 		self.Centre()
@@ -159,6 +177,7 @@ class HondaECU_GUI(wx.Frame):
 				if serial == self.active_device:
 					pub.sendMessage("HondaECU.device", action="deactivate", device=self.devices[self.active_device], serial=self.active_device)
 					self.active_device = None
+					self.statusbar.SetStatusText("", 0)
 				del self.devices[serial]
 				dirty = True
 		if not self.active_device and len(self.devices) > 0:
@@ -171,3 +190,7 @@ class HondaECU_GUI(wx.Frame):
 				self.m_devices.Append(self.devices[serial] + " | " + serial)
 		if self.active_device:
 			self.m_devices.SetSelection(list(self.devices.keys()).index(serial))
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "state":
+			self.statusbar.SetStatusText("state: %s" % value[1], 0)
