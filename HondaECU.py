@@ -1,7 +1,7 @@
 import argparse
 
 from cmd import *
-from gui import *
+from gui2 import *
 
 __VERSION__ = "2.0.0_beta1"
 
@@ -57,11 +57,12 @@ if __name__ == '__main__':
 
 	db_grp = parser.add_argument_group('debugging options')
 	db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
+	db_grp.add_argument('--verbose', action='store_true', help="turn on verbose output")
 	db_grp.add_argument('--noredirect', action='store_true', help="dont redirect stdout/stderr")
 	args = parser.parse_args()
 
 	if args.mode == None:
-		app = wx.App(redirect=not args.noredirect)
+		app = wx.App()
 		gui = HondaECU_GUI(args, __VERSION__)
 		app.MainLoop()
 	else:

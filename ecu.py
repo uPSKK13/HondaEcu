@@ -96,13 +96,22 @@ def format_message(mtype, data):
 
 class HondaECU(object):
 
-	def __init__(self, device_id=None):
+	def __init__(self, device_id=None, dprint=None):
 		super(HondaECU, self).__init__()
 		self.device_id = device_id
 		self.dev = None
 		self.error = 0
 		self.resets = 0
+		if not dprint:
+			self.dprint = self.__dprint
+		else:
+			self.dprint = dprint
 		self.reset()
+
+	def __dprint(self, msg):
+		sys.stderr.write(msg)
+		sys.stderr.write("\n")
+		sys.stderr.flush()
 
 	def reset(self):
 		if self.dev != None:
@@ -136,6 +145,14 @@ class HondaECU(object):
 
 	def ping(self, debug=False):
 		return self.send_command([0xfe],[0x72], debug=debug)!=None
+
+	def probe_tables(self):
+		tables = []
+		for t in [0x10, 0x11, 0x20, 0x60, 0x61, 0xd0, 0xd1]:
+			info = self.send_command([0x72], [0x71, t])
+			if info[3] > 2:
+				tables.append(t)
+		return tables
 
 	def init(self, debug=False):
 		self.wakeup()
@@ -188,25 +205,18 @@ class HondaECU(object):
 
 	def send_command(self, mtype, data=[], debug=False, retries=1):
 		msg, ml, dl = format_message(mtype, data)
-		while retries >= 0:
-			retries -= 1
-			if debug:
-				sys.stderr.write("[%s] > [%s]" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % m for m in msg])))
-				sys.stderr.flush()
+		r = 0
+		while r <= retries:
+			self.dprint("%d > [%s]" % (r, ", ".join(["%02x" % m for m in msg])))
 			resp = self.send(msg, ml)
 			if resp:
-				if debug:
-					sys.stderr.write("\n[%s] < [%s]\n" % (str.rjust("%.03f" % self.time(), 8),", ".join(["%02x" % r for r in resp])))
-					sys.stderr.flush()
+				self.dprint("%d < [%s]" % (r, ", ".join(["%02x" % r for r in resp])))
 				rmtype = resp[:ml]
 				rml = resp[ml:(ml+1)]
 				rdl = ord(rml) - 2 - len(rmtype)
 				rdata = resp[(ml+1):-1]
 				return (rmtype, rml, rdata, rdl)
-			else:
-				if debug:
-					sys.stderr.write(" !\n")
-					sys.stderr.flush()
+			r += 1
 
 	def detect_ecu_state(self, debug=False):
 		states = [

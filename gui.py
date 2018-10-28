@@ -5,8 +5,6 @@ import wx
 import wx.adv
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
-from ecu import *
-
 binsizes = {
 	"56kB":56,
 	"256kB":256,
@@ -584,6 +582,110 @@ class FlashDialog(wx.Dialog):
 
 class HondaECU_GUI(wx.Frame):
 
+	def __init__(self, args, version):
+		title = "HondaECU %s" % (version)
+		if args.debug:
+			sys.stderr.write(title)
+			sys.stderr.write("\n-------------------------\n")
+		self.args = args
+		self.state_delay = time.time()
+		self.ecu = None
+		self.device_state = DEVICE_STATE_SETUP
+		self.device_state_index = 0
+		self.ftdi_devices = []
+		self.ftdi_active = None
+		self.file = None
+		self.usbcontext = usb1.USBContext()
+		self.flashop = False
+
+		wx.Frame.__init__(self, None, title=title)
+		self.SetMinSize(wx.Size(800,600))
+
+		self.statusbar = self.CreateStatusBar(1)
+
+		if getattr(sys, 'frozen', False ):
+			self.basepath = sys._MEIPASS
+		else:
+			self.basepath = os.path.dirname(os.path.realpath(__file__))
+		ip = os.path.join(self.basepath,"honda.ico")
+		self.offpng = os.path.join(self.basepath, "power_off.png")
+		self.onpng = os.path.join(self.basepath, "power_on.png")
+		self.goodpng = os.path.join(self.basepath, "flash_good.png")
+		self.badpng = os.path.join(self.basepath, "flash_bad.png")
+
+		ib = wx.IconBundle()
+		ib.AddIcon(ip)
+		self.SetIcons(ib)
+
+		#menuBar = wx.MenuBar()
+		#menu = wx.Menu()
+		#m_exit = menu.Append(wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program.")
+		#self.Bind(wx.EVT_MENU, self.OnClose, m_exit)
+		#menuBar.Append(menu, "&File")
+		#self.SetMenuBar(menuBar)
+
+		self.panel = wx.Panel(self)
+
+		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
+		self.m_devices = wx.Choice(self.panel, wx.ID_ANY)
+		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
+
+		self.notebook = wx.Notebook(self.panel, wx.ID_ANY)
+
+		self.infop = InfoPanel(self)
+		self.flashp = FlashPanel(self)
+		self.datap = DataPanel(self)
+		self.errorp = ErrorPanel(self)
+
+		self.notebook.AddPage(self.infop, "ECU Info")
+		self.notebook.AddPage(self.flashp, "Flash Operations")
+		self.notebook.AddPage(self.datap, "Diagnostic Tables")
+		self.notebook.AddPage(self.errorp, "Error Codes")
+
+		self.faults = {'past':[], 'current':[], 'past_new':[], 'current_new':[]}
+
+		self.idle_actions = [
+			[
+				self.Get_Info
+			],
+			[
+				self.ValidateModes
+			],
+			[
+				self.GetTable10,
+				self.GetTable11,
+				self.GetTable20,
+				self.GetTabled0
+			],
+			[
+				self.Get_Current_Faults,
+				self.Get_Past_Faults,
+				self.Update_Error_list
+			]
+		]
+
+		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
+
+		mainbox = wx.BoxSizer(wx.VERTICAL)
+		mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
+		mainbox.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
+		self.notebook.Layout()
+		self.panel.SetSizer(mainbox)
+		self.panel.Layout()
+		self.Centre()
+
+		self.Show()
+
+		#self.Bind(wx.EVT_IDLE, self.OnIdle)
+		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
+		#self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+		self.flashdlg = FlashDialog(self)
+
+		#self.idletimer = wx.Timer(self, wx.ID_ANY)
+		#self.Bind(wx.EVT_TIMER, self.TimerActions)
+		#self.idletimer.Start(250)
+
 	def TimerActions(self, event):
 		#print(self.device_state)
 		try:
@@ -652,110 +754,6 @@ class HondaECU_GUI(wx.Frame):
 		self.maxb = len(self.byts)
 		self.maxi = self.maxb/128
 		self.writesize = 128
-
-	def __init__(self, args, version):
-		title = "HondaECU %s" % (version)
-		if args.debug:
-			sys.stderr.write(title)
-			sys.stderr.write("\n-------------------------\n")
-		self.args = args
-		self.state_delay = time.time()
-		self.ecu = None
-		self.device_state = DEVICE_STATE_SETUP
-		self.device_state_index = 0
-		self.ftdi_devices = []
-		self.ftdi_active = None
-		self.file = None
-		self.usbcontext = usb1.USBContext()
-		self.flashop = False
-
-		wx.Frame.__init__(self, None, title=title)
-		self.SetMinSize(wx.Size(800,600))
-
-		self.statusbar = self.CreateStatusBar(1)
-
-		if getattr(sys, 'frozen', False ):
-			self.basepath = sys._MEIPASS
-		else:
-			self.basepath = os.path.dirname(os.path.realpath(__file__))
-		ip = os.path.join(self.basepath,"honda.ico")
-		self.offpng = os.path.join(self.basepath, "power_off.png")
-		self.onpng = os.path.join(self.basepath, "power_on.png")
-		self.goodpng = os.path.join(self.basepath, "flash_good.png")
-		self.badpng = os.path.join(self.basepath, "flash_bad.png")
-
-		ib = wx.IconBundle()
-		ib.AddIcon(ip)
-		self.SetIcons(ib)
-
-		menuBar = wx.MenuBar()
-		menu = wx.Menu()
-		m_exit = menu.Append(wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program.")
-		self.Bind(wx.EVT_MENU, self.OnClose, m_exit)
-		menuBar.Append(menu, "&File")
-		self.SetMenuBar(menuBar)
-
-		self.panel = wx.Panel(self)
-
-		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
-		self.m_devices = wx.Choice(self.panel, wx.ID_ANY)
-		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
-
-		self.notebook = wx.Notebook(self.panel, wx.ID_ANY)
-
-		self.infop = InfoPanel(self)
-		self.flashp = FlashPanel(self)
-		self.datap = DataPanel(self)
-		self.errorp = ErrorPanel(self)
-
-		self.notebook.AddPage(self.infop, "ECU Info")
-		self.notebook.AddPage(self.flashp, "Flash Operations")
-		self.notebook.AddPage(self.datap, "Diagnostic Tables")
-		self.notebook.AddPage(self.errorp, "Error Codes")
-
-		self.faults = {'past':[], 'current':[], 'past_new':[], 'current_new':[]}
-
-		self.idle_actions = [
-			[
-				self.Get_Info
-			],
-			[
-				self.ValidateModes
-			],
-			[
-				self.GetTable10,
-				self.GetTable11,
-				self.GetTable20,
-				self.GetTabled0
-			],
-			[
-				self.Get_Current_Faults,
-				self.Get_Past_Faults,
-				self.Update_Error_list
-			]
-		]
-
-		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
-
-		mainbox = wx.BoxSizer(wx.VERTICAL)
-		mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
-		mainbox.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
-		self.notebook.Layout()
-		self.panel.SetSizer(mainbox)
-		self.panel.Layout()
-		self.Centre()
-
-		self.Show()
-
-		self.Bind(wx.EVT_IDLE, self.OnIdle)
-		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
-		self.Bind(wx.EVT_CLOSE, self.OnClose)
-
-		self.flashdlg = FlashDialog(self)
-
-		self.idletimer = wx.Timer(self, wx.ID_ANY)
-		self.Bind(wx.EVT_TIMER, self.TimerActions)
-		self.idletimer.Start(250)
 
 	def GetTable10(self):
 		if not self.emergency:
