@@ -144,14 +144,17 @@ class HondaECU(object):
 		time.sleep(.130)
 
 	def ping(self, debug=False):
-		return self.send_command([0xfe],[0x72], debug=debug)!=None
+		return self.send_command([0xfe],[0x72])!=None
 
 	def probe_tables(self):
 		tables = []
 		for t in [0x10, 0x11, 0x20, 0x60, 0x61, 0xd0, 0xd1]:
 			info = self.send_command([0x72], [0x71, t])
-			if info[3] > 2:
-				tables.append(t)
+			if info:
+				if info[3] > 2:
+					tables.append(t)
+			else:
+				return []
 		return tables
 
 	def init(self, debug=False):
@@ -218,7 +221,7 @@ class HondaECU(object):
 				return (rmtype, rml, rdata, rdl)
 			r += 1
 
-	def detect_ecu_state(self, debug=False):
+	def detect_ecu_state(self, wakeup=False):
 		states = [
 			"unknown",				# 0
 			"ok",					# 1
@@ -231,18 +234,21 @@ class HondaECU(object):
 			"finalize",				# 8
 			"incomplete",			# 9
 			"reset",				# 10
-			"read"					# 11
+			"read",					# 11
+			"off"					# 12
 		]
 		state = 0
-		if self.ping(debug=debug):
-			rinfo = self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
-			winfo = self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
+		if wakeup:
+			self.wakeup()
+		if self.ping():
+			rinfo = self.send_command([0x7b], [0x00, 0x01, 0x01])
+			winfo = self.send_command([0x7d], [0x01, 0x01, 0x01])
 			if winfo:
 				state = 1
 			else:
 				state = 2
 		else:
-			einfo = self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+			einfo = self.send_command([0x7e], [0x01, 0x01, 0x00])
 			if einfo:
 				if einfo[2][1] == 0x00:
 					state = 3
@@ -263,66 +269,71 @@ class HondaECU(object):
 				else:
 					print(einfo[2][1])
 			else:
-				dinfo = self.send_command([0x82, 0x82, 0x00], [], debug=debug)
+				dinfo = self.send_command([0x82, 0x82, 0x00], [])
 				if dinfo:
 					state = 11
+		if state == 0:
+			if not wakeup:
+				state, _ = self.detect_ecu_state(wakeup=True)
+			elif not self.kline():
+				state = 12
 		return state, states[state]
 
 	def do_init_recover(self, debug=False):
-		self.send_command([0x7b], [0x00, 0x01, 0x01], debug=debug)
-		self.send_command([0x7b], [0x00, 0x01, 0x02], debug=debug)
-		self.send_command([0x7b], [0x00, 0x01, 0x03], debug=debug)
-		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17], debug=debug)
-		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13], debug=debug)
+		self.send_command([0x7b], [0x00, 0x01, 0x01])
+		self.send_command([0x7b], [0x00, 0x01, 0x02])
+		self.send_command([0x7b], [0x00, 0x01, 0x03])
+		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17])
+		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13])
 
 	def do_init_write(self, debug=False):
-		self.send_command([0x7d], [0x01, 0x01, 0x01], debug=debug)
-		self.send_command([0x7d], [0x01, 0x01, 0x02], debug=debug)
-		self.send_command([0x7d], [0x01, 0x01, 0x03], debug=debug)
-		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d], debug=debug)
-		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49], debug=debug)
+		self.send_command([0x7d], [0x01, 0x01, 0x01])
+		self.send_command([0x7d], [0x01, 0x01, 0x02])
+		self.send_command([0x7d], [0x01, 0x01, 0x03])
+		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d])
+		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49])
 
 	def do_erase(self, debug=False):
-		self.send_command([0x7e], [0x01, 0x02], debug=debug)
-		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00], debug=debug)
-		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff], debug=debug)
-		self.send_command([0x7e], [0x01, 0x0e, 0x01, 0x90], debug=debug)
-		self.send_command([0x7e], [0x01, 0x01, 0x01], debug=debug)
-		self.send_command([0x7e], [0x01, 0x04, 0xff], debug=debug)
+		self.send_command([0x7e], [0x01, 0x02])
+		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00])
+		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff])
+		self.send_command([0x7e], [0x01, 0x0e, 0x01, 0x90])
+		self.send_command([0x7e], [0x01, 0x01, 0x01])
+		self.send_command([0x7e], [0x01, 0x04, 0xff])
 
 	def do_erase_wait(self, debug=False):
 		cont = 1
 		while cont:
-			info = self.send_command([0x7e], [0x01, 0x05], debug=debug)
+			info = self.send_command([0x7e], [0x01, 0x05])
 			if info:
 				if info[2][1] == 0x00:
 					cont = 0
 			else:
 				cont = -1
 		if cont == 0:
-			into = self.send_command([0x7e], [0x01, 0x01, 0x00], debug=debug)
+			into = self.send_command([0x7e], [0x01, 0x01, 0x00])
 
 	def do_post_write(self, debug=False):
-		self.send_command([0x7e], [0x01, 0x09], debug=debug)
+		self.send_command([0x7e], [0x01, 0x09])
 		time.sleep(.5)
-		self.send_command([0x7e], [0x01, 0x0a], debug=debug)
+		self.send_command([0x7e], [0x01, 0x0a])
 		time.sleep(.5)
-		self.send_command([0x7e], [0x01, 0x0c], debug=debug)
+		self.send_command([0x7e], [0x01, 0x0c])
 		time.sleep(.5)
-		info = self.send_command([0x7e], [0x01, 0x0d], debug=debug)
+		info = self.send_command([0x7e], [0x01, 0x0d])
 		if info: return (info[2][1] == 0x0f)
 
 	def get_faults(self, debug=False):
 		faults = {'past':[], 'current':[]}
 		for i in range(1,0x0c):
-			info_current = self.send_command([0x72],[0x74, i], debug=debug)[2]
+			info_current = self.send_command([0x72],[0x74, i])[2]
 			for j in [3,5,7]:
 				if info_current[j] != 0:
 					faults['current'].append("%02d-%02d" % (info_current[j],info_current[j+1]))
 			if info_current[2] == 0:
 				break
 		for i in range(1,0x0c):
-			info_past = self.send_command([0x72],[0x73, i], debug=debug)[2]
+			info_past = self.send_command([0x72],[0x73, i])[2]
 			for j in [3,5,7]:
 				if info_past[j] != 0:
 					faults['past'].append("%02d-%02d" % (info_past[j],info_past[j+1]))
@@ -344,7 +355,7 @@ def do_read_flash(ecu, binfile, debug=False):
 		size = location
 		rate = 0
 		while True:
-			info = ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize], debug=debug)
+			info = ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
 			if not info:
 				readsize -= 1
 				if readsize < 1:
@@ -386,7 +397,7 @@ def do_write_flash(ecu, byts, debug=False, offset=0):
 		c1 = checksum8bit(x)
 		c2 = checksum8bitHonda(x)
 		x = [0x01, 0x06] + x + [c1, c2]
-		info = ecu.send_command([0x7e], x, debug=debug)
+		info = ecu.send_command([0x7e], x)
 		if ord(info[1]) != 5:
 			sys.stdout.write(" error\n")
 			sys.exit(1)
@@ -401,7 +412,7 @@ def do_write_flash(ecu, byts, debug=False, offset=0):
 				size = w
 		i += 1
 		if i % 2 == 0:
-			ecu.send_command([0x7e], [0x01, 0x08], debug=debug)
+			ecu.send_command([0x7e], [0x01, 0x08])
 	if nl:
 		sys.stdout.write("\n")
 		sys.stdout.flush()

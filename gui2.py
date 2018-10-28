@@ -62,18 +62,23 @@ class KlineWorker(Thread):
 			wx.LogVerbose("Activating device (%s | %s)" % (device, serial))
 			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug)
 			self.ecu.setup()
-			self.ecu.wakeup()
 			self.ready = True
 			self.state = 0
 
 	def run(self):
 		while self.parent.run:
 			if self.ready and self.ecu:
-				self.state, status = self.ecu.detect_ecu_state()
-				wx.LogVerbose("ECU state: %s" % (status))
-				if self.state == 1:
-					tables = " ".join([hex(x) for x in self.ecu.probe_tables()])
-					wx.LogVerbose("HDS tables: %s" % tables)
+				try:
+					self.state, status = self.ecu.detect_ecu_state()
+					wx.LogVerbose("ECU state: %s" % (status))
+					if self.state == 1:
+						tables = " ".join([hex(x) for x in self.ecu.probe_tables()])
+						wx.LogVerbose("HDS tables: %s" % tables)
+				except pylibftdi._base.FtdiError:
+					pass
+				except AttributeError:
+					pass
+
 
 class HondaECU_GUI(wx.Frame):
 
@@ -104,8 +109,20 @@ class HondaECU_GUI(wx.Frame):
 		ib.AddIcon(ip)
 		self.SetIcons(ib)
 
+		self.panel = wx.Panel(self)
+
+		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
+		self.m_devices = wx.Choice(self.panel, wx.ID_ANY)
+		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
+
+		mainbox = wx.BoxSizer(wx.VERTICAL)
+		mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
+		self.panel.SetSizer(mainbox)
+		self.panel.Layout()
+
 		# Bind event handlers
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
+		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
 		pub.subscribe(self.USBMonitorHandler, "USBMonitor")
 
 		# Post GUI-setup actions
@@ -121,11 +138,21 @@ class HondaECU_GUI(wx.Frame):
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
+	def OnDeviceSelected(self, event):
+		serial = list(self.devices.keys())[self.m_devices.GetSelection()]
+		if serial != self.active_device:
+			if self.active_device:
+				pub.sendMessage("HondaECU.device", action="deactivate", device=self.devices[self.active_device], serial=self.active_device)
+			self.active_device = serial
+			pub.sendMessage("HondaECU.device", action="activate", device=self.devices[self.active_device], serial=self.active_device)
+
 	def USBMonitorHandler(self, action, device, serial):
+		dirty = False
 		if action == "add":
 			wx.LogVerbose("Adding device (%s | %s)" % (device, serial))
 			if not serial in self.devices:
 				self.devices[serial] = device
+				dirty = True
 		elif action =="remove":
 			wx.LogVerbose("Removing device (%s | %s)" % (device, serial))
 			if serial in self.devices:
@@ -133,6 +160,14 @@ class HondaECU_GUI(wx.Frame):
 					pub.sendMessage("HondaECU.device", action="deactivate", device=self.devices[self.active_device], serial=self.active_device)
 					self.active_device = None
 				del self.devices[serial]
+				dirty = True
 		if not self.active_device and len(self.devices) > 0:
 			self.active_device = list(self.devices.keys())[0]
 			pub.sendMessage("HondaECU.device", action="activate", device=self.devices[self.active_device], serial=self.active_device)
+			dirty = True
+		if dirty:
+			self.m_devices.Clear()
+			for serial in self.devices:
+				self.m_devices.Append(self.devices[serial] + " | " + serial)
+		if self.active_device:
+			self.m_devices.SetSelection(list(self.devices.keys()).index(serial))
