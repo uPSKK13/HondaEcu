@@ -135,7 +135,6 @@ class HondaECU(object):
 			self.dev.ftdi_fn.ftdi_set_latency_timer(self.latency)
 		latency = c_ubyte()
 		self.dev.ftdi_fn.ftdi_get_latency_timer(byref(latency))
-		print(latency.value)
 
 	def _break(self, ms, debug=False):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)

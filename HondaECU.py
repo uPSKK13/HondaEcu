@@ -60,6 +60,7 @@ if __name__ == '__main__':
 	db_grp.add_argument('--verbose', action='store_true', help="turn on verbose output")
 	db_grp.add_argument('--noredirect', action='store_true', help="dont redirect stdout/stderr")
 	db_grp.add_argument('--latency', type=int, help="latency timer")
+	db_grp.add_argument('--skip-power-check', action='store_true', help="skip power check")
 	args = parser.parse_args()
 
 	if args.mode == None:

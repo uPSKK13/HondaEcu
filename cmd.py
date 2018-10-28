@@ -63,17 +63,18 @@ def HondaECU_CmdLine(args, version):
                 print(f())
             sys.exit(1)
 
-        if args.mode in ["read"] and ecu.kline():
-            print_header()
-            sys.stdout.write("Turn off bike\n")
-            while ecu.kline():
-                time.sleep(0)
-            time.sleep(1)
-        if not ecu.kline():
-            sys.stdout.write("Turn on bike\n")
-            while not ecu.kline():
-                time.sleep(0)
-            time.sleep(1)
+        if not args.skip_power_check:
+            if args.mode in ["read"] and ecu.kline():
+                print_header()
+                sys.stdout.write("Turn off bike\n")
+                while ecu.kline():
+                    time.sleep(0)
+                time.sleep(1)
+            if not ecu.kline():
+                sys.stdout.write("Turn on bike\n")
+                while not ecu.kline():
+                    time.sleep(0)
+                time.sleep(1)
 
         print_header()
         sys.stdout.write("Waking-up ECU\n")
