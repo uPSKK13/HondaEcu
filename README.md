@@ -118,5 +118,5 @@ If you make a bench harness to work with your ECU you will need a 2.5 amp power 
 * http://forum.pgmfi.org/index.php
 * http://ecuhacking.activeboard.com
 * http://www.motorsport-brix.de
-* http://projects.gonzos.net/ctx-obd
+* https://gonzos.net/projects/ctx-obd
 * http://opengarages.org/handbook/ebook
