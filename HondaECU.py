@@ -17,8 +17,7 @@ class MultOf8(object):
 		else:
 			raise argparse.ArgumentTypeError("%d is not a multiple of 8" % (value))
 
-if __name__ == '__main__':
-
+def Main():
 	default_checksum = '0x3fff8'
 	default_romsize = 256
 
@@ -69,3 +68,6 @@ if __name__ == '__main__':
 		app.MainLoop()
 	else:
 		HondaECU_CmdLine(args, __VERSION__)
+
+if __name__ == '__main__':
+	Main()
