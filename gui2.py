@@ -201,10 +201,10 @@ class HondaECU_GUI(wx.Frame):
 					self.__deactivate()
 				del self.devices[device]
 				dirty = True
-		# if not self.active_device and len(self.devices) > 0:
-		# 	self.active_device = list(self.devices.keys())[0]
-		# 	pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=self.devices[self.active_device])
-		# 	dirty = True
+		if not self.active_device and len(self.devices) > 0:
+			self.active_device = list(self.devices.keys())[0]
+			pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=self.devices[self.active_device])
+			dirty = True
 		if dirty:
 			self.m_devices.Clear()
 			for device in self.devices:
@@ -212,8 +212,8 @@ class HondaECU_GUI(wx.Frame):
 				if self.devices[device]:
 					t += " | " + self.devices[device]
 				self.m_devices.Append(t)
-		# if self.active_device:
-		# 	self.m_devices.SetSelection(list(self.devices.keys()).index(self.active_device))
+			if self.active_device:
+				self.m_devices.SetSelection(list(self.devices.keys()).index(self.active_device))
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "state":
