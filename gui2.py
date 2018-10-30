@@ -67,6 +67,7 @@ class KlineWorker(Thread):
 		self.parent = parent
 		self.__clear_data()
 		pub.subscribe(self.DeviceHandler, "HondaECU.device")
+		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -86,7 +87,11 @@ class KlineWorker(Thread):
 		self.errorcodes = {}
 		self.update_tables = True
 		self.tables = None
+		self.clear_codes = False
 
+	def ErrorPanelHandler(self, action):
+		if action == "cleardtc":
+			self.clear_codes = True
 
 	def DeviceHandler(self, action, device, serial):
 		if action == "deactivate":
@@ -125,6 +130,18 @@ class KlineWorker(Thread):
 									self.flashcount = int(info[2][4])
 									wx.CallAfter(pub.sendMessage, "KlineWorker", info="flashcount", value=self.flashcount)
 									wx.Yield()
+							while self.clear_codes:
+								info = self.ecu.send_command([0x72],[0x60, 0x03])
+								if info:
+									if info[2][1] == 0x00:
+										self.dtccount = -1
+										self.errorcodes = {}
+										self.clear_codes = False
+								else:
+									self.dtccount = -1
+									self.errorcodes = {}
+									self.clear_codes = False
+								wx.Yield()
 							if self.update_errors:
 								errorcodes = {}
 								for type in [0x74,0x73]:
@@ -201,6 +218,8 @@ class ErrorPanel(wx.Panel):
 
 	def OnClearCodes(self, event):
 		self.resetbutton.Disable()
+		self.errorlist.DeleteAllItems()
+		wx.CallAfter(pub.sendMessage, "ErrorPanel", action="cleardtc")
 
 class DataPanel(wx.Panel):
 
@@ -671,15 +690,17 @@ class HondaECU_GUI(wx.Frame):
 		self.SetStatusBar(self.statusbar)
 		self.statusbar.SetStatusWidths([32, 170, 130, 110])
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN])
+
 		self.statusicon = wx.StaticBitmap(self.statusbar)
 		self.statusicon.SetBitmap(self.statusicons[0])
-		self.statusbar.AddWidget(self.statusicon, pos=0)
 		self.ecmidl = wx.StaticText(self.statusbar)
-		self.statusbar.AddWidget(self.ecmidl, pos=1)
 		self.flashcountl = wx.StaticText(self.statusbar)
-		self.statusbar.AddWidget(self.flashcountl, pos=2)
 		self.dtccountl = wx.StaticText(self.statusbar)
-		self.statusbar.AddWidget(self.dtccountl, pos=3)
+
+		self.statusbar.AddWidget(self.statusicon, pos=0)
+		self.statusbar.AddWidget(self.ecmidl, pos=1, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.AddWidget(self.flashcountl, pos=2, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.AddWidget(self.dtccountl, pos=3, horizontalalignment=ESB.ESB_ALIGN_LEFT)
 
 		self.panel = wx.Panel(self)
 
@@ -707,6 +728,7 @@ class HondaECU_GUI(wx.Frame):
 		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
 		pub.subscribe(self.USBMonitorHandler, "USBMonitor")
 		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
+		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
 
 		# Post GUI-setup actions
 		self.Centre()
@@ -736,6 +758,11 @@ class HondaECU_GUI(wx.Frame):
 				pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=serial)
 			else:
 				pass
+
+	def ErrorPanelHandler(self, action):
+		if action == "cleardtc":
+			self.dtccountl.SetLabel("   DTC Count: --")
+			self.statusbar.OnSize(None)
 
 	def USBMonitorHandler(self, action, device, serial):
 		dirty = False
@@ -778,13 +805,13 @@ class HondaECU_GUI(wx.Frame):
 				self.statusicon.SetBitmap(self.statusicons[2])
 			self.statusbar.OnSize(None)
 		elif info == "ecmid":
-			self.ecmidl.SetLabel("ECM ID: %s" % value)
+			self.ecmidl.SetLabel("   ECM ID: %s" % value)
 			self.statusbar.OnSize(None)
 		elif info == "flashcount":
-			self.flashcountl.SetLabel("Flash Count: %d" % value)
+			self.flashcountl.SetLabel("   Flash Count: %d" % value)
 			self.statusbar.OnSize(None)
 		elif info == "dtccount":
-			self.dtccountl.SetLabel("DTC Count: %d" % value)
+			self.dtccountl.SetLabel("   DTC Count: %d" % value)
 			if value > 0:
 				self.errorp.resetbutton.Enable(True)
 			else:
