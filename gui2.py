@@ -523,54 +523,47 @@ class DataPanel(wx.Panel):
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "hds":
-			if value[0] in [0x10, 0x17]:
-				if value[1] == 19:
-					data = struct.unpack(">H12BHB", value[2][2:])
-					self.enginespeedl.SetLabel("%d" % (data[0]))
-					self.tpsensorl.SetLabel("%d" % (data[2]))
-					self.ectsensorl.SetLabel("%d" % (-40 + data[4]))
-					self.iatsensorl.SetLabel("%d" % (-40 + data[6]))
-					self.mapsensorl.SetLabel("%d" % (data[8]))
-					self.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
-					self.vehiclespeedl.SetLabel("%d" % (data[12]))
-					self.advancel.SetLabel("%.03f" % (data[13]))
-					self.injectorl.SetLabel("%d" % (data[14]))
-			elif value[0] == 0x11:
-				if value[1] == 22:
-					data = struct.unpack(">H12BH2BH", value[2][2:])
-					self.enginespeedl.SetLabel("%d" % (data[0]))
-					self.tpsensorl.SetLabel("%d" % (data[2]))
-					self.ectsensorl.SetLabel("%d" % (-40 + data[4]))
-					self.iatsensorl.SetLabel("%d" % (-40 + data[6]))
-					self.mapsensorl.SetLabel("%d" % (data[8]))
-					self.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
-					self.vehiclespeedl.SetLabel("%d" % (data[12]))
-					self.advancel.SetLabel("%.03f" % (data[13]))
-					self.injectorl.SetLabel("%.03f" % (data[14]))
+			if value[0] in [0x10, 0x11, 0x17]:
+				u = ">H12BHB"
+				if value[0] == 0x11:
+					u = ">H12BH2BH"
+				data = struct.unpack(u, value[2][2:])
+				self.enginespeedl.SetLabel("%d" % (data[0]))
+				self.tpsensorl.SetLabel("%d" % (data[2]))
+				self.ectsensorl.SetLabel("%d" % (-40 + data[4]))
+				self.iatsensorl.SetLabel("%d" % (-40 + data[6]))
+				self.mapsensorl.SetLabel("%d" % (data[8]))
+				self.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
+				self.vehiclespeedl.SetLabel("%d" % (data[12]))
+				self.injectorl.SetLabel("%.03f" % (data[13]))
+				self.advancel.SetLabel("%.01f" % (-64 + data[14]/255*127.5))
+				if value[0] == 0x11:
 					self.iacvpl.SetLabel("%d" % (data[15]))
-					self.iacvcl.SetLabel("%.03f" % (data[16]))
-			elif value[0] == 0x20:
+					self.iacvcl.SetLabel("%.03f" % (data[16]/32767))
+			elif value[0] in [0x20, 0x21]:
 				if value[1] == 5:
 					data = struct.unpack(">3B", value[2][2:])
-					self.o2volt1l.SetLabel("%.03f" % (data[0]/255*5))
-					self.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
-					self.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
-			elif value[0] == 0x21:
-				if value[1] == 5:
-					data = struct.unpack(">3B", value[2][2:])
-					self.o2volt2l.SetLabel("%.03f" % (data[0]/255*5))
-					self.o2heat2l.SetLabel("Off" if data[2]==0 else "On")
-					self.sttrim2l.SetLabel("%.03f" % (data[1]/255*2))
+					if value[0] == 0x20:
+						self.o2volt1l.SetLabel("%.03f" % (data[0]/255*5))
+						self.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
+						self.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
+					else:
+						self.o2volt2l.SetLabel("%.03f" % (data[0]/255*5))
+						self.o2heat2l.SetLabel("Off" if data[2]==0 else "On")
+						self.sttrim2l.SetLabel("%.03f" % (data[1]/255*2))
 			elif value[0] == 0xd0:
-				if value[1] == 16:
-					data = struct.unpack(">7Bb6B", value[2][2:])
+				if value[1] > 2:
+					data = struct.unpack(">7Bb%dB" % (value[1]-10), value[2][2:])
 					self.egcvil.SetLabel("%.03f" % (data[5]/255*5))
 					self.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
 					self.egcvll.SetLabel("%d" % (data[7]))
+					self.lscl.SetLabel("%.03f" % (data[8]/255*1))
+					self.lstl.SetLabel("%.03f" % (data[9]/255*1))
+					self.lsvl.SetLabel("%d" % (data[10]))
 			elif value[0] == 0xd1:
 				if value[1] == 8:
 					data = struct.unpack(">6B", value[2][2:])
-					self.icsl.SetLabel("Off" if data[0] % 2 else "On")
+					self.icsl.SetLabel("On" if data[0] else "Off")
 			self.Layout()
 
 class FlashPanel(wx.Panel):
