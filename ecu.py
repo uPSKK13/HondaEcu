@@ -151,16 +151,18 @@ class HondaECU(object):
 	def ping(self, debug=False):
 		return self.send_command([0xfe],[0x72])!=None
 
-	def probe_tables(self):
-		tables = []
-		for t in [0x10, 0x11, 0x20, 0x60, 0x61, 0xd0, 0xd1]:
+	def probe_tables(self, tables=None):
+		if not tables:
+			tables = [0x10, 0x11, 0x20, 0x21, 0x60, 0x61, 0x70, 0x71, 0xd0, 0xd1]
+		ret = {}
+		for t in tables:
 			info = self.send_command([0x72], [0x71, t])
 			if info:
 				if info[3] > 2:
-					tables.append(t)
+					ret[t] = [info[3],info[2]]
 			else:
-				return []
-		return tables
+				return {}
+		return ret
 
 	def init(self, debug=False):
 		self.wakeup()
