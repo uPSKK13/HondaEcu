@@ -526,7 +526,7 @@ class DataPanel(wx.Panel):
 			if value[0] in [0x10, 0x11, 0x17]:
 				u = ">H12BHB"
 				if value[0] == 0x11:
-					u = ">H12BH2BH"
+					u += "BH"
 				data = struct.unpack(u, value[2][2:])
 				self.enginespeedl.SetLabel("%d" % (data[0]))
 				self.tpsensorl.SetLabel("%d" % (data[2]))
@@ -539,7 +539,7 @@ class DataPanel(wx.Panel):
 				self.advancel.SetLabel("%.01f" % (-64 + data[14]/255*127.5))
 				if value[0] == 0x11:
 					self.iacvpl.SetLabel("%d" % (data[15]))
-					self.iacvcl.SetLabel("%.03f" % (data[16]/32767))
+					self.iacvcl.SetLabel("%.03f" % (data[16]))
 			elif value[0] in [0x20, 0x21]:
 				if value[1] == 5:
 					data = struct.unpack(">3B", value[2][2:])
@@ -564,6 +564,7 @@ class DataPanel(wx.Panel):
 				if value[1] == 8:
 					data = struct.unpack(">6B", value[2][2:])
 					self.icsl.SetLabel("On" if data[0] else "Off")
+					self.pairvl.SetLabel("On" if data[4] & 4 else "Off")
 			self.Layout()
 
 class FlashPanel(wx.Panel):
