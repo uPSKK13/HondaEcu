@@ -523,7 +523,7 @@ class DataPanel(wx.Panel):
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "hds":
-			if value[0] == 0x10:
+			if value[0] in [0x10, 0x17]:
 				if value[1] == 19:
 					data = struct.unpack(">H12BHB", value[2][2:])
 					self.enginespeedl.SetLabel("%d" % (data[0]))
@@ -567,6 +567,10 @@ class DataPanel(wx.Panel):
 					self.egcvil.SetLabel("%.03f" % (data[5]/255*5))
 					self.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
 					self.egcvll.SetLabel("%d" % (data[7]))
+			elif value[0] == 0xd1:
+				if value[1] == 8:
+					data = struct.unpack(">6B", value[2][2:])
+					self.icsl.SetLabel("Off" if data[0] % 2 else "On")
 			self.Layout()
 
 class FlashPanel(wx.Panel):
