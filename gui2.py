@@ -539,7 +539,7 @@ class DataPanel(wx.Panel):
 				self.advancel.SetLabel("%.01f" % (-64 + data[14]/255*127.5))
 				if value[0] == 0x11:
 					self.iacvpl.SetLabel("%d" % (data[15]))
-					self.iacvcl.SetLabel("%.03f" % (data[16]))
+					self.iacvcl.SetLabel("%.03f" % (data[16]/65535*8.0))
 			elif value[0] in [0x20, 0x21]:
 				if value[1] == 5:
 					data = struct.unpack(">3B", value[2][2:])
@@ -563,7 +563,7 @@ class DataPanel(wx.Panel):
 			elif value[0] == 0xd1:
 				if value[1] == 8:
 					data = struct.unpack(">6B", value[2][2:])
-					self.icsl.SetLabel("On" if data[0] else "Off")
+					self.icsl.SetLabel("On" if data[0] & 1 else "Off")
 					self.pairvl.SetLabel("On" if data[4] & 4 else "Off")
 			self.Layout()
 
