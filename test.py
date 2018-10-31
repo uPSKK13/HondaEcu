@@ -15,12 +15,13 @@ db_grp = parser.add_argument_group('debugging options')
 db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
 args = parser.parse_args()
 
-ecu = HondaECU(dprint=lambda x: None)
+ecu = HondaECU()
 ecu.setup()
 ecu.wakeup()
-while True:
-    info = ecu.send_command([0x72], [0x71, 0xd1])
-    print([i for i in info[2][2:]])
+ecu.ping()
+# while True:
+#     info = ecu.send_command([0x72], [0x71, 0xd1])
+#     print([i for i in info[2][2:]])
 # if ecu.kline():
 #     sys.stdout.write("Turn off bike\n")
 #     while ecu.kline():
@@ -37,7 +38,7 @@ while True:
 #     print(hex(k),v)
 
 #ecu.send_command([0x7e], [0x01, 0x08], debug=args.debug)
-#ecu.send_command([0x82, 0x82, 0x00], [], debug=args.debug)
+ecu.send_command([0x82, 0x82, 0x00], [0,0,0])
 #ecu.do_post_write(debug=True)
 #code.interact(local=dict(globals(), **locals()))
 sys.exit(1)

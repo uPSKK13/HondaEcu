@@ -70,11 +70,16 @@ def checksum8bit(data):
 	return 0xff - ((sum(bytearray(data))-1) >> 8)
 
 def validate_checksum(byts, cksum):
-	fcksum = byts[cksum]
-	ccksum = checksum8bitHonda(byts[:cksum]+byts[(cksum+1):])
+	if cksum == 0:
+		fcksum = cksum
+		ccksum = checksum8bitHonda(byts)
+	else:
+		fcksum = byts[cksum]
+		ccksum = checksum8bitHonda(byts[:cksum]+byts[(cksum+1):])
 	return fcksum, ccksum
 
-def do_validation(byts, cksum, fix=False):
+def do_validation(byts, cksum=0, fix=False):
+	assert(not (cksum==0 and fix))
 	status = "bad"
 	fcksum, ccksum = validate_checksum(byts, cksum)
 	if fcksum != ccksum:
@@ -276,7 +281,7 @@ class HondaECU(object):
 				else:
 					print(einfo[2][1])
 			else:
-				dinfo = self.send_command([0x82, 0x82, 0x00], [])
+				dinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00])
 				if dinfo:
 					state = 11
 		if state == 0:
@@ -347,6 +352,52 @@ class HondaECU(object):
 			if info_past[2] == 0:
 				break
 		return faults
+
+	def do_read_flash(self, binfile):
+		readsize = 12
+		location = 0
+		nl = False
+		with open(binfile, "wb") as fbin:
+			while True:
+				info = self.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
+				if not info:
+					readsize -= 1
+					if readsize < 1:
+						break
+				else:
+					fbin.write(info[2])
+					fbin.flush()
+					location += readsize
+		with open(binfile, "rb") as fbin:
+			nbyts = os.path.getsize(binfile)
+			byts = bytearray(fbin.read(nbyts))
+			_, status = do_validation(byts)
+			return status == "good"
+
+	def do_write_flash(self, byts, offset=0):
+		print("write start")
+		writesize = 128
+		maxi = len(byts)/128
+		i = 0
+		while i < maxi:
+			w = (i*writesize)
+			bytstart = [s for s in struct.pack(">H",offset+(8*i))]
+			if i+1 == maxi:
+				bytend = [s for s in struct.pack(">H",offset)]
+			else:
+				bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
+			d = list(byts[((i+0)*128):((i+1)*128)])
+			x = bytstart + d + bytend
+			c1 = checksum8bit(x)
+			c2 = checksum8bitHonda(x)
+			x = [0x01, 0x06] + x + [c1, c2]
+			info = self.send_command([0x7e], x)
+			if not info or ord(info[1]) != 5:
+				return False
+			i += 1
+			if i % 2 == 0:
+				self.send_command([0x7e], [0x01, 0x08])
+		return True
 
 ##################################################
 

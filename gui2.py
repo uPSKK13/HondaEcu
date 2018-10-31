@@ -68,6 +68,7 @@ class KlineWorker(Thread):
 		self.__clear_data()
 		pub.subscribe(self.DeviceHandler, "HondaECU.device")
 		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
+		pub.subscribe(self.FlashPanelHandler, "FlashPanel")
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -88,6 +89,13 @@ class KlineWorker(Thread):
 		self.update_tables = True
 		self.tables = None
 		self.clear_codes = False
+		self.flash_mode = -1
+		self.flash_data = None
+
+	def FlashPanelHandler(self, mode, data):
+		wx.LogVerbose("Flash operation (%d) requested" % (mode))
+		self.flash_data = data
+		self.flash_mode = mode
 
 	def ErrorPanelHandler(self, action):
 		if action == "cleardtc":
@@ -111,11 +119,17 @@ class KlineWorker(Thread):
 				time.sleep(.001)
 			else:
 				try:
-					if self.state in [0,12]:
+					if self.state == 0:
+						self.flash_mode = -1
+						self.flash_data = None
+						self.ecmid = None
+						self.flashcount = -1
+						self.dtccount = -1
+						time.sleep(.250)
 						self.state, status = self.ecu.detect_ecu_state()
 						wx.CallAfter(pub.sendMessage, "KlineWorker", info="state", value=(self.state,status))
 						wx.LogVerbose("ECU state: %s" % (status))
-					elif self.state == 1:
+					else:
 						if self.ecu.ping():
 							if not self.ecmid:
 								info = self.ecu.send_command([0x72], [0x71, 0x00])
@@ -129,7 +143,6 @@ class KlineWorker(Thread):
 								if info:
 									self.flashcount = int(info[2][4])
 									wx.CallAfter(pub.sendMessage, "KlineWorker", info="flashcount", value=self.flashcount)
-									wx.Yield()
 							while self.clear_codes:
 								info = self.ecu.send_command([0x72],[0x60, 0x03])
 								if info:
@@ -141,18 +154,19 @@ class KlineWorker(Thread):
 									self.dtccount = -1
 									self.errorcodes = {}
 									self.clear_codes = False
-								wx.Yield()
 							if self.update_errors:
 								errorcodes = {}
 								for type in [0x74,0x73]:
 									errorcodes[hex(type)] = []
 									for i in range(1,0x0c):
-										info = self.ecu.send_command([0x72],[type, i])[2]
-										wx.Yield()
-										for j in [3,5,7]:
-											if info[j] != 0:
-												errorcodes[hex(type)].append("%02d-%02d" % (info[j],info[j+1]))
-										if info[2] == 0:
+										info = self.ecu.send_command([0x72],[type, i])
+										if info:
+											for j in [3,5,7]:
+												if info[2][j] != 0:
+													errorcodes[hex(type)].append("%02d-%02d" % (info[2][j],info[2][j+1]))
+											if info[2] == 0:
+												break
+										else:
 											break
 								dtccount = sum([len(c) for c in errorcodes.values()])
 								if self.dtccount != dtccount:
@@ -161,7 +175,6 @@ class KlineWorker(Thread):
 								if self.errorcodes != errorcodes:
 									self.errorcodes = errorcodes
 									wx.CallAfter(pub.sendMessage, "KlineWorker", info="dtc", value=self.errorcodes)
-								wx.Yield()
 							if not self.tables:
 								tables = self.ecu.probe_tables()
 								if len(tables) > 0:
@@ -170,7 +183,6 @@ class KlineWorker(Thread):
 									wx.LogVerbose("HDS tables: %s" % tables)
 									for t, d in self.tables.items():
 										wx.CallAfter(pub.sendMessage, "KlineWorker", info="hds", value=(t,d[0],d[1]))
-										wx.Yield()
 							else:
 								if self.update_tables:
 									for t in self.tables:
@@ -179,8 +191,45 @@ class KlineWorker(Thread):
 											if info[3] > 2:
 												self.tables[t] = [info[3],info[2]]
 												wx.CallAfter(pub.sendMessage, "KlineWorker", info="hds", value=(t,info[3],info[2]))
-												wx.Yield()
 						else:
+							self.state = 0
+						if self.flash_mode >= 0:
+							if self.flash_mode == 0:
+								wx.LogVerbose("Turn off bike")
+								while self.ecu.kline():
+									time.sleep(.1)
+								time.sleep(1)
+								wx.LogVerbose("Turn on bike")
+								while not self.ecu.kline():
+									time.sleep(.1)
+								time.sleep(1)
+								self.ecu.wakeup()
+								self.ecu.ping()
+								wx.LogVerbose("Security access")
+								self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
+								self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
+								wx.LogVerbose("Reading ECU")
+								status = self.ecu.do_read_flash(self.flash_data)
+								wx.LogVerbose("Read %s" % ("good" if status else "bad"))
+							else:
+								if self.flash_mode == 1:
+									wx.LogVerbose("Initializing write process")
+									self.ecu.do_init_write()
+								elif self.flash_mode == 2:
+									wx.LogVerbose("Initializing recovery process")
+									self.ecu.do_init_recover()
+									wx.LogVerbose("Entering enhanced diagnostic mode")
+									self.ecu.send_command([0x72],[0x00, 0xf1])
+									time.sleep(1)
+									self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
+								wx.LogVerbose("Erasing ECU")
+								time.sleep(14)
+								self.ecu.do_erase()
+								self.ecu.do_erase_wait()
+								wx.LogVerbose("Writing ECU")
+								self.ecu.do_write_flash(self.flash_data)
+								wx.LogVerbose("Finalizing write process")
+								self.ecu.do_post_write()
 							self.state = 0
 				except pylibftdi._base.FtdiError:
 					pass
@@ -608,14 +657,50 @@ class FlashPanel(wx.Panel):
 		self.SetSizer(self.flashpsizer)
 
 		self.fixchecksum.Bind(wx.EVT_CHECKBOX, self.OnFix)
+		self.readfpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.checksum.Bind(wx.EVT_CHOICE, self.OnValidateMode)
 		self.mode.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
+
+	def OnValidateMode(self, event):
+		go = False
+		if self.mode.GetSelection() == 0:
+			if len(self.readfpicker.GetPath()) > 0:
+				go = True
+		else:
+			if len(self.writefpicker.GetPath()) > 0:
+				if os.path.isfile(self.writefpicker.GetPath()):
+					if self.fixchecksum.IsChecked():
+						if self.checksum.GetSelection() > -1:
+							go = True
+					else:
+						go = True
+				if go:
+					fbin = open(self.writefpicker.GetPath(), "rb")
+					nbyts = os.path.getsize(self.writefpicker.GetPath())
+					byts = bytearray(fbin.read(nbyts))
+					fbin.close()
+					cksum = 0
+					if self.fixchecksum.IsChecked():
+						if self.checksum.GetSelection() > -1 and int(checksums[self.checksum.GetSelection()],16) < nbyts:
+							 cksum = int(checksums[self.checksum.GetSelection()],16)
+						else:
+							go = False
+					if go:
+						self.byts, status = do_validation(byts, cksum, self.fixchecksum.IsChecked())
+						go = (status != "bad")
+		if go:
+			self.gobutton.Enable()
+		else:
+			self.gobutton.Disable()
 
 	def OnFix(self, event):
 		if self.fixchecksum.IsChecked():
 			self.checksum.Enable()
 		else:
 			self.checksum.Disable()
+		self.OnValidateMode(None)
 
 	def OnModeChange(self, event):
 		if self.mode.GetSelection() == 0:
@@ -633,7 +718,13 @@ class FlashPanel(wx.Panel):
 		self.Layout()
 
 	def OnGo(self, event):
-		pass
+		mode = self.mode.GetSelection()
+		if mode == 0:
+			data = self.readfpicker.GetPath()
+		else:
+			data = self.byts
+		self.gobutton.Disable()
+		pub.sendMessage("FlashPanel", mode=mode, data=data)
 
 	def setEmergency(self, emergency):
 		if emergency:
@@ -793,6 +884,9 @@ class HondaECU_GUI(wx.Frame):
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "state":
+			self.ecmidl.SetLabel("")
+			self.flashcountl.SetLabel("")
+			self.dtccountl.SetLabel("")
 			if value[0] in [0,12]:
 				self.statusicon.SetBitmap(self.statusicons[0])
 			elif value[0] in [1]:
@@ -800,6 +894,9 @@ class HondaECU_GUI(wx.Frame):
 			elif value[0] in [10]:
 				self.statusicon.SetBitmap(self.statusicons[3])
 			else:
+				self.ecmidl.SetLabel("   ECM ID: -- -- -- -- --")
+				self.flashcountl.SetLabel("   Flash Count: --")
+				self.dtccountl.SetLabel("   DTC Count: --")
 				self.statusicon.SetBitmap(self.statusicons[2])
 			self.statusbar.OnSize(None)
 		elif info == "ecmid":
