@@ -766,6 +766,8 @@ class HondaECU_GUI(wx.Frame):
 		ib.AddIcon(ip)
 		self.SetIcons(ib)
 
+		wx.ToolTip.Enable(True)
+
 		self.statusicons = [
 			wx.Image(os.path.join(self.basepath, "bullet_black.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
 			wx.Image(os.path.join(self.basepath, "bullet_green.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
@@ -782,6 +784,7 @@ class HondaECU_GUI(wx.Frame):
 
 		self.statusicon = wx.StaticBitmap(self.statusbar)
 		self.statusicon.SetBitmap(self.statusicons[0])
+
 		self.ecmidl = wx.StaticText(self.statusbar)
 		self.flashcountl = wx.StaticText(self.statusbar)
 		self.dtccountl = wx.StaticText(self.statusbar)
@@ -898,6 +901,7 @@ class HondaECU_GUI(wx.Frame):
 				self.flashcountl.SetLabel("   Flash Count: --")
 				self.dtccountl.SetLabel("   DTC Count: --")
 				self.statusicon.SetBitmap(self.statusicons[2])
+			self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (value[1])))
 			self.statusbar.OnSize(None)
 		elif info == "ecmid":
 			self.ecmidl.SetLabel("   ECM ID: %s" % value)
