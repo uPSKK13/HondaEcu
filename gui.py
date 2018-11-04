@@ -185,7 +185,7 @@ class KlineWorker(Thread):
 				time.sleep(.001)
 			else:
 				try:
-					if self.state == 0:
+					if self.state != 1:
 						self.flash_mode = -1
 						self.flash_data = None
 						self.ecmid = None
@@ -259,8 +259,6 @@ class KlineWorker(Thread):
 											if info[3] > 2:
 												self.tables[t] = [info[3],info[2]]
 												wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hds", value=(t,info[3],info[2]))
-						else:
-							self.state = 0
 						if self.flash_mode >= 0:
 							if self.flash_mode == 0:
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweroff", value=None)
