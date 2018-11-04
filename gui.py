@@ -103,7 +103,10 @@ class KlineWorker(Thread):
 			self.clear_codes = True
 
 	def DeviceHandler(self, action, device, serial):
-		if action == "deactivate":
+		if action == "interrupt":
+			self.flash_mode = -1
+			self.update_state()
+		elif action == "deactivate":
 			if self.ecu:
 				wx.LogVerbose("Deactivating device (%s | %s)" % (device, serial))
 				self.__cleanup()
@@ -121,7 +124,7 @@ class KlineWorker(Thread):
 			t = time.time()
 			size = location
 			rate = 0
-			while True:
+			while self.flash_mode==0:
 				info = self.ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
 				if not info:
 					readsize -= 1
@@ -137,6 +140,8 @@ class KlineWorker(Thread):
 						rate = (location-size)/(n-t)
 						t = n
 						size = location
+			if self.flash_mode != 0:
+				return "bad"
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 		with open(binfile, "rb") as fbin:
 			nbyts = os.path.getsize(binfile)
@@ -152,7 +157,7 @@ class KlineWorker(Thread):
 		t = time.time()
 		rate = 0
 		size = 0
-		while i < maxi:
+		while self.flash_mode > 0 and i < maxi:
 			w = (i*writesize)
 			bytstart = [s for s in struct.pack(">H",offset+(8*i))]
 			if i+1 == maxi:
@@ -176,8 +181,18 @@ class KlineWorker(Thread):
 			i += 1
 			if i % 2 == 0:
 				self.ecu.send_command([0x7e], [0x01, 0x08])
-		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
-		return True
+		if self.flash_mode > 0:
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			return True
+		else:
+			return False
+
+	def update_state(self):
+		state, status = self.ecu.detect_ecu_state()
+		if state != self.state:
+			self.state = state
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=(self.state,status))
+			wx.LogVerbose("ECU state: %s" % (status))
 
 	def run(self):
 		while self.parent.run:
@@ -192,11 +207,7 @@ class KlineWorker(Thread):
 						self.flashcount = -1
 						self.dtccount = -1
 						time.sleep(.250)
-						state, status = self.ecu.detect_ecu_state()
-						if state != self.state:
-							self.state = state
-							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=(self.state,status))
-							wx.LogVerbose("ECU state: %s" % (status))
+						self.update_state()
 					else:
 						if self.ecu.ping():
 							if not self.ecmid:
@@ -1066,6 +1077,7 @@ class HondaECU_GUI(wx.Frame):
 
 	def FlashPanelHandler(self, mode, data):
 		self.flashdlg.ShowModal()
+		dispatcher.send(signal="HondaECU.device", sender=self, action="interrupt", device=self.active_device, serial=self.devices[self.active_device])
 
 	def ErrorPanelHandler(self, action):
 		if action == "cleardtc":

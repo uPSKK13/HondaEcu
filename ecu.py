@@ -281,7 +281,7 @@ class HondaECU(object):
 				else:
 					print(einfo[2][1])
 			else:
-				dinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00])
+				dinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08])
 				if dinfo:
 					state = 11
 		if state == 0:
