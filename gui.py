@@ -832,7 +832,8 @@ class FlashPanel(wx.Panel):
 class FlashDialog(wx.Dialog):
 
 	def __init__(self, parent):
-		wx.Dialog.__init__(self, parent, size=(300,250))
+		wx.Dialog.__init__(self, parent)
+		self.SetSize(300,250)
 		self.parent = parent
 
 		self.lastpulse = 0
@@ -865,7 +866,7 @@ class FlashDialog(wx.Dialog):
 		self.SetSizer(mainbox)
 
 		self.Layout()
-		self.Center()
+		self.CenterOnParent()
 
 		self.button.Bind(wx.EVT_BUTTON, self.OnButton)
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
@@ -969,6 +970,7 @@ class HondaECU_GUI(wx.Frame):
 
 		# Setup GUI
 		wx.Frame.__init__(self, None, title=title)
+		self.SetSize(800,600)
 		self.SetMinSize(wx.Size(800,600))
 		ib = wx.IconBundle()
 		ib.AddIcon(ip)
@@ -1034,7 +1036,7 @@ class HondaECU_GUI(wx.Frame):
 		dispatcher.connect(self.FlashPanelHandler, signal="FlashPanel", sender=dispatcher.Any)
 
 		# Post GUI-setup actions
-		self.Centre()
+		self.Center()
 		self.Show()
 		self.usbmonitor.start()
 		self.klineworker.start()
