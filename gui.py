@@ -7,8 +7,9 @@ from threading import Thread
 import usb1
 import pylibftdi
 
+from pydispatch import dispatcher
+
 import wx
-from wx.lib.pubsub import pub
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
 import EnhancedStatusBar as ESB
@@ -47,7 +48,7 @@ class USBMonitor(Thread):
 							pass
 						new_devices[device] = serial
 						if not device in self.ftdi_devices.keys():
-							wx.CallAfter(pub.sendMessage, "USBMonitor", action="add", device=str(device), serial=serial)
+							wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", device=str(device), serial=serial)
 				except usb1.USBErrorPipe:
 					pass
 				except usb1.USBErrorNoDevice:
@@ -58,7 +59,7 @@ class USBMonitor(Thread):
 					pass
 			for device in self.ftdi_devices.keys():
 				if not device in new_devices.keys():
-					wx.CallAfter(pub.sendMessage, "USBMonitor", action="remove", device=str(device), serial=self.ftdi_devices[device])
+					wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", device=str(device), serial=self.ftdi_devices[device])
 			self.ftdi_devices = new_devices
 
 class KlineWorker(Thread):
@@ -66,9 +67,9 @@ class KlineWorker(Thread):
 	def __init__(self, parent):
 		self.parent = parent
 		self.__clear_data()
-		pub.subscribe(self.DeviceHandler, "HondaECU.device")
-		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
-		pub.subscribe(self.FlashPanelHandler, "FlashPanel")
+		dispatcher.connect(self.DeviceHandler, signal="HondaECU.device", sender=dispatcher.Any)
+		dispatcher.connect(self.ErrorPanelHandler, signal="ErrorPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.FlashPanelHandler, signal="FlashPanel", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -131,12 +132,12 @@ class KlineWorker(Thread):
 					fbin.flush()
 					location += readsize
 					n = time.time()
-					wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 					if n-t > 1:
 						rate = (location-size)/(n-t)
 						t = n
 						size = location
-			wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 		with open(binfile, "rb") as fbin:
 			nbyts = os.path.getsize(binfile)
 			byts = bytearray(fbin.read(nbyts))
@@ -167,7 +168,7 @@ class KlineWorker(Thread):
 			if not info or ord(info[1]) != 5:
 				return False
 			n = time.time()
-			wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 			if n-t > 1:
 				rate = (w-size)/(n-t)
 				t = n
@@ -175,7 +176,7 @@ class KlineWorker(Thread):
 			i += 1
 			if i % 2 == 0:
 				self.ecu.send_command([0x7e], [0x01, 0x08])
-		wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 		return True
 
 	def run(self):
@@ -194,7 +195,7 @@ class KlineWorker(Thread):
 						state, status = self.ecu.detect_ecu_state()
 						if state != self.state:
 							self.state = state
-							wx.CallAfter(pub.sendMessage, "KlineWorker", info="state", value=(self.state,status))
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=(self.state,status))
 						wx.LogVerbose("ECU state: %s" % (status))
 					else:
 						if self.ecu.ping():
@@ -203,13 +204,13 @@ class KlineWorker(Thread):
 								if info:
 									self.ecmid = info[2][2:7]
 									ecmid = " ".join(["%02x" % i for i in self.ecmid])
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="ecmid", value=ecmid)
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=ecmid)
 									wx.LogVerbose("ECM id: %s" % (ecmid))
 							if self.flashcount < 0:
 								info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03])
 								if info:
 									self.flashcount = int(info[2][4])
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="flashcount", value=self.flashcount)
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
 							while self.clear_codes:
 								info = self.ecu.send_command([0x72],[0x60, 0x03])
 								if info:
@@ -238,10 +239,10 @@ class KlineWorker(Thread):
 								dtccount = sum([len(c) for c in errorcodes.values()])
 								if self.dtccount != dtccount:
 									self.dtccount = dtccount
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="dtccount", value=self.dtccount)
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="dtccount", value=self.dtccount)
 								if self.errorcodes != errorcodes:
 									self.errorcodes = errorcodes
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="dtc", value=self.errorcodes)
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="dtc", value=self.errorcodes)
 							if not self.tables:
 								tables = self.ecu.probe_tables()
 								if len(tables) > 0:
@@ -249,7 +250,7 @@ class KlineWorker(Thread):
 									tables = " ".join([hex(x) for x in self.tables.keys()])
 									wx.LogVerbose("HDS tables: %s" % tables)
 									for t, d in self.tables.items():
-										wx.CallAfter(pub.sendMessage, "KlineWorker", info="hds", value=(t,d[0],d[1]))
+										wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hds", value=(t,d[0],d[1]))
 							else:
 								if self.update_tables:
 									for t in self.tables:
@@ -257,18 +258,18 @@ class KlineWorker(Thread):
 										if info:
 											if info[3] > 2:
 												self.tables[t] = [info[3],info[2]]
-												wx.CallAfter(pub.sendMessage, "KlineWorker", info="hds", value=(t,info[3],info[2]))
+												wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hds", value=(t,info[3],info[2]))
 						else:
 							self.state = 0
 						if self.flash_mode >= 0:
 							if self.flash_mode == 0:
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="poweroff", value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweroff", value=None)
 								wx.LogVerbose("Turn off bike")
 								time.sleep(.5)
 								while self.ecu.kline():
 									time.sleep(.2)
 								time.sleep(.5)
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="poweron", value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweron", value=None)
 								wx.LogVerbose("Turn on bike")
 								while not self.ecu.kline():
 									time.sleep(.2)
@@ -279,31 +280,31 @@ class KlineWorker(Thread):
 								self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
 								self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
 								wx.LogVerbose("Reading ECU")
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="read", value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read", value=None)
 								status = self.do_read_flash(self.flash_data)
 								wx.LogVerbose("Read %s" % (status))
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="read%s" % status, value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read%s" % status, value=None)
 							else:
 								if self.flash_mode == 1:
 									wx.LogVerbose("Initializing write process")
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="initwrite", value=None)
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initwrite", value=None)
 									self.ecu.do_init_write()
 								elif self.flash_mode == 2:
 									wx.LogVerbose("Initializing recovery process")
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="initrecover", value=None)
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initrecover", value=None)
 									self.ecu.do_init_recover()
 									wx.LogVerbose("Entering enhanced diagnostic mode")
 									self.ecu.send_command([0x72],[0x00, 0xf1])
 									time.sleep(1)
 									self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
 								wx.LogVerbose("Pre-erase wait")
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="wait", value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="wait", value=None)
 								for i in range(14):
 									w = 14-i
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(w/14*100,str(w)))
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100,str(w)))
 									time.sleep(1)
 								wx.LogVerbose("Erasing ECU")
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="erase", value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
 								self.ecu.do_erase()
 								cont = 1
 								while cont:
@@ -313,15 +314,15 @@ class KlineWorker(Thread):
 											cont = 0
 									else:
 										cont = -1
-									wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(-1,""))
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,""))
 								wx.LogVerbose("Writing ECU")
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="write", value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
 								self.do_write_flash(self.flash_data)
 								wx.LogVerbose("Finalizing write process")
 								ret = self.ecu.do_post_write()
 								status = "good" if ret else "bad"
 								wx.LogVerbose("Write %s" % (status))
-								wx.CallAfter(pub.sendMessage, "KlineWorker", info="write%s" % status, value=None)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write%s" % status, value=None)
 							self.state = 0
 				except pylibftdi._base.FtdiError:
 					pass
@@ -360,7 +361,7 @@ class ErrorPanel(wx.Panel):
 	def OnClearCodes(self, event):
 		self.resetbutton.Disable()
 		self.errorlist.DeleteAllItems()
-		wx.CallAfter(pub.sendMessage, "ErrorPanel", action="cleardtc")
+		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="cleardtc")
 
 class DataPanel(wx.Panel):
 
@@ -660,7 +661,7 @@ class DataPanel(wx.Panel):
 
 		self.SetSizer(self.datapsizer)
 
-		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "hds":
@@ -817,7 +818,7 @@ class FlashPanel(wx.Panel):
 		else:
 			data = self.byts
 		self.gobutton.Disable()
-		pub.sendMessage("FlashPanel", mode=mode, data=data)
+		dispatcher.send(signal="FlashPanel", sender=self, mode=mode, data=data)
 
 	def setEmergency(self, emergency):
 		if emergency:
@@ -869,7 +870,7 @@ class FlashDialog(wx.Dialog):
 		self.Center()
 
 		self.button.Bind(wx.EVT_BUTTON, self.OnButton)
-		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
 
 	def SetState(self, msg=False, msg2=False, bmp=False, pgrs=False, btn=False):
 		if btn != False:
@@ -1029,10 +1030,10 @@ class HondaECU_GUI(wx.Frame):
 		# Bind event handlers
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
-		pub.subscribe(self.USBMonitorHandler, "USBMonitor")
-		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
-		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
-		pub.subscribe(self.FlashPanelHandler, "FlashPanel")
+		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+		dispatcher.connect(self.ErrorPanelHandler, signal="ErrorPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.FlashPanelHandler, signal="FlashPanel", sender=dispatcher.Any)
 
 		# Post GUI-setup actions
 		self.Centre()
@@ -1055,11 +1056,11 @@ class HondaECU_GUI(wx.Frame):
 		serial = self.devices[device]
 		if device != self.active_device:
 			if self.active_device:
-				pub.sendMessage("HondaECU.device", action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+				dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
 				self.__deactivate()
 			if self.devices[device]:
 				self.active_device = device
-				pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=serial)
+				dispatcher.send(signal="HondaECU.device", sender=self, action="activate", device=self.active_device, serial=serial)
 			else:
 				pass
 
@@ -1082,13 +1083,13 @@ class HondaECU_GUI(wx.Frame):
 			wx.LogVerbose("Removing device (%s | %s)" % (device, serial))
 			if device in self.devices:
 				if device == self.active_device:
-					pub.sendMessage("HondaECU.device", action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+					dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
 					self.__deactivate()
 				del self.devices[device]
 				dirty = True
 		if not self.active_device and len(self.devices) > 0:
 			self.active_device = list(self.devices.keys())[0]
-			pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=self.devices[self.active_device])
+			dispatcher.send(signal="HondaECU.device", sender=self, action="activate", device=self.active_device, serial=self.devices[self.active_device])
 			dirty = True
 		if dirty:
 			self.m_devices.Clear()

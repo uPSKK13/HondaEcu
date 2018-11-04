@@ -38,6 +38,7 @@ install:
   - '%PYTHON_HOME%\Scripts\pip install libusb1'
   - '%PYTHON_HOME%\Scripts\pip install pylibftdi'
   - '%PYTHON_HOME%\Scripts\pip install pyinstaller'
+  - '%PYTHON_HOME%\Scripts\pip install pydispatcher'
 
 build_script:
   - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary images/honda.ico;images --add-binary images/power_off.png;images --add-binary images/power_on.png;images --add-binary images/flash_good.png;images --add-binary images/flash_bad.png;images --add-binary images/bullet_black.png;images --add-binary images/bullet_yellow.png;images --add-binary images/bullet_green.png;images --add-binary images/bullet_red.png;images --add-binary %LIBUSB%;. --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU_%SUFFIX% --icon=images/honda.ico'
