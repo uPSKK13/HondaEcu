@@ -1,9 +1,9 @@
 import argparse
 
 from cmd import *
-from gui2 import *
+from gui import *
 
-__VERSION__ = "2.0.0_beta1"
+__VERSION__ = "2.0.0_beta2"
 
 class Hex(object):
 	def __call__(self, value):

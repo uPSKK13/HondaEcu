@@ -1,16 +1,20 @@
-import os, sys
+import sys
+import os
+import time
+
+from threading import Thread
+
 import usb1
 import pylibftdi
+
 import wx
-import wx.adv
+from wx.lib.pubsub import pub
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
-binsizes = {
-	"56kB":56,
-	"256kB":256,
-	"512kB":512,
-	"1024kB":1024
-}
+import EnhancedStatusBar as ESB
+
+from ecu import *
+
 checksums = [
 	"0xDFEF",
 	"0x18FFE",
@@ -21,25 +25,310 @@ checksums = [
 	"0xFFFF8"
 ]
 
-DEVICE_STATE_SETUP = -2
-DEVICE_STATE_ERROR = -1
-DEVICE_STATE_INIT_A = 0
-DEVICE_STATE_INIT_B = 1
-DEVICE_STATE_UNKNOWN = 2
-DEVICE_STATE_CONNECTED = 3
-DEVICE_STATE_CLEAR_CODES = 4
-DEVICE_STATE_POWER_OFF = 5
-DEVICE_STATE_POWER_ON = 6
-DEVICE_STATE_READ_SECURITY = 7
-DEVICE_STATE_READ = 8
-DEVICE_STATE_WRITE_INIT = 9
-DEVICE_STATE_RECOVER_INIT = 10
-DEVICE_STATE_ERASE = 11
-DEVICE_STATE_ERASE_WAIT = 12
-DEVICE_STATE_WRITE = 13
-DEVICE_STATE_WRITE_FINALIZE = 14
-DEVICE_STATE_POST_READ = 15
-DEVICE_STATE_POST_WRITE = 16
+class USBMonitor(Thread):
+
+	def __init__(self, parent):
+		self.parent = parent
+		self.usbcontext = usb1.USBContext()
+		self.ftdi_devices = {}
+		Thread.__init__(self)
+
+	def run(self):
+		while self.parent.run:
+			time.sleep(.5)
+			new_devices = {}
+			for device in self.usbcontext.getDeviceList(skip_on_error=True):
+				try:
+					if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID and device.getProductID() in pylibftdi.driver.USB_PID_LIST:
+						serial = None
+						try:
+							serial = device.getSerialNumber()
+						except usb1.USBErrorNotSupported:
+							pass
+						new_devices[device] = serial
+						if not device in self.ftdi_devices.keys():
+							wx.CallAfter(pub.sendMessage, "USBMonitor", action="add", device=str(device), serial=serial)
+				except usb1.USBErrorPipe:
+					pass
+				except usb1.USBErrorNoDevice:
+					pass
+				except usb1.USBErrorIO:
+					pass
+				except usb1.USBErrorBusy:
+					pass
+			for device in self.ftdi_devices.keys():
+				if not device in new_devices.keys():
+					wx.CallAfter(pub.sendMessage, "USBMonitor", action="remove", device=str(device), serial=self.ftdi_devices[device])
+			self.ftdi_devices = new_devices
+
+class KlineWorker(Thread):
+
+	def __init__(self, parent):
+		self.parent = parent
+		self.__clear_data()
+		pub.subscribe(self.DeviceHandler, "HondaECU.device")
+		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
+		pub.subscribe(self.FlashPanelHandler, "FlashPanel")
+		Thread.__init__(self)
+
+	def __cleanup(self):
+		if self.ecu:
+			self.ecu.dev.close()
+			del self.ecu
+		self.__clear_data()
+
+	def __clear_data(self):
+		self.ecu = None
+		self.ready = False
+		self.state = 0
+		self.ecmid = None
+		self.flashcount = -1
+		self.dtccount = -1
+		self.update_errors = True
+		self.errorcodes = {}
+		self.update_tables = True
+		self.tables = None
+		self.clear_codes = False
+		self.flash_mode = -1
+		self.flash_data = None
+
+	def FlashPanelHandler(self, mode, data):
+		wx.LogVerbose("Flash operation (%d) requested" % (mode))
+		self.flash_data = data
+		self.flash_mode = mode
+
+	def ErrorPanelHandler(self, action):
+		if action == "cleardtc":
+			self.clear_codes = True
+
+	def DeviceHandler(self, action, device, serial):
+		if action == "deactivate":
+			if self.ecu:
+				wx.LogVerbose("Deactivating device (%s | %s)" % (device, serial))
+				self.__cleanup()
+		elif action == "activate":
+			wx.LogVerbose("Activating device (%s | %s)" % (device, serial))
+			self.__clear_data()
+			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug)
+			self.ecu.setup()
+			self.ready = True
+
+	def do_read_flash(self, binfile, debug=False):
+		readsize = 12
+		location = 0
+		with open(binfile, "wb") as fbin:
+			t = time.time()
+			size = location
+			rate = 0
+			while True:
+				info = self.ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
+				if not info:
+					readsize -= 1
+					if readsize < 1:
+						break
+				else:
+					fbin.write(info[2])
+					fbin.flush()
+					location += readsize
+					n = time.time()
+					wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+					if n-t > 1:
+						rate = (location-size)/(n-t)
+						t = n
+						size = location
+			wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+		with open(binfile, "rb") as fbin:
+			nbyts = os.path.getsize(binfile)
+			byts = bytearray(fbin.read(nbyts))
+			_, status = do_validation(byts, nbyts-8)
+			return status
+
+	def do_write_flash(self, byts, debug=False, offset=0):
+		writesize = 128
+		maxi = len(byts)/128
+		i = 0
+		w = 0
+		t = time.time()
+		rate = 0
+		size = 0
+		while i < maxi:
+			w = (i*writesize)
+			bytstart = [s for s in struct.pack(">H",offset+(8*i))]
+			if i+1 == maxi:
+				bytend = [s for s in struct.pack(">H",offset)]
+			else:
+				bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
+			d = list(byts[((i+0)*128):((i+1)*128)])
+			x = bytstart + d + bytend
+			c1 = checksum8bit(x)
+			c2 = checksum8bitHonda(x)
+			x = [0x01, 0x06] + x + [c1, c2]
+			info = self.ecu.send_command([0x7e], x)
+			if not info or ord(info[1]) != 5:
+				return False
+			n = time.time()
+			wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			if n-t > 1:
+				rate = (w-size)/(n-t)
+				t = n
+				size = w
+			i += 1
+			if i % 2 == 0:
+				self.ecu.send_command([0x7e], [0x01, 0x08])
+		wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+		return True
+
+	def run(self):
+		while self.parent.run:
+			if not self.ready:
+				time.sleep(.001)
+			else:
+				try:
+					if self.state == 0:
+						self.flash_mode = -1
+						self.flash_data = None
+						self.ecmid = None
+						self.flashcount = -1
+						self.dtccount = -1
+						time.sleep(.250)
+						state, status = self.ecu.detect_ecu_state()
+						if state != self.state:
+							self.state = state
+							wx.CallAfter(pub.sendMessage, "KlineWorker", info="state", value=(self.state,status))
+						wx.LogVerbose("ECU state: %s" % (status))
+					else:
+						if self.ecu.ping():
+							if not self.ecmid:
+								info = self.ecu.send_command([0x72], [0x71, 0x00])
+								if info:
+									self.ecmid = info[2][2:7]
+									ecmid = " ".join(["%02x" % i for i in self.ecmid])
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="ecmid", value=ecmid)
+									wx.LogVerbose("ECM id: %s" % (ecmid))
+							if self.flashcount < 0:
+								info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03])
+								if info:
+									self.flashcount = int(info[2][4])
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="flashcount", value=self.flashcount)
+							while self.clear_codes:
+								info = self.ecu.send_command([0x72],[0x60, 0x03])
+								if info:
+									if info[2][1] == 0x00:
+										self.dtccount = -1
+										self.errorcodes = {}
+										self.clear_codes = False
+								else:
+									self.dtccount = -1
+									self.errorcodes = {}
+									self.clear_codes = False
+							if self.update_errors:
+								errorcodes = {}
+								for type in [0x74,0x73]:
+									errorcodes[hex(type)] = []
+									for i in range(1,0x0c):
+										info = self.ecu.send_command([0x72],[type, i])
+										if info:
+											for j in [3,5,7]:
+												if info[2][j] != 0:
+													errorcodes[hex(type)].append("%02d-%02d" % (info[2][j],info[2][j+1]))
+											if info[2] == 0:
+												break
+										else:
+											break
+								dtccount = sum([len(c) for c in errorcodes.values()])
+								if self.dtccount != dtccount:
+									self.dtccount = dtccount
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="dtccount", value=self.dtccount)
+								if self.errorcodes != errorcodes:
+									self.errorcodes = errorcodes
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="dtc", value=self.errorcodes)
+							if not self.tables:
+								tables = self.ecu.probe_tables()
+								if len(tables) > 0:
+									self.tables = tables
+									tables = " ".join([hex(x) for x in self.tables.keys()])
+									wx.LogVerbose("HDS tables: %s" % tables)
+									for t, d in self.tables.items():
+										wx.CallAfter(pub.sendMessage, "KlineWorker", info="hds", value=(t,d[0],d[1]))
+							else:
+								if self.update_tables:
+									for t in self.tables:
+										info = self.ecu.send_command([0x72], [0x71, t])
+										if info:
+											if info[3] > 2:
+												self.tables[t] = [info[3],info[2]]
+												wx.CallAfter(pub.sendMessage, "KlineWorker", info="hds", value=(t,info[3],info[2]))
+						else:
+							self.state = 0
+						if self.flash_mode >= 0:
+							if self.flash_mode == 0:
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="poweroff", value=None)
+								wx.LogVerbose("Turn off bike")
+								time.sleep(.5)
+								while self.ecu.kline():
+									time.sleep(.2)
+								time.sleep(.5)
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="poweron", value=None)
+								wx.LogVerbose("Turn on bike")
+								while not self.ecu.kline():
+									time.sleep(.2)
+								time.sleep(.5)
+								self.ecu.wakeup()
+								self.ecu.ping()
+								wx.LogVerbose("Security access")
+								self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
+								self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
+								wx.LogVerbose("Reading ECU")
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="read", value=None)
+								status = self.do_read_flash(self.flash_data)
+								wx.LogVerbose("Read %s" % (status))
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="read%s" % status, value=None)
+							else:
+								if self.flash_mode == 1:
+									wx.LogVerbose("Initializing write process")
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="initwrite", value=None)
+									self.ecu.do_init_write()
+								elif self.flash_mode == 2:
+									wx.LogVerbose("Initializing recovery process")
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="initrecover", value=None)
+									self.ecu.do_init_recover()
+									wx.LogVerbose("Entering enhanced diagnostic mode")
+									self.ecu.send_command([0x72],[0x00, 0xf1])
+									time.sleep(1)
+									self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
+								wx.LogVerbose("Pre-erase wait")
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="wait", value=None)
+								for i in range(14):
+									w = 14-i
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(w/14*100,str(w)))
+									time.sleep(1)
+								wx.LogVerbose("Erasing ECU")
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="erase", value=None)
+								self.ecu.do_erase()
+								cont = 1
+								while cont:
+									info = self.ecu.send_command([0x7e], [0x01, 0x05])
+									if info:
+										if info[2][1] == 0x00:
+											cont = 0
+									else:
+										cont = -1
+									wx.CallAfter(pub.sendMessage, "KlineWorker", info="progress", value=(-1,""))
+								wx.LogVerbose("Writing ECU")
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="write", value=None)
+								self.do_write_flash(self.flash_data)
+								wx.LogVerbose("Finalizing write process")
+								ret = self.ecu.do_post_write()
+								status = "good" if ret else "bad"
+								wx.LogVerbose("Write %s" % (status))
+								wx.CallAfter(pub.sendMessage, "KlineWorker", info="write%s" % status, value=None)
+							self.state = 0
+				except pylibftdi._base.FtdiError:
+					pass
+				except AttributeError:
+					pass
+				except OSError:
+					pass
 
 class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
 	def __init__(self, parent, ID, pos=wx.DefaultPosition,
@@ -50,8 +339,8 @@ class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
 
 class ErrorPanel(wx.Panel):
 
-	def __init__(self, gui):
-		wx.Panel.__init__(self, gui.notebook)
+	def __init__(self, parent):
+		wx.Panel.__init__(self, parent)
 
 		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT|wx.LC_HRULES)
 		self.errorlist.InsertColumn(1,"DTC",format=wx.LIST_FORMAT_CENTER,width=50)
@@ -66,34 +355,17 @@ class ErrorPanel(wx.Panel):
 		self.errorsizer.Add(self.resetbutton, 0, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.RIGHT, border=10)
 		self.SetSizer(self.errorsizer)
 
-		self.Bind(wx.EVT_BUTTON, gui.OnClearCodes)
+		self.Bind(wx.EVT_BUTTON, self.OnClearCodes)
 
-class InfoPanel(wx.Panel):
-
-	def __init__(self, gui):
-		wx.Panel.__init__(self, gui.notebook)
-
-		self.ecmidl = wx.StaticText(self, label="ECM ID:")
-		self.ecmid = wx.StaticText(self, label="")
-		self.statusl = wx.StaticText(self, label="Status:")
-		self.status = wx.StaticText(self, label="")
-		self.flashcountl = wx.StaticText(self,label="Flash count:")
-		self.flashcount = wx.StaticText(self, label="")
-
-		self.infopsizer = wx.GridBagSizer(0,0)
-		self.infopsizer.Add(self.ecmidl, pos=(0,0), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=10)
-		self.infopsizer.Add(self.ecmid, pos=(0,1), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=10)
-		self.infopsizer.Add(self.statusl, pos=(1,0), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=10)
-		self.infopsizer.Add(self.status, pos=(1,1), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=10)
-		self.infopsizer.Add(self.flashcountl, pos=(2,0), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT, border=10)
-		self.infopsizer.Add(self.flashcount, pos=(2,1), flag=wx.LEFT|wx.TOP|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT, border=10)
-		self.infopsizer.AddGrowableCol(1,1)
-		self.SetSizer(self.infopsizer)
+	def OnClearCodes(self, event):
+		self.resetbutton.Disable()
+		self.errorlist.DeleteAllItems()
+		wx.CallAfter(pub.sendMessage, "ErrorPanel", action="cleardtc")
 
 class DataPanel(wx.Panel):
 
-	def __init__(self, gui):
-		wx.Panel.__init__(self, gui.notebook)
+	def __init__(self, parent):
+		wx.Panel.__init__(self, parent)
 
 		enginespeedl = wx.StaticText(self, label="Engine speed")
 		vehiclespeedl = wx.StaticText(self, label="Vehicle speed")
@@ -388,19 +660,66 @@ class DataPanel(wx.Panel):
 
 		self.SetSizer(self.datapsizer)
 
+		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "hds":
+			if value[0] in [0x10, 0x11, 0x17]:
+				u = ">H12BHB"
+				if value[0] == 0x11:
+					u += "BH"
+				data = struct.unpack(u, value[2][2:])
+				self.enginespeedl.SetLabel("%d" % (data[0]))
+				self.tpsensorl.SetLabel("%d" % (data[2]))
+				self.ectsensorl.SetLabel("%d" % (-40 + data[4]))
+				self.iatsensorl.SetLabel("%d" % (-40 + data[6]))
+				self.mapsensorl.SetLabel("%d" % (data[8]))
+				self.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
+				self.vehiclespeedl.SetLabel("%d" % (data[12]))
+				self.injectorl.SetLabel("%.03f" % (data[13]))
+				self.advancel.SetLabel("%.01f" % (-64 + data[14]/255*127.5))
+				if value[0] == 0x11:
+					self.iacvpl.SetLabel("%d" % (data[15]))
+					self.iacvcl.SetLabel("%.03f" % (data[16]/65535*8.0))
+			elif value[0] in [0x20, 0x21]:
+				if value[1] == 5:
+					data = struct.unpack(">3B", value[2][2:])
+					if value[0] == 0x20:
+						self.o2volt1l.SetLabel("%.03f" % (data[0]/255*5))
+						self.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
+						self.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
+					else:
+						self.o2volt2l.SetLabel("%.03f" % (data[0]/255*5))
+						self.o2heat2l.SetLabel("Off" if data[2]==0 else "On")
+						self.sttrim2l.SetLabel("%.03f" % (data[1]/255*2))
+			elif value[0] == 0xd0:
+				if value[1] > 2:
+					data = struct.unpack(">7Bb%dB" % (value[1]-10), value[2][2:])
+					self.egcvil.SetLabel("%.03f" % (data[5]/255*5))
+					self.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
+					self.egcvll.SetLabel("%d" % (data[7]))
+					self.lscl.SetLabel("%.03f" % (data[8]/255*1))
+					self.lstl.SetLabel("%.03f" % (data[9]/255*1))
+					self.lsvl.SetLabel("%d" % (data[10]))
+			elif value[0] == 0xd1:
+				if value[1] == 8:
+					data = struct.unpack(">6B", value[2][2:])
+					self.icsl.SetLabel("On" if data[0] & 1 else "Off")
+					self.pairvl.SetLabel("On" if data[4] & 4 else "Off")
+			self.Layout()
+
 class FlashPanel(wx.Panel):
 
-	def __init__(self, gui):
-		wx.Panel.__init__(self, gui.notebook)
+	def __init__(self, parent):
+		self.parent = parent
+		wx.Panel.__init__(self, parent)
 
 		self.mode = wx.RadioBox(self, label="Mode", choices=["Read","Write","Recover"])
 		self.wfilel = wx.StaticText(self, label="File")
-		self.wsizel = wx.StaticText(self, label="Size")
 		self.wchecksuml = wx.StaticText(self,label="Checksum")
 		self.readfpicker = wx.FilePickerCtrl(self, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.writefpicker = wx.FilePickerCtrl(self,wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.fixchecksum = wx.CheckBox(self, label="Fix")
-		self.size = wx.Choice(self, choices=["Auto"]+list(binsizes.keys()))
 		self.checksum = wx.Choice(self, choices=list(checksums))
 		self.gobutton = wx.Button(self, label="Start")
 
@@ -410,11 +729,8 @@ class FlashPanel(wx.Panel):
 		self.wchecksuml.Show(False)
 		self.gobutton.Disable()
 		self.checksum.Disable()
-		self.size.SetSelection(0)
 
 		self.optsbox = wx.BoxSizer(wx.HORIZONTAL)
-		self.optsbox.Add(self.wsizel, 0, flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
-		self.optsbox.Add(self.size, 0)
 		self.optsbox.Add(self.wchecksuml, 0, flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 		self.optsbox.Add(self.checksum, 0)
 		self.optsbox.Add(self.fixchecksum, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
@@ -434,14 +750,74 @@ class FlashPanel(wx.Panel):
 		self.SetSizer(self.flashpsizer)
 
 		self.fixchecksum.Bind(wx.EVT_CHECKBOX, self.OnFix)
-		self.mode.Bind(wx.EVT_RADIOBOX, gui.OnModeChange)
-		self.gobutton.Bind(wx.EVT_BUTTON, gui.OnGo)
+		self.readfpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.checksum.Bind(wx.EVT_CHOICE, self.OnValidateMode)
+		self.mode.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
+		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
+
+	def OnValidateMode(self, event):
+		go = False
+		if self.mode.GetSelection() == 0:
+			if len(self.readfpicker.GetPath()) > 0:
+				go = True
+		else:
+			if len(self.writefpicker.GetPath()) > 0:
+				if os.path.isfile(self.writefpicker.GetPath()):
+					if self.fixchecksum.IsChecked():
+						if self.checksum.GetSelection() > -1:
+							go = True
+					else:
+						go = True
+				if go:
+					fbin = open(self.writefpicker.GetPath(), "rb")
+					nbyts = os.path.getsize(self.writefpicker.GetPath())
+					byts = bytearray(fbin.read(nbyts))
+					fbin.close()
+					cksum = 0
+					if self.fixchecksum.IsChecked():
+						if self.checksum.GetSelection() > -1 and int(checksums[self.checksum.GetSelection()],16) < nbyts:
+							 cksum = int(checksums[self.checksum.GetSelection()],16)
+						else:
+							go = False
+					if go:
+						self.byts, status = do_validation(byts, cksum, self.fixchecksum.IsChecked())
+						go = (status != "bad")
+		if go:
+			self.gobutton.Enable()
+		else:
+			self.gobutton.Disable()
 
 	def OnFix(self, event):
 		if self.fixchecksum.IsChecked():
 			self.checksum.Enable()
 		else:
 			self.checksum.Disable()
+		self.OnValidateMode(None)
+
+	def OnModeChange(self, event):
+		if self.mode.GetSelection() == 0:
+			self.fixchecksum.Show(False)
+			self.writefpicker.Show(False)
+			self.readfpicker.Show(True)
+			self.wchecksuml.Show(False)
+			self.checksum.Show(False)
+		else:
+			self.wchecksuml.Show(True)
+			self.checksum.Show(True)
+			self.fixchecksum.Show(True)
+			self.writefpicker.Show(True)
+			self.readfpicker.Show(False)
+		self.Layout()
+
+	def OnGo(self, event):
+		mode = self.mode.GetSelection()
+		if mode == 0:
+			data = self.readfpicker.GetPath()
+		else:
+			data = self.byts
+		self.gobutton.Disable()
+		pub.sendMessage("FlashPanel", mode=mode, data=data)
 
 	def setEmergency(self, emergency):
 		if emergency:
@@ -460,743 +836,306 @@ class FlashDialog(wx.Dialog):
 		wx.Dialog.__init__(self, parent, size=(300,250))
 		self.parent = parent
 
-		self.offimg = wx.Image(self.parent.offpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-		self.onimg = wx.Image(self.parent.onpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-		self.goodimg = wx.Image(self.parent.goodpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-		self.badimg = wx.Image(self.parent.badpng, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		self.lastpulse = 0
+
+		self.offimg = wx.Image(os.path.join(self.parent.basepath, "images/power_off.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		self.onimg = wx.Image(os.path.join(self.parent.basepath, "images/power_on.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		self.goodimg = wx.Image(os.path.join(self.parent.basepath, "images/flash_good.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		self.badimg = wx.Image(os.path.join(self.parent.basepath, "images/flash_bad.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 
 		self.msg = wx.StaticText(self, label="", style=wx.ALIGN_CENTRE)
 		self.msg2 = wx.StaticText(self, label="", style=wx.ALIGN_CENTRE)
-		self.image = wx.StaticBitmap(self)
-		self.progress = wx.Gauge(self)
+		self.image = wx.StaticBitmap(self, size=wx.Size(96,96))
+		self.progress = wx.Gauge(self, size=wx.Size(260,-1))
 		self.progress.SetRange(100)
-		self.progress.SetValue(0)
 		self.button = wx.Button(self, label="Close")
-		self.button.Show(False)
+
+		self.SetState(msg="", msg2="", bmp=wx.NullBitmap, pgrs=None, btn=None)
 
 		mainbox = wx.BoxSizer(wx.VERTICAL)
-		mainbox.Add(self.msg, 0, wx.ALIGN_CENTER|wx.TOP, 30)
-		mainbox.Add(self.image, 0, wx.ALIGN_CENTER|wx.TOP, 10)
-		mainbox.Add(self.progress, 0, wx.EXPAND|wx.ALL, 40)
+		mainbox.AddSpacer(20)
+		mainbox.Add(self.msg, 0, wx.ALIGN_CENTER, 0)
+		mainbox.AddSpacer(10)
+		mainbox.Add(self.image, 0, wx.ALIGN_CENTER, 0)
+		mainbox.Add(self.progress, 0, wx.ALIGN_CENTER|wx.TOP, 30)
+		mainbox.AddSpacer(10)
 		mainbox.Add(self.msg2, 0, wx.ALIGN_CENTER, 0)
+		mainbox.AddStretchSpacer(1)
 		mainbox.Add(self.button, 0, wx.ALIGN_CENTER, 0)
+		mainbox.AddSpacer(20)
 		self.SetSizer(mainbox)
 
 		self.Layout()
 		self.Center()
 
 		self.button.Bind(wx.EVT_BUTTON, self.OnButton)
+		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
+
+	def SetState(self, msg=False, msg2=False, bmp=False, pgrs=False, btn=False):
+		if btn != False:
+			if btn != None:
+				self.button.SetLabel(btn)
+				self.button.Show(True)
+			else:
+				self.button.SetLabel("")
+				self.button.Show(False)
+		if msg != False:
+			if msg != None:
+				self.msg.SetLabel(msg)
+				self.msg.Show(True)
+			else:
+				self.msg.SetLabel("")
+				self.msg.Show(False)
+		if msg2 != False:
+			if msg2 != None:
+				self.msg2.SetLabel(msg2)
+				self.msg2.Show(True)
+			else:
+				self.msg2.SetLabel("")
+				self.msg2.Show(False)
+		if bmp != False:
+			if bmp != None:
+				self.image.SetBitmap(bmp)
+				self.image.Show(True)
+			else:
+				self.image.SetBitmap(wx.NullBitmap)
+				self.image.Show(False)
+		if pgrs != False:
+			if pgrs != None:
+				if pgrs >= 0:
+					self.progress.SetValue(pgrs)
+				else:
+					pulse = time.time()
+					if pulse - self.lastpulse > .2:
+						self.progress.Pulse()
+						self.lastpulse = pulse
+				self.progress.Show(True)
+			else:
+				self.progress.SetValue(100)
+				self.progress.Show(False)
+		self.Layout()
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "poweroff":
+			self.SetState(msg="Turn off ECU", msg2="", bmp=self.offimg, pgrs=None, btn=None)
+		elif info == "poweron":
+			self.SetState(msg="Turn on ECU", msg2="", bmp=self.onimg, pgrs=None, btn=None)
+		elif info == "read":
+			self.SetState(msg="Reading ECU", msg2="", bmp=None, pgrs=0, btn=None)
+		elif info == "wait":
+			self.SetState(msg="Waiting", msg2="", bmp=None, pgrs=100, btn="Abort")
+		elif info == "erase":
+			self.SetState(msg="Erasing ECU", msg2="", bmp=None, pgrs=-1, btn=None)
+		elif info == "initwrite":
+			self.SetState(msg="Initializing Write", msg2="", bmp=None, btn=None)
+		elif info == "initrecover":
+			self.SetState(msg="Initializing Recover", msg2="", bmp=None, btn=None)
+		elif info == "write":
+			self.SetState(msg="Writing ECU", msg2="", bmp=None, pgrs=0, btn=None)
+		elif info == "readgood":
+			self.SetState(msg="Read Successful", msg2="", bmp=self.goodimg, pgrs=None, btn="Close")
+		elif info == "readbad":
+			self.SetState(msg="Read Unsuccessful", msg2="", bmp=self.badimg, pgrs=None, btn="Close")
+		elif info == "writegood":
+			self.SetState(msg="Write Successful", msg2="", bmp=self.goodimg, pgrs=None, btn="Close")
+		elif info == "writebad":
+			self.SetState(msg="Write Unsuccessful", msg2="", bmp=self.badimg, pgrs=None, btn="Close")
+		elif info == "progress":
+			self.SetState(msg2=value[1], pgrs=value[0])
 
 	def OnButton(self, event):
 		self.EndModal(1)
 
-	def WaitOff(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Turn off ECU")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(self.offimg)
-		self.image.Show(True)
-		self.progress.Show(False)
-		self.button.Show(False)
-		self.Layout()
-
-	def WaitOn(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Turn on ECU")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(self.onimg)
-		self.image.Show(True)
-		self.progress.Show(False)
-		self.button.Show(False)
-		self.Layout()
-
-	def WaitRead(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Reading ECU")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(wx.NullBitmap)
-		self.image.Show(False)
-		self.progress.Show(True)
-		self.button.Show(False)
-		self.Layout()
-
-	def WaitWrite(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Writing ECU")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(wx.NullBitmap)
-		self.image.Show(False)
-		self.progress.Show(True)
-		self.button.Show(False)
-		self.Layout()
-
-	def WaitRecover(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Recovering ECU")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(wx.NullBitmap)
-		self.image.Show(False)
-		self.progress.Show(True)
-		self.button.Show(False)
-		self.Layout()
-
-	def WaitReadGood(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Read Successful")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(self.goodimg)
-		self.image.Show(True)
-		self.progress.Show(False)
-		self.button.Show(True)
-		self.Layout()
-
-	def WaitReadBad(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Read Unsuccessful")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(self.badimg)
-		self.image.Show(True)
-		self.progress.Show(False)
-		self.button.Show(True)
-		self.Layout()
-
-	def WaitWriteGood(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Write Successful")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(self.goodimg)
-		self.image.Show(True)
-		self.progress.Show(False)
-		self.button.Show(True)
-		self.Layout()
-
-	def WaitWriteBad(self):
-		self.progress.SetValue(0)
-		self.msg.SetLabel("Write Unsuccessful")
-		self.msg2.SetLabel("")
-		self.image.SetBitmap(self.badimg)
-		self.image.Show(True)
-		self.progress.Show(False)
-		self.button.Show(True)
-		self.Layout()
-
 class HondaECU_GUI(wx.Frame):
 
 	def __init__(self, args, version):
+		# Initialize GUI things
+		wx.Log.SetActiveTarget(wx.LogStderr())
+		wx.Log.SetVerbose(args.verbose)
+		if not args.debug:
+			wx.Log.SetLogLevel(wx.LOG_Info)
+		self.run = True
+		self.active_device = None
+		self.devices = {}
 		title = "HondaECU %s" % (version)
-		if args.debug:
-			sys.stderr.write(title)
-			sys.stderr.write("\n-------------------------\n")
-		self.args = args
-		self.state_delay = time.time()
-		self.ecu = None
-		self.device_state = DEVICE_STATE_SETUP
-		self.device_state_index = 0
-		self.ftdi_devices = []
-		self.ftdi_active = None
-		self.file = None
-		self.usbcontext = usb1.USBContext()
-		self.flashop = False
-
-		wx.Frame.__init__(self, None, title=title)
-		self.SetMinSize(wx.Size(800,600))
-
-		self.statusbar = self.CreateStatusBar(1)
-
-		if getattr(sys, 'frozen', False ):
+		if getattr(sys, 'frozen', False):
 			self.basepath = sys._MEIPASS
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
-		ip = os.path.join(self.basepath,"honda.ico")
-		self.offpng = os.path.join(self.basepath, "power_off.png")
-		self.onpng = os.path.join(self.basepath, "power_on.png")
-		self.goodpng = os.path.join(self.basepath, "flash_good.png")
-		self.badpng = os.path.join(self.basepath, "flash_bad.png")
+		ip = os.path.join(self.basepath,"images/honda.ico")
 
+		# Initialize threads
+		self.usbmonitor = USBMonitor(self)
+		self.klineworker = KlineWorker(self)
+
+		# Setup GUI
+		wx.Frame.__init__(self, None, title=title)
+		self.SetMinSize(wx.Size(800,600))
 		ib = wx.IconBundle()
 		ib.AddIcon(ip)
 		self.SetIcons(ib)
 
-		#menuBar = wx.MenuBar()
-		#menu = wx.Menu()
-		#m_exit = menu.Append(wx.ID_EXIT, "E&xit\tAlt-X", "Close window and exit program.")
-		#self.Bind(wx.EVT_MENU, self.OnClose, m_exit)
-		#menuBar.Append(menu, "&File")
-		#self.SetMenuBar(menuBar)
+		wx.ToolTip.Enable(True)
+
+		self.statusicons = [
+			wx.Image(os.path.join(self.basepath, "images/bullet_black.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_green.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_yellow.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_red.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		]
+
+		self.statusbar = ESB.EnhancedStatusBar(self, -1)
+		self.statusbar.SetFieldsCount(4)
+		self.statusbar.SetSize((-1, 32))
+		self.SetStatusBar(self.statusbar)
+		self.statusbar.SetStatusWidths([32, 170, 130, 110])
+		self.statusbar.SetStatusStyles([wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN])
+
+		self.statusicon = wx.StaticBitmap(self.statusbar)
+		self.statusicon.SetBitmap(self.statusicons[0])
+
+		self.ecmidl = wx.StaticText(self.statusbar)
+		self.flashcountl = wx.StaticText(self.statusbar)
+		self.dtccountl = wx.StaticText(self.statusbar)
+
+		self.statusbar.AddWidget(self.statusicon, pos=0)
+		self.statusbar.AddWidget(self.ecmidl, pos=1, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.AddWidget(self.flashcountl, pos=2, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.AddWidget(self.dtccountl, pos=3, horizontalalignment=ESB.ESB_ALIGN_LEFT)
 
 		self.panel = wx.Panel(self)
 
 		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
+
 		self.m_devices = wx.Choice(self.panel, wx.ID_ANY)
 		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
 
 		self.notebook = wx.Notebook(self.panel, wx.ID_ANY)
-
-		self.infop = InfoPanel(self)
-		self.flashp = FlashPanel(self)
-		self.datap = DataPanel(self)
-		self.errorp = ErrorPanel(self)
-
-		self.notebook.AddPage(self.infop, "ECU Info")
+		self.flashp = FlashPanel(self.notebook)
+		self.datap = DataPanel(self.notebook)
+		self.errorp = ErrorPanel(self.notebook)
 		self.notebook.AddPage(self.flashp, "Flash Operations")
-		self.notebook.AddPage(self.datap, "Diagnostic Tables")
-		self.notebook.AddPage(self.errorp, "Error Codes")
+		self.notebook.AddPage(self.datap, "Data Logging")
+		self.notebook.AddPage(self.errorp, "Diagnostic Trouble Codes")
 
-		self.faults = {'past':[], 'current':[], 'past_new':[], 'current_new':[]}
-
-		self.idle_actions = [
-			[
-				self.Get_Info
-			],
-			[
-				self.ValidateModes
-			],
-			[
-				self.GetTable10,
-				self.GetTable11,
-				self.GetTable20,
-				self.GetTabled0
-			],
-			[
-				self.Get_Current_Faults,
-				self.Get_Past_Faults,
-				self.Update_Error_list
-			]
-		]
-
-		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnPageChanged)
+		self.flashdlg = FlashDialog(self)
 
 		mainbox = wx.BoxSizer(wx.VERTICAL)
 		mainbox.Add(devicebox, 0, wx.EXPAND | wx.ALL, 10)
 		mainbox.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
-		self.notebook.Layout()
 		self.panel.SetSizer(mainbox)
 		self.panel.Layout()
-		self.Centre()
 
-		self.Show()
-
-		#self.Bind(wx.EVT_IDLE, self.OnIdle)
+		# Bind event handlers
+		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		self.m_devices.Bind(wx.EVT_CHOICE, self.OnDeviceSelected)
-		#self.Bind(wx.EVT_CLOSE, self.OnClose)
+		pub.subscribe(self.USBMonitorHandler, "USBMonitor")
+		pub.subscribe(self.KlineWorkerHandler, "KlineWorker")
+		pub.subscribe(self.ErrorPanelHandler, "ErrorPanel")
+		pub.subscribe(self.FlashPanelHandler, "FlashPanel")
 
-		self.flashdlg = FlashDialog(self)
+		# Post GUI-setup actions
+		self.Centre()
+		self.Show()
+		self.usbmonitor.start()
+		self.klineworker.start()
 
-		#self.idletimer = wx.Timer(self, wx.ID_ANY)
-		#self.Bind(wx.EVT_TIMER, self.TimerActions)
-		#self.idletimer.Start(250)
-
-	def TimerActions(self, event):
-		#print(self.device_state)
-		try:
-			new_devices = self.usbcontext.getDeviceList(skip_on_error=True)
-			for device in new_devices:
-				if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID:
-					if device.getProductID() in pylibftdi.driver.USB_PID_LIST:
-						if not device in self.ftdi_devices:
-							if self.args.debug:
-								sys.stderr.write("Adding device (%s) to list\n" % device)
-							self.ftdi_devices.append(device)
-							self.UpdateDeviceList()
-			for device in self.ftdi_devices:
-				if not device in new_devices:
-					if device == self.ftdi_active:
-						self.deactivateDevice()
-						self.infop.ecmid.SetLabel("")
-						self.infop.status.SetLabel("")
-						self.infop.flashcount.SetLabel("")
-						self.infop.Layout()
-					self.ftdi_devices.remove(device)
-					self.UpdateDeviceList()
-					if self.args.debug:
-						sys.stderr.write("Removing device (%s) from list\n" % device)
-		except OSError:
-			pass
-		try:
-			if self.device_state == DEVICE_STATE_CONNECTED:
-				if len(self.idle_actions[self.notebook.GetSelection()]) > 0:
-					self.idle_actions[self.notebook.GetSelection()][self.device_state_index]()
-					self.device_state_index = (self.device_state_index + 1) % len(self.idle_actions[self.notebook.GetSelection()])
-				if self.emergency:
-					pass
-				else:
-					if not self.ecu.ping():
-						self.device_state = DEVICE_STATE_ERROR
-			elif self.device_state == DEVICE_STATE_POST_READ:
-				pass
-			elif self.device_state == DEVICE_STATE_POST_WRITE:
-				if not self.ecu.kline():
-					self.device_state = DEVICE_STATE_ERROR
-		except pylibftdi._base.FtdiError:
-			self.device_state = DEVICE_STATE_SETUP
-
-
-	def deactivateDevice(self):
-		if self.ecu != None:
-			self.ecu.dev.close()
-			del self.ecu
-			self.ecu = None
-		if self.args.debug:
-			sys.stderr.write("Deactivating device (%s)\n" % self.ftdi_active)
-		self.ftdi_active = None
-		self.device_state = DEVICE_STATE_SETUP
-		self.Clean()
-
-	def initRead(self, rom_size):
-		self.maxbyte = 1024 * rom_size
-		if self.maxbyte < 0:
-			self.maxbyte = math.inf
-		self.nbyte = 0
-		self.readsize = 8
-
-	def initWrite(self):
-		self.i = 0
-		self.maxb = len(self.byts)
-		self.maxi = self.maxb/128
-		self.writesize = 128
-
-	def GetTable10(self):
-		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0x10], debug=self.args.debug)
-			if info[3] == 19:
-				data = struct.unpack(">H15B", info[2][2:])
-				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
-				self.datap.tpsensorl.SetLabel("%d" % (data[2]))
-				self.datap.ectsensorl.SetLabel("%d" % (-40 + data[4]))
-				self.datap.iatsensorl.SetLabel("%d" % (-40 + data[6]))
-				self.datap.mapsensorl.SetLabel("%d" % (data[8]))
-				self.datap.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
-				self.datap.vehiclespeedl.SetLabel("%d" % (data[12]))
-				self.datap.advancel.SetLabel("%.03f" % (data[13]))
-				self.datap.injectorl.SetLabel("%d" % (data[14]))
-				self.datap.Layout()
-
-	def GetTable11(self):
-		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0x11], debug=self.args.debug)
-			if info[3] == 22:
-				data = struct.unpack(">H18B", info[2][2:])
-				self.datap.enginespeedl.SetLabel("%d" % (data[0]))
-				self.datap.tpsensorl.SetLabel("%d" % (data[2]))
-				self.datap.ectsensorl.SetLabel("%d" % (-40 + data[4]))
-				self.datap.iatsensorl.SetLabel("%d" % (-40 + data[6]))
-				self.datap.mapsensorl.SetLabel("%d" % (data[8]))
-				self.datap.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
-				self.datap.vehiclespeedl.SetLabel("%d" % (data[12]))
-				self.datap.advancel.SetLabel("%.03f" % (data[13]))
-				self.datap.injectorl.SetLabel("%d" % (data[14]))
-				self.datap.iacvpl.SetLabel("%d" % (data[16]))
-				self.datap.iacvcl.SetLabel("%.03f" % (data[17]/127))
-				self.datap.Layout()
-
-	def GetTable20(self):
-		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0x20], debug=self.args.debug)
-			if info[3] == 5:
-				data = struct.unpack(">3B", info[2][2:])
-				self.datap.o2volt1l.SetLabel("%.03f" % (data[0]/255*5))
-				self.datap.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
-				self.datap.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
-				self.datap.Layout()
-
-	def GetTabled0(self):
-		if not self.emergency:
-			info = self.ecu.send_command([0x72], [0x71, 0xd0], debug=self.args.debug)
-			if info[3] == 16:
-				data = struct.unpack(">7Bb6B", info[2][2:])
-				self.datap.egcvil.SetLabel("%.03f" % (data[5]/255*5))
-				self.datap.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
-				self.datap.egcvll.SetLabel("%d" % (data[7]))
-				self.datap.Layout()
-
-	def Get_Info(self):
-		if not self.emergency:
-			info = self.ecu.send_command([0x72],[0x72, 0x00, 0x00, 0x05], debug=self.args.debug)
-			if info:
-				self.infop.ecmid.SetLabel("%s" % " ".join(["%02x" % b for b in info[2][3:]]))
-			info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03], debug=self.args.debug)
-			if info:
-				self.infop.status.SetLabel("dirty" if info[2][2] == 0xff else "clean")
-				self.infop.flashcount.SetLabel(str(int(info[2][4])))
-			self.infop.Layout()
-
-	def _get_faults(self, type, debug):
-		faults = []
-		for i in range(1,0x0c):
-			info_current = self.ecu.send_command([0x72],[type, i], debug=debug)[2]
-			for j in [3,5,7]:
-				if info_current[j] != 0:
-					faults.append("%02d-%02d" % (info_current[j],info_current[j+1]))
-			if info_current[2] == 0:
-				break
-		return sorted(faults)
-
-	def Get_Current_Faults(self):
-		if not self.emergency:
-			self.faults["current_new"] = self._get_faults(0x74, debug=self.args.debug)
-
-	def Get_Past_Faults(self):
-		if not self.emergency:
-			self.faults["past_new"] = self._get_faults(0x73, debug=self.args.debug)
-
-	def Update_Error_list(self):
-		if self.faults["current"] != self.faults["current_new"] or self.faults["past"] != self.faults["past_new"]:
-			self.errorp.errorlist.DeleteAllItems()
-			faultcount = 0
-			for code in self.faults["current_new"]:
-				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
-				faultcount += 1
-			for code in self.faults["past_new"]:
-				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
-				faultcount += 1
-			self.errorp.resetbutton.Enable(faultcount > 0)
-			self.errorp.Layout()
-			self.faults["current"] = self.faults["current_new"]
-			self.faults["past"] = self.faults["past_new"]
-
-	def OnPageChanged(self, event):
-		self.device_state_index = 0
-		event.Skip()
-
-	def OnClearCodes(self, event):
-		self.errorp.resetbutton.Enable(False)
-		if self.args.debug:
-			sys.stderr.write('Clearing codes\n')
-		self.statusbar.SetStatusText("Clearing diagnostic trouble codes...")
-		self.device_state = DEVICE_STATE_CLEAR_CODES
-
-	def OnGo(self, event):
-		self.device_state = DEVICE_STATE_POWER_OFF
-		self.flashop = True
-		self.flashdlg.WaitOff()
-		self.flashdlg.ShowModal()
-		self.flashop = False
-
-	def OnModeChange(self, event):
-		if self.flashp.mode.GetSelection() == 0:
-			self.flashp.fixchecksum.Show(False)
-			self.flashp.writefpicker.Show(False)
-			self.flashp.readfpicker.Show(True)
-			self.flashp.wchecksuml.Show(False)
-			self.flashp.checksum.Show(False)
-			self.flashp.wsizel.Show(True)
-			self.flashp.size.Show(True)
-		else:
-			self.flashp.wchecksuml.Show(True)
-			self.flashp.checksum.Show(True)
-			self.flashp.fixchecksum.Show(True)
-			self.flashp.writefpicker.Show(True)
-			self.flashp.readfpicker.Show(False)
-			self.flashp.wsizel.Show(False)
-			self.flashp.size.Show(False)
-		self.flashp.Layout()
-
-	def OnDeviceSelected(self, event):
-		self.statusbar.SetStatusText("")
-		newdevice = self.ftdi_devices[self.m_devices.GetSelection()]
-		if self.ftdi_active != None:
-			if self.ftdi_active != newdevice:
-				self.deactivateDevice()
-		self.ftdi_active = newdevice
-		try:
-			self.device_state = DEVICE_STATE_SETUP
-			self.statusbar.SetStatusText("")
-			self.ecu = HondaECU(device_id=self.ftdi_active.getSerialNumber())
-			if self.args.debug:
-				sys.stderr.write("Activating device (%s)\n" % self.ftdi_active)
-			self.device_state = DEVICE_STATE_INIT_A
-		except usb1.USBErrorNotSupported as e:
-			self.ecu = None
-			self.statusbar.SetStatusText("Incorrect driver for device, install libusbK with Zadig!")
-		except usb1.USBErrorBusy:
-			self.ecu = None
-
-	def UpdateDeviceList(self):
-		self.m_devices.Clear()
-		for i,d in enumerate(self.ftdi_devices):
-			n = str(d)
-			try:
-				time.sleep(.1)
-				s = d.getSerialNumber()
-				if s == None:
-					pass
-				n += " | " + s
-			except usb1.USBErrorNotSupported:
-				pass
-			except usb1.USBErrorBusy:
-				pass
-			except usb1.USBErrorNoDevice:
-				continue
-			except usb1.USBErrorIO:
-				continue
-			except usb1.USBErrorPipe:
-				continue
-			self.m_devices.Append(n)
-			if self.ftdi_active == d:
-				self.m_devices.SetSelection(i)
-			if self.ftdi_active == None:
-				self.ftdi_active = self.ftdi_devices[0]
-				self.m_devices.SetSelection(0)
-				self.OnDeviceSelected(None)
+	def __deactivate(self):
+		self.active_device = None
 
 	def OnClose(self, event):
-		for d in self.ftdi_devices:
-			d.close()
+		self.run = False
+		self.usbmonitor.join()
+		self.klineworker.join()
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
-	def startErase(self):
-		self.write_wait = time.time()
-		self.device_state = DEVICE_STATE_ERASE
-		self.flashdlg.msg2.SetLabel("Waiting")
-		self.flashdlg.progress.SetRange(12)
-		self.flashdlg.progress.SetValue(12)
-		self.flashdlg.Layout()
-		if self.args.debug:
-			sys.stderr.write("Waiting\n")
+	def OnDeviceSelected(self, event):
+		device = list(self.devices.keys())[self.m_devices.GetSelection()]
+		serial = self.devices[device]
+		if device != self.active_device:
+			if self.active_device:
+				pub.sendMessage("HondaECU.device", action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+				self.__deactivate()
+			if self.devices[device]:
+				self.active_device = device
+				pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=serial)
+			else:
+				pass
 
-	def ValidateModes(self):
-		go = False
-		if self.flashp.mode.GetSelection() == 0:
-			if len(self.flashp.readfpicker.GetPath()) > 0:
-				go = True
-		else:
-			if len(self.flashp.writefpicker.GetPath()) > 0:
-				if os.path.isfile(self.flashp.writefpicker.GetPath()):
-					if self.flashp.fixchecksum.IsChecked():
-						if self.flashp.checksum.GetSelection() > -1:
-							go = True
-					else:
-						go = True
-				if go:
-					fbin = open(self.flashp.writefpicker.GetPath(), "rb")
-					nbyts = os.path.getsize(self.flashp.writefpicker.GetPath())
-					self.byts = bytearray(fbin.read(nbyts))
-					fbin.close()
-					cksum = None
-					if self.flashp.fixchecksum.IsChecked():
-						if self.flashp.checksum.GetSelection() > -1 and int(checksums[self.flashp.checksum.GetSelection()],16) < nbyts:
-							 cksum = int(checksums[self.flashp.checksum.GetSelection()],16)
-						else:
-							go = False
-					else:
-						cksum = nbyts - 8
-					if go:
-						self.byts, status = do_validation(self.byts, cksum, self.flashp.fixchecksum.IsChecked())
-						go = (status != "bad")
-		if go:
-			self.flashp.gobutton.Enable()
-		else:
-			self.flashp.gobutton.Disable()
+	def FlashPanelHandler(self, mode, data):
+		self.flashdlg.ShowModal()
 
-	def SetEmergency(self, emergency):
-		self.emergency = emergency
-		self.flashp.setEmergency(self.emergency)
-		self.OnModeChange(None)
+	def ErrorPanelHandler(self, action):
+		if action == "cleardtc":
+			self.dtccountl.SetLabel("   DTC Count: --")
+			self.statusbar.OnSize(None)
 
-	def Clear(self):
-		self.statusbar.SetStatusText("")
-		self.flashp.gobutton.Disable()
-		self.infop.ecmid.SetLabel("")
-		self.infop.status.SetLabel("")
-		self.infop.flashcount.SetLabel("")
-		self.infop.Layout()
+	def USBMonitorHandler(self, action, device, serial):
+		dirty = False
+		if action == "add":
+			wx.LogVerbose("Adding device (%s | %s)" % (device, serial))
+			if not device in self.devices:
+				self.devices[device] = serial
+				dirty = True
+		elif action =="remove":
+			wx.LogVerbose("Removing device (%s | %s)" % (device, serial))
+			if device in self.devices:
+				if device == self.active_device:
+					pub.sendMessage("HondaECU.device", action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+					self.__deactivate()
+				del self.devices[device]
+				dirty = True
+		if not self.active_device and len(self.devices) > 0:
+			self.active_device = list(self.devices.keys())[0]
+			pub.sendMessage("HondaECU.device", action="activate", device=self.active_device, serial=self.devices[self.active_device])
+			dirty = True
+		if dirty:
+			self.m_devices.Clear()
+			for device in self.devices:
+				t = device
+				if self.devices[device]:
+					t += " | " + self.devices[device]
+				self.m_devices.Append(t)
+			if self.active_device:
+				self.m_devices.SetSelection(list(self.devices.keys()).index(self.active_device))
 
-	def OnIdle(self, event):
-		#print(self.device_state)
-		try:
-			if self.device_state == DEVICE_STATE_ERROR:
-				self.Clear()
-				if self.ecu:
-					if self.ecu.kline():
-						self.device_state = DEVICE_STATE_INIT_A
-						self.state_delay = time.time()
-					else:
-						self.statusbar.SetStatusText("Turn on ECU!")
-			elif self.device_state == DEVICE_STATE_INIT_A and time.time() > self.state_delay+.5:
-				self.SetEmergency(False)
-				if self.ecu.kline():
-					self.ecu._break(.070)
-					self.device_state = DEVICE_STATE_INIT_B
-					self.state_delay = time.time()
-				else:
-					self.device_state = DEVICE_STATE_ERROR
-			elif self.device_state == DEVICE_STATE_INIT_B and time.time() > self.state_delay+.130:
-				info = self.ecu.send_command([0xfe],[0x72], debug=self.args.debug)
-				if info and info[2][0] == 0x72:
-					self.ecu.send_command([0x72],[0x00, 0xf0], debug=self.args.debug)
-					self.statusbar.SetStatusText("ECU connected!")
-					if self.flashop:
-						if self.flashp.mode.GetSelection() == 0:
-							self.device_state = DEVICE_STATE_READ_SECURITY
-							self.flashdlg.WaitRead()
-						elif self.flashp.mode.GetSelection() == 1:
-							self.device_state = DEVICE_STATE_WRITE_INIT
-							self.flashdlg.WaitWrite()
-						elif self.flashp.mode.GetSelection() == 2:
-							self.write_wait = time.time()
-							self.device_state = DEVICE_STATE_RECOVER_INIT
-							self.flashdlg.WaitWrite()
-					else:
-						self.device_state = DEVICE_STATE_CONNECTED
-					self.state_delay = time.time()
-				else:
-					self.device_state = DEVICE_STATE_UNKNOWN
-			elif self.device_state == DEVICE_STATE_UNKNOWN:
-				if self.ecu.send_command([0x7e], [0x01, 0x02], debug=self.args.debug) != None:
-					self.statusbar.SetStatusText("ECU connected (emergency)!")
-					self.SetEmergency(True)
-					self.device_state = DEVICE_STATE_CONNECTED
-				else:
-					self.device_state = DEVICE_STATE_ERROR
-			elif self.device_state == DEVICE_STATE_CLEAR_CODES:
+	def KlineWorkerHandler(self, info, value):
+		if info == "state":
+			self.ecmidl.SetLabel("")
+			self.flashcountl.SetLabel("")
+			self.dtccountl.SetLabel("")
+			if value[0] in [0,12]:
+				self.statusicon.SetBitmap(self.statusicons[0])
+			elif value[0] in [1]:
+				self.statusicon.SetBitmap(self.statusicons[1])
+			elif value[0] in [10]:
+				self.statusicon.SetBitmap(self.statusicons[3])
+			else:
+				self.ecmidl.SetLabel("   ECM ID: -- -- -- -- --")
+				self.flashcountl.SetLabel("   Flash Count: --")
+				self.dtccountl.SetLabel("   DTC Count: --")
+				self.statusicon.SetBitmap(self.statusicons[2])
+			self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (value[1])))
+			self.statusbar.OnSize(None)
+		elif info == "ecmid":
+			self.ecmidl.SetLabel("   ECM ID: %s" % value)
+			self.statusbar.OnSize(None)
+		elif info == "flashcount":
+			self.flashcountl.SetLabel("   Flash Count: %d" % value)
+			self.statusbar.OnSize(None)
+		elif info == "dtccount":
+			self.dtccountl.SetLabel("   DTC Count: %d" % value)
+			if value > 0:
+				self.errorp.resetbutton.Enable(True)
+			else:
+				self.errorp.resetbutton.Enable(False)
 				self.errorp.errorlist.DeleteAllItems()
-				self.errorp.Layout()
-				info = self.ecu.send_command([0x72],[0x60, 0x03], debug=self.args.debug)
-				if info and info[2][1] == 0x00:
-					self.statusbar.SetStatusText("ECU connected!")
-					self.device_state = DEVICE_STATE_CONNECTED
-			elif self.device_state == DEVICE_STATE_POWER_OFF:
-				if not self.ecu.kline():
-					self.device_state = DEVICE_STATE_POWER_ON
-					self.flashdlg.WaitOn()
-			elif self.device_state == DEVICE_STATE_POWER_ON:
-				if self.ecu.kline():
-					if self.emergency:
-						self.flashdlg.WaitRecover()
-						self.startErase()
-					else:
-						self.device_state = DEVICE_STATE_INIT_A
-					self.state_delay = time.time()
-			elif self.device_state == DEVICE_STATE_READ_SECURITY:
-				if self.args.debug:
-					sys.stderr.write("Security access\n")
-				self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f], debug=self.args.debug)
-				self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75], debug=self.args.debug)
-				if self.flashp.size.GetSelection() == 0:
-					maxbyte = -1
-				else:
-					maxbyte = list(binsizes.values())[self.flashp.size.GetSelection()-1]
-				self.initRead(maxbyte)
-				self.file = open(self.flashp.readfpicker.GetPath(), "wb")
-				if self.args.debug:
-					sys.stderr.write("Reading ECU\n")
-				self.device_state = DEVICE_STATE_READ
-			elif self.device_state == DEVICE_STATE_READ:
-				if self.nbyte < self.maxbyte:
-					info = self.ecu.send_command([0x82, 0x82, 0x00], [int(self.nbyte/65536)] + [b for b in struct.pack("<H", self.nbyte % 65536)] + [self.readsize], debug=self.args.debug)
-					if info != None:
-						self.file.write(info[2])
-						self.file.flush()
-						self.nbyte += self.readsize
-						if self.maxbyte!=math.inf:
-							self.flashdlg.progress.SetValue(int(100*self.nbyte/self.maxbyte))
-							self.flashdlg.msg2.SetLabel("%dB of %dB" % (self.nbyte, self.maxbyte))
-						else:
-							self.flashdlg.progress.SetValue(100)
-							self.flashdlg.msg2.SetLabel("%dB" % (self.nbyte))
-						self.flashdlg.Layout()
-					else:
-						self.flashdlg.WaitReadBad()
-						self.device_state = DEVICE_STATE_ERROR
-						self.statusbar.SetStatusText("")
-				else:
-					self.device_state = DEVICE_STATE_POST_READ
-					self.statusbar.SetStatusText("Read complete, power-cycle ECU!")
-					self.file.close()
-					self.flashdlg.WaitReadGood()
-			elif self.device_state == DEVICE_STATE_RECOVER_INIT:
-				if self.args.debug:
-					sys.stdout.write("Initializing recovery process\n")
-				self.ecu.do_init_recover(debug=self.args.debug)
-				if self.args.debug:
-					sys.stdout.write("Entering enhanced diagnostic mode\n")
-				self.ecu.send_command([0x72],[0x00, 0xf1], debug=self.args.debug)
-				self.ecu.send_command([0x27],[0x00, 0x9f, 0x00], debug=self.args.debug)
-				self.startErase()
-			elif self.device_state == DEVICE_STATE_WRITE_INIT:
-				if self.args.debug:
-					sys.stderr.write("Initializing write process\n")
-				try:
-					self.ecu.do_init_write(debug=self.args.debug)
-					self.startErase()
-				except MaxRetriesException:
-					if self.initok:
-						if self.args.debug:
-							sys.stderr.write("Switching to recovery mode\n")
-						self.device_state = DEVICE_STATE_RECOVER_INIT
-					else:
-						self.startErase()
-			elif self.device_state == DEVICE_STATE_ERASE:
-				if time.time() > self.write_wait+12:
-					self.eraseinc = 0
-					self.flashdlg.msg2.SetLabel("Erasing ECU")
-					self.flashdlg.progress.SetRange(180)
-					self.flashdlg.progress.SetValue(0)
-					self.flashdlg.Layout()
-					if self.args.debug:
-						sys.stderr.write("Erasing ECU\n")
-					self.ecu.do_erase()
-					self.device_state = DEVICE_STATE_ERASE_WAIT
-				else:
-					self.flashdlg.progress.SetValue(int(12-round(time.time()-self.write_wait)))
-			elif self.device_state == DEVICE_STATE_ERASE_WAIT:
-				info = self.ecu.send_command([0x7e], [0x01, 0x05], debug=self.args.debug)
-				if info[2][1] == 0x00:
-					self.ecu.send_command([0x7e], [0x01, 0x01, 0x00], debug=self.args.debug)
-					self.initWrite()
-					if self.args.debug:
-						sys.stderr.write("Writing ECU\n")
-					self.device_state = DEVICE_STATE_WRITE
-					self.flashdlg.progress.SetRange(100)
-					self.flashdlg.progress.SetValue(0)
-					self.flashdlg.msg2.SetLabel("")
-					self.flashdlg.Layout()
-				else:
-					self.eraseinc += 1
-					if self.eraseinc > 180:
-						self.eraseinc = 180
-					self.flashdlg.progress.SetValue(self.eraseinc)
-			elif self.device_state == DEVICE_STATE_WRITE:
-				if self.i < self.maxi:
-					bytstart = [s for s in struct.pack(">H",(8*self.i))]
-					if self.i+1 == self.maxi:
-						bytend = [s for s in struct.pack(">H",0)]
-					else:
-						bytend = [s for s in struct.pack(">H",(8*(self.i+1)))]
-					d = list(self.byts[((self.i+0)*128):((self.i+1)*128)])
-					x = bytstart + d + bytend
-					c1 = checksum8bit(x)
-					c2 = checksum8bitHonda(x)
-					x = [0x01, 0x06] + x + [c1, c2]
-					info = self.ecu.send_command([0x7e], x, debug=self.args.debug)
-					if info:
-						if ord(info[1]) != 5:
-							info = None
-						else:
-							self.i += 1
-							if self.i % 2 == 0:
-								info = self.ecu.send_command([0x7e], [0x01, 0x08], debug=self.args.debug)
-							self.flashdlg.progress.SetValue(int(100*self.i/self.maxi))
-							self.flashdlg.msg2.SetLabel("%dB of %dB" % (self.i*128, self.maxb))
-							self.flashdlg.Layout()
-					if not info:
-						self.flashdlg.WaitWriteBad()
-						self.device_state = DEVICE_STATE_ERROR
-						self.statusbar.SetStatusText("")
-				else:
-					self.device_state = DEVICE_STATE_WRITE_FINALIZE
-			elif self.device_state == DEVICE_STATE_WRITE_FINALIZE:
-				if self.args.debug:
-					sys.stderr.write("Finalizing write process\n")
-				self.ecu.do_post_write(debug=self.args.debug)
-				self.device_state = DEVICE_STATE_POST_WRITE
-				self.statusbar.SetStatusText("Write successful, power-cycle ECU!")
-				self.flashdlg.WaitWriteGood()
-		except pylibftdi._base.FtdiError:
-			self.device_state = DEVICE_STATE_ERROR
-			self.statusbar.SetStatusText("")
-		except usb1.USBErrorPipe:
-			self.device_state = DEVICE_STATE_ERROR
-			self.statusbar.SetStatusText("")
-		event.RequestMore()
+			self.statusbar.OnSize(None)
+		elif info == "dtc":
+			self.errorp.errorlist.DeleteAllItems()
+			for code in value[hex(0x74)]:
+				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
+			for code in value[hex(0x73)]:
+				self.errorp.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
+			self.errorp.Layout()
