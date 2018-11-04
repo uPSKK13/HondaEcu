@@ -196,7 +196,7 @@ class KlineWorker(Thread):
 						if state != self.state:
 							self.state = state
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=(self.state,status))
-						wx.LogVerbose("ECU state: %s" % (status))
+							wx.LogVerbose("ECU state: %s" % (status))
 					else:
 						if self.ecu.ping():
 							if not self.ecmid:
