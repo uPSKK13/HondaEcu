@@ -50,9 +50,9 @@ def HondaECU_CmdLine(args, version):
 
         try:
             if args.debug:
-                ecu = HondaECU(latency=args.latency)
+                ecu = HondaECU(latency=args.latency, baudrate=args.baudrate)
             else:
-                ecu = HondaECU(dprint=lambda x: False, latency=args.latency)
+                ecu = HondaECU(dprint=lambda x: False, latency=args.latency, baudrate=args.baudrate)
         except FtdiError:
             sys.stderr.write("No flash adapters detected!\n")
             sys.exit(-2)

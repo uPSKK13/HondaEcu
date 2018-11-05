@@ -64,8 +64,9 @@ class USBMonitor(Thread):
 
 class KlineWorker(Thread):
 
-	def __init__(self, parent):
+	def __init__(self, parent, baudrate):
 		self.parent = parent
+		self.baudrate = baudrate
 		self.__clear_data()
 		dispatcher.connect(self.DeviceHandler, signal="HondaECU.device", sender=dispatcher.Any)
 		dispatcher.connect(self.ErrorPanelHandler, signal="ErrorPanel", sender=dispatcher.Any)
@@ -113,7 +114,7 @@ class KlineWorker(Thread):
 		elif action == "activate":
 			wx.LogVerbose("Activating device (%s | %s)" % (device, serial))
 			self.__clear_data()
-			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug)
+			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug, baudrate=self.baudrate)
 			self.ecu.setup()
 			self.ready = True
 
@@ -977,7 +978,7 @@ class HondaECU_GUI(wx.Frame):
 
 		# Initialize threads
 		self.usbmonitor = USBMonitor(self)
-		self.klineworker = KlineWorker(self)
+		self.klineworker = KlineWorker(self, args.baudrate)
 
 		# Setup GUI
 		wx.Frame.__init__(self, None, title=title)
