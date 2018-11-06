@@ -983,7 +983,7 @@ class HondaECU_GUI(wx.Frame):
 
 		self.statusbar = ESB.EnhancedStatusBar(self, -1)
 		self.statusbar.SetFieldsCount(4)
-		self.statusbar.SetSize((-1, 32))
+		self.statusbar.SetSize((-1, 28))
 		self.SetStatusBar(self.statusbar)
 		self.statusbar.SetStatusWidths([32, 170, 130, 110])
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN])
@@ -1004,7 +1004,7 @@ class HondaECU_GUI(wx.Frame):
 
 		devicebox = wx.StaticBoxSizer(wx.HORIZONTAL, self.panel, "FTDI Devices")
 
-		self.m_devices = wx.Choice(self.panel, wx.ID_ANY)
+		self.m_devices = wx.Choice(self.panel, wx.ID_ANY, size=(-1,32))
 		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
 
 		self.notebook = wx.Notebook(self.panel, wx.ID_ANY)
@@ -1051,14 +1051,14 @@ class HondaECU_GUI(wx.Frame):
 		serial = list(self.devices.keys())[self.m_devices.GetSelection()]
 		if serial != self.active_device:
 			if self.active_device:
-				dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.devices[self.active_device])
+				dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.active_device)
 				self.__deactivate()
 				self.active_device = serial
-				dispatcher.send(signal="HondaECU.device", sender=self, action="activate", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.devices[self.active_device])
+				dispatcher.send(signal="HondaECU.device", sender=self, action="activate", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.active_device)
 
 	def FlashPanelHandler(self, mode, data):
 		self.flashdlg.ShowModal()
-		dispatcher.send(signal="HondaECU.device", sender=self, action="interrupt", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.devices[self.active_device])
+		dispatcher.send(signal="HondaECU.device", sender=self, action="interrupt", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.active_device)
 
 	def ErrorPanelHandler(self, action):
 		if action == "cleardtc":
