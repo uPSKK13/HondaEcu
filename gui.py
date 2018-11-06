@@ -671,36 +671,38 @@ class DataPanel(wx.Panel):
 				self.mapsensorl.SetLabel("%d" % (data[8]))
 				self.batteryvoltagel.SetLabel("%.03f" % (data[11]/10))
 				self.vehiclespeedl.SetLabel("%d" % (data[12]))
-				self.injectorl.SetLabel("%.03f" % (data[13]))
-				self.advancel.SetLabel("%.01f" % (-64 + data[14]/255*127.5))
+				self.injectorl.SetLabel("%.03f" % (data[13]/0xffff*265.5))
+				self.advancel.SetLabel("%.01f" % (-64 + data[14]/0xff*127.5))
 				if value[0] == 0x11:
 					self.iacvpl.SetLabel("%d" % (data[15]))
-					self.iacvcl.SetLabel("%.03f" % (data[16]/65535*8.0))
+					self.iacvcl.SetLabel("%.03f" % (data[16]/0xffff*8.0))
 			elif value[0] in [0x20, 0x21]:
 				if value[1] == 5:
 					data = struct.unpack(">3B", value[2][2:])
 					if value[0] == 0x20:
-						self.o2volt1l.SetLabel("%.03f" % (data[0]/255*5))
+						self.o2volt1l.SetLabel("%.03f" % (data[0]/0xff*5))
 						self.o2heat1l.SetLabel("Off" if data[2]==0 else "On")
-						self.sttrim1l.SetLabel("%.03f" % (data[1]/255*2))
+						self.sttrim1l.SetLabel("%.03f" % (data[1]/0xff*2))
 					else:
-						self.o2volt2l.SetLabel("%.03f" % (data[0]/255*5))
+						self.o2volt2l.SetLabel("%.03f" % (data[0]/0xff*5))
 						self.o2heat2l.SetLabel("Off" if data[2]==0 else "On")
-						self.sttrim2l.SetLabel("%.03f" % (data[1]/255*2))
+						self.sttrim2l.SetLabel("%.03f" % (data[1]/0xff*2))
 			elif value[0] == 0xd0:
 				if value[1] > 2:
 					data = struct.unpack(">7Bb%dB" % (value[1]-10), value[2][2:])
-					self.egcvil.SetLabel("%.03f" % (data[5]/255*5))
-					self.egcvtl.SetLabel("%.03f" % (data[6]/255*5))
+					self.egcvil.SetLabel("%.03f" % (data[5]/0xff*5))
+					self.egcvtl.SetLabel("%.03f" % (data[6]/0xff*5))
 					self.egcvll.SetLabel("%d" % (data[7]))
-					self.lscl.SetLabel("%.03f" % (data[8]/255*1))
-					self.lstl.SetLabel("%.03f" % (data[9]/255*1))
+					self.lscl.SetLabel("%.03f" % (data[8]/0xff*1))
+					self.lstl.SetLabel("%.03f" % (data[9]/0xff*1))
 					self.lsvl.SetLabel("%d" % (data[10]))
 			elif value[0] == 0xd1:
 				if value[1] == 8:
 					data = struct.unpack(">6B", value[2][2:])
 					self.icsl.SetLabel("On" if data[0] & 1 else "Off")
+					self.fpcl.SetLabel("On" if data[4] & 1 else "Off")
 					self.pairvl.SetLabel("On" if data[4] & 4 else "Off")
+					self.fc1l.SetLabel("On" if data[5] & 1 else "Off")
 			self.Layout()
 
 class FlashPanel(wx.Panel):
