@@ -12,37 +12,14 @@ Research and development takes time and money. Since it is my goal to keep this 
 
 HondaECU for Windows requires the libusbK driver. Download [Zadig](https://zadig.akeo.ie/) and use it to install the libusbK driver. There is a usage guide on the Zadig website if you need help using it. Once libusbK is installed for your FTDI device, download the latest release of HondaECU.exe.
 
-#### Usage
-
-```
-HondaECU.exe --help
-usage: HondaECU.exe [-h] [--checksum CHECKSUM] [--rom-size ROM_SIZE]
-                   [--fix-checksum] [--debug]
-                   {read,write,recover,validate_checksum,fix_checksum} binfile
-
-positional arguments:
-  {read,write,recover,validate_checksum,fix_checksum}
-                        ECU mode
-  binfile               name of bin to read or write
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --checksum CHECKSUM   hex location of checksum in ECU bin (default: 0x3fff8)
-  --rom-size ROM_SIZE   size of ECU bin in kilobytes (default: 256)
-  --fix-checksum        fix checksum before write/recover (default: False)
-
-debugging options:
-  --debug               turn on debugging output (default: False)
-```
 
 #### From source
 
  https://conda.io/miniconda.html
- https://github.com/libusb/libusb/releases/download/v1.0.22/libusb-1.0.22.7z
  https://sourceforge.net/projects/picusb/files/libftdi1-1.4git_devkit_x86_x64_14June2018.zip
 
  ```
-pip install libusb1 pylibftdi wxPython
+pip install pylibftdi wxPython pydispatcher
  ```
 
 ## Checksums

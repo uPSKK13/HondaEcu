@@ -4,7 +4,6 @@ import time
 
 from threading import Thread
 
-import usb1
 import pylibftdi
 
 from pydispatch import dispatcher
@@ -30,7 +29,6 @@ class USBMonitor(Thread):
 
 	def __init__(self, parent):
 		self.parent = parent
-		self.usbcontext = usb1.USBContext()
 		self.ftdi_devices = {}
 		Thread.__init__(self)
 
@@ -38,28 +36,14 @@ class USBMonitor(Thread):
 		while self.parent.run:
 			time.sleep(.5)
 			new_devices = {}
-			for device in self.usbcontext.getDeviceList(skip_on_error=True):
-				try:
-					if device.getVendorID() == pylibftdi.driver.FTDI_VENDOR_ID and device.getProductID() in pylibftdi.driver.USB_PID_LIST:
-						serial = None
-						try:
-							serial = device.getSerialNumber()
-						except usb1.USBErrorNotSupported:
-							pass
-						new_devices[device] = serial
-						if not device in self.ftdi_devices.keys():
-							wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", device=str(device), serial=serial)
-				except usb1.USBErrorPipe:
-					pass
-				except usb1.USBErrorNoDevice:
-					pass
-				except usb1.USBErrorIO:
-					pass
-				except usb1.USBErrorBusy:
-					pass
-			for device in self.ftdi_devices.keys():
-				if not device in new_devices.keys():
-					wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", device=str(device), serial=self.ftdi_devices[device])
+			for device in Driver().list_devices():
+				vendor, product, serial = map(lambda x: x.decode('latin1'), device)
+				new_devices[serial] = (vendor, product)
+				if not serial in self.ftdi_devices:
+					wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", vendor=vendor, product=product, serial=serial)
+			for serial in self.ftdi_devices:
+				if not serial in new_devices:
+					wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", vendor=self.ftdi_devices[serial][0], product=self.ftdi_devices[serial][1], serial=serial)
 			self.ftdi_devices = new_devices
 
 class KlineWorker(Thread):
@@ -103,16 +87,16 @@ class KlineWorker(Thread):
 		if action == "cleardtc":
 			self.clear_codes = True
 
-	def DeviceHandler(self, action, device, serial):
+	def DeviceHandler(self, action, vendor, product, serial):
 		if action == "interrupt":
 			self.flash_mode = -1
 			self.update_state()
 		elif action == "deactivate":
 			if self.ecu:
-				wx.LogVerbose("Deactivating device (%s | %s)" % (device, serial))
+				wx.LogVerbose("Deactivating device (%s : %s : %s)" % (vendor, product, serial))
 				self.__cleanup()
 		elif action == "activate":
-			wx.LogVerbose("Activating device (%s | %s)" % (device, serial))
+			wx.LogVerbose("Activating device (%s : %s : %s)" % (vendor, product, serial))
 			self.__clear_data()
 			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug, baudrate=self.baudrate)
 			self.ecu.setup()
@@ -1064,53 +1048,46 @@ class HondaECU_GUI(wx.Frame):
 			w.Destroy()
 
 	def OnDeviceSelected(self, event):
-		device = list(self.devices.keys())[self.m_devices.GetSelection()]
-		serial = self.devices[device]
-		if device != self.active_device:
+		serial = list(self.devices.keys())[self.m_devices.GetSelection()]
+		if serial != self.active_device:
 			if self.active_device:
-				dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+				dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.devices[self.active_device])
 				self.__deactivate()
-			if self.devices[device]:
-				self.active_device = device
-				dispatcher.send(signal="HondaECU.device", sender=self, action="activate", device=self.active_device, serial=serial)
-			else:
-				pass
+				self.active_device = serial
+				dispatcher.send(signal="HondaECU.device", sender=self, action="activate", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.devices[self.active_device])
 
 	def FlashPanelHandler(self, mode, data):
 		self.flashdlg.ShowModal()
-		dispatcher.send(signal="HondaECU.device", sender=self, action="interrupt", device=self.active_device, serial=self.devices[self.active_device])
+		dispatcher.send(signal="HondaECU.device", sender=self, action="interrupt", vendor=self.devices[self.active_device][0], product=self.devices[self.active_device][1], serial=self.devices[self.active_device])
 
 	def ErrorPanelHandler(self, action):
 		if action == "cleardtc":
 			self.dtccountl.SetLabel("   DTC Count: --")
 			self.statusbar.OnSize(None)
 
-	def USBMonitorHandler(self, action, device, serial):
+	def USBMonitorHandler(self, action, vendor, product, serial):
 		dirty = False
 		if action == "add":
-			wx.LogVerbose("Adding device (%s | %s)" % (device, serial))
-			if not device in self.devices:
-				self.devices[device] = serial
+			wx.LogVerbose("Adding device (%s : %s : %s)" % (vendor, product, serial))
+			if not serial in self.devices:
+				self.devices[serial] = (vendor, product)
 				dirty = True
 		elif action =="remove":
-			wx.LogVerbose("Removing device (%s | %s)" % (device, serial))
-			if device in self.devices:
-				if device == self.active_device:
-					dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", device=self.active_device, serial=self.devices[self.active_device])
+			wx.LogVerbose("Removing device (%s : %s : %s)" % (vendor, product, serial))
+			if serial in self.devices:
+				if serial == self.active_device:
+					dispatcher.send(signal="HondaECU.device", sender=self, action="deactivate", vendor=vendor, product=product, serial=serial)
 					self.__deactivate()
-				del self.devices[device]
+				del self.devices[serial]
 				dirty = True
 		if not self.active_device and len(self.devices) > 0:
 			self.active_device = list(self.devices.keys())[0]
-			dispatcher.send(signal="HondaECU.device", sender=self, action="activate", device=self.active_device, serial=self.devices[self.active_device])
+			dispatcher.send(signal="HondaECU.device", sender=self, action="activate", vendor=vendor, product=product, serial=serial)
 			dirty = True
 		if dirty:
 			self.m_devices.Clear()
-			for device in self.devices:
-				t = device
-				if self.devices[device]:
-					t += " | " + self.devices[device]
-				self.m_devices.Append(t)
+			for serial in self.devices:
+				self.m_devices.Append(self.devices[serial][0] + " : " + self.devices[serial][1] + " : " + serial)
 			if self.active_device:
 				self.m_devices.SetSelection(list(self.devices.keys()).index(self.active_device))
 
