@@ -36,14 +36,18 @@ class USBMonitor(Thread):
 		while self.parent.run:
 			time.sleep(.5)
 			new_devices = {}
-			for device in Driver().list_devices():
-				vendor, product, serial = map(lambda x: x.decode('latin1'), device)
-				new_devices[serial] = (vendor, product)
-				if not serial in self.ftdi_devices:
-					wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", vendor=vendor, product=product, serial=serial)
-			for serial in self.ftdi_devices:
-				if not serial in new_devices:
-					wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", vendor=self.ftdi_devices[serial][0], product=self.ftdi_devices[serial][1], serial=serial)
+			try:
+				for device in Driver().list_devices():
+					vendor, product, serial = map(lambda x: x.decode('latin1'), device)
+					new_devices[serial] = (vendor, product)
+					if not serial in self.ftdi_devices:
+						wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", vendor=vendor, product=product, serial=serial)
+				for serial in self.ftdi_devices:
+					if not serial in new_devices:
+						wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", vendor=self.ftdi_devices[serial][0], product=self.ftdi_devices[serial][1], serial=serial)
+			except pylibftdi._base.LibraryMissingError as e:
+				wx.LogError(str(e))
+				break
 			self.ftdi_devices = new_devices
 
 class KlineWorker(Thread):
