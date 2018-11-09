@@ -226,12 +226,21 @@ class HondaECU(object):
 			self.dprint("%d > [%s]" % (r, ", ".join(["%02x" % m for m in msg])))
 			resp = self.send(msg, ml)
 			if resp:
-				self.dprint("%d < [%s]" % (r, ", ".join(["%02x" % r for r in resp])))
-				rmtype = resp[:ml]
-				rml = resp[ml:(ml+1)]
-				rdl = ord(rml) - 2 - len(rmtype)
-				rdata = resp[(ml+1):-1]
-				return (rmtype, rml, rdata, rdl)
+				if checksum8bitHonda(resp[:-1]) == resp[-1]:
+					self.dprint("%d < [%s]" % (r, ", ".join(["%02x" % r for r in resp])))
+					rmtype = resp[:ml]
+					valid = False
+					if ml == 3:
+						valid = (rmtype[:2] == bytearray(map(lambda x: x | 0x10, mtype[:2])))
+					elif ml == 1:
+						valid = (rmtype == bytearray(map(lambda x: x & 0xf, mtype)))
+					if valid:
+						rml = resp[ml:(ml+1)]
+						rdl = ord(rml) - 2 - len(rmtype)
+						rdata = resp[(ml+1):-1]
+						return (rmtype, rml, rdata, rdl)
+					else:
+						print("shit")
 			r += 1
 
 	def detect_ecu_state(self, wakeup=False):
