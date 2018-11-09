@@ -104,9 +104,12 @@ class KlineWorker(Thread):
 		elif action == "activate":
 			wx.LogVerbose("Activating device (%s : %s : %s)" % (vendor, product, serial))
 			self.__clear_data()
-			self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug, baudrate=self.baudrate)
-			self.ecu.setup()
-			self.ready = True
+			try:
+				self.ecu = HondaECU(device_id=serial, dprint=wx.LogDebug, baudrate=self.baudrate)
+				self.ecu.setup()
+				self.ready = True
+			except pylibftdi._base.FtdiError:
+				pass
 
 	def do_read_flash(self, binfile, debug=False):
 		readsize = 12
@@ -261,6 +264,9 @@ class KlineWorker(Thread):
 											if info[3] > 2:
 												self.tables[t] = [info[3],info[2]]
 												wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hds", value=(t,info[3],info[2]))
+						elif self.flash_mode < 0:
+							if not self.ecu.kline():
+								self.state = 0
 						if self.flash_mode >= 0:
 							if self.flash_mode == 0:
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweroff", value=None)
@@ -1088,10 +1094,13 @@ class HondaECU_GUI(wx.Frame):
 					self.__deactivate()
 				del self.devices[serial]
 				dirty = True
-		if not self.active_device and len(self.devices) > 0:
-			self.active_device = list(self.devices.keys())[0]
-			dispatcher.send(signal="HondaECU.device", sender=self, action="activate", vendor=vendor, product=product, serial=serial)
-			dirty = True
+		if len(self.devices) > 0:
+			if not self.active_device:
+				self.active_device = list(self.devices.keys())[0]
+				dispatcher.send(signal="HondaECU.device", sender=self, action="activate", vendor=vendor, product=product, serial=serial)
+				dirty = True
+		else:
+			self.__clear_widgets()
 		if dirty:
 			self.m_devices.Clear()
 			for serial in self.devices:
@@ -1099,11 +1108,17 @@ class HondaECU_GUI(wx.Frame):
 			if self.active_device:
 				self.m_devices.SetSelection(list(self.devices.keys()).index(self.active_device))
 
+	def __clear_widgets(self):
+		self.ecmidl.SetLabel("")
+		self.flashcountl.SetLabel("")
+		self.dtccountl.SetLabel("")
+		self.statusicon.SetBitmap(self.statusicons[0])
+		self.statusicon.Show(False)
+		self.statusbar.OnSize(None)
+
 	def KlineWorkerHandler(self, info, value):
 		if info == "state":
-			self.ecmidl.SetLabel("")
-			self.flashcountl.SetLabel("")
-			self.dtccountl.SetLabel("")
+			self.__clear_widgets()
 			if value[0] in [0,12]:
 				self.statusicon.SetBitmap(self.statusicons[0])
 			elif value[0] in [1]:
@@ -1116,6 +1131,7 @@ class HondaECU_GUI(wx.Frame):
 				self.dtccountl.SetLabel("   DTC Count: --")
 				self.statusicon.SetBitmap(self.statusicons[2])
 			self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (value[1])))
+			self.statusicon.Show(True)
 			self.statusbar.OnSize(None)
 		elif info == "ecmid":
 			self.ecmidl.SetLabel("   ECM ID: %s" % value)
