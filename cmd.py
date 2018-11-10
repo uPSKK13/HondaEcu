@@ -1,5 +1,6 @@
 import os, sys
 from ecu import *
+from pylibftdi import FtdiError
 
 def HondaECU_CmdLine(args, version):
 

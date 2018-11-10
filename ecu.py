@@ -1,5 +1,5 @@
 from __future__ import division
-from pylibftdi import Device, FtdiError, Driver
+from pylibftdi import Device
 from ctypes import *
 import struct
 import time
