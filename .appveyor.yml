@@ -1,11 +1,7 @@
 image:
   - Visual Studio 2017
-  #- Ubuntu
 
-stack: python 3.6
-
-cache:
-  - '%LOCALAPPDATA%\pip\Cache'
+stack: python 3.7
 
 environment:
   matrix:
@@ -13,28 +9,17 @@ environment:
       LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll"
       LIBUSB: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libusb-1.0.dll"
       SUFFIX: "x86"
-      PYTHON_HOME: C:\Python36
-      PYTHON_VERSION: '3.6'
+      PYTHON_HOME: C:\Python37
+      PYTHON_VERSION: '3.7'
       PYTHON_ARCH: '32'
-    # - platform: x64
-    #   LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin64/libftdi1.dll"
-    #   SUFFIX: "x64"
-    #   PYTHON_HOME: C:\Python36-x64
-    #   PYTHON_VERSION: '3.6'
-    #   PYTHON_ARCH: '64'
 
 build: off
 
 install:
-  - sh: wget -q -O /tmp/libpng12.deb http://mirrors.kernel.org/ubuntu/pool/main/libp/libpng/libpng12-0_1.2.54-1ubuntu1_amd64.deb && dpkg -i /tmp/libpng12.deb && rm /tmp/libpng12.deb
-  - sh: sudo apt-get install -y libpython3.6-dev libftdi1 libftdi1-dev
-  - sh: '%PYTHON_HOME%\Scripts\pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 wxPython'
   - ps: Invoke-WebRequest -Uri 'https://sourceforge.net/projects/picusb/files/libftdi1-1.4git_devkit_x86_x64_14June2018.zip' -OutFile libftdi1-1.4git_devkit_x86_x64_14June2018.zip -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome
   - cmd: 7z x libftdi1-1.4git_devkit_x86_x64_14June2018.zip
   - cmd: '%PYTHON_HOME%\Scripts\pip install wxPython'
-  - '%PYTHON_HOME%\Scripts\pip install pylibftdi'
-  - '%PYTHON_HOME%\Scripts\pip install pyinstaller'
-  - '%PYTHON_HOME%\Scripts\pip install pydispatcher'
+  - '%PYTHON_HOME%\Scripts\pip install pylibftdi pydispatcher pyinstaller'
 
 build_script:
   - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary images/honda.ico;images --add-binary images/power_off.png;images --add-binary images/power_on.png;images --add-binary images/flash_good.png;images --add-binary images/flash_bad.png;images --add-binary images/bullet_black.png;images --add-binary images/bullet_yellow.png;images --add-binary images/bullet_green.png;images --add-binary images/bullet_red.png;images --add-binary %LIBUSB%;. --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU --icon=images/honda.ico'
@@ -43,9 +28,8 @@ artifacts:
   - path: dist\*
 
 deploy:
-
   provider: GitHub
-  description: 'Honda ECU K-line commandline tool'
+  description: 'A diagnostic and flashing tool for Honda ECUs'
   auth_token:
     secure: VDADKxNk9UEQ11Ycj0bjwqi5yzJKuKOZ+qAWu5vfPqSQTeJDiCoqWSuCLYK1o2pC
   artifact: /.*\.exe/
