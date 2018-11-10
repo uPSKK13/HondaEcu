@@ -11,16 +11,17 @@ environment:
   matrix:
     - platform: x86
       LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll"
+      LIBUSB: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libusb-1.0.dll"
       SUFFIX: "x86"
       PYTHON_HOME: C:\Python36
       PYTHON_VERSION: '3.6'
       PYTHON_ARCH: '32'
-    - platform: x64
-      LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin64/libftdi1.dll"
-      SUFFIX: "x64"
-      PYTHON_HOME: C:\Python36-x64
-      PYTHON_VERSION: '3.6'
-      PYTHON_ARCH: '64'
+    # - platform: x64
+    #   LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin64/libftdi1.dll"
+    #   SUFFIX: "x64"
+    #   PYTHON_HOME: C:\Python36-x64
+    #   PYTHON_VERSION: '3.6'
+    #   PYTHON_ARCH: '64'
 
 build: off
 
@@ -36,7 +37,7 @@ install:
   - '%PYTHON_HOME%\Scripts\pip install pydispatcher'
 
 build_script:
-  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary images/honda.ico;images --add-binary images/power_off.png;images --add-binary images/power_on.png;images --add-binary images/flash_good.png;images --add-binary images/flash_bad.png;images --add-binary images/bullet_black.png;images --add-binary images/bullet_yellow.png;images --add-binary images/bullet_green.png;images --add-binary images/bullet_red.png;images --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU_%SUFFIX% --icon=images/honda.ico'
+  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary images/honda.ico;images --add-binary images/power_off.png;images --add-binary images/power_on.png;images --add-binary images/flash_good.png;images --add-binary images/flash_bad.png;images --add-binary images/bullet_black.png;images --add-binary images/bullet_yellow.png;images --add-binary images/bullet_green.png;images --add-binary images/bullet_red.png;images --add-binary %LIBUSB%;. --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU --icon=images/honda.ico'
 
 artifacts:
   - path: dist\*
