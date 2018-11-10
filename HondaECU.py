@@ -1,7 +1,3 @@
-import os
-basepath = os.path.dirname(os.path.abspath(__file__))
-os.environ['PATH'] = basepath + os.pathsep + os.environ['PATH']
-
 import argparse
 
 from cmd import *
