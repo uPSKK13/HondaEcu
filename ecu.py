@@ -179,10 +179,15 @@ class HondaECU(object):
 		self.dev.ftdi_fn.ftdi_read_pins(byref(pin_byte))
 		return (pin_byte.value == 0xff)
 
-	def kline(self):
+	def kline(self, timeout=.05):
 		self.dev.flush()
 		self.dev._write(b"\x00")
-		return self.dev._read(1) == b"\x00"
+		to = time.time()
+		while time.time() - to < timeout:
+			tmp = self.dev._read(1)
+			if len(tmp) == 1:
+				return tmp == b"\x00"
+		return False
 
 	def kline_alt(self):
 		self.dev.flush()
