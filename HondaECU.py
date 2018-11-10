@@ -3,7 +3,7 @@ import argparse
 from cmd import *
 from gui import *
 
-__VERSION__ = "2.0.0_beta3"
+__VERSION__ = "2.0.0_beta4"
 
 class Hex(object):
 	def __call__(self, value):

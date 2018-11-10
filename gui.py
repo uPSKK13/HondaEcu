@@ -45,8 +45,10 @@ class USBMonitor(Thread):
 				for serial in self.ftdi_devices:
 					if not serial in new_devices:
 						wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", vendor=self.ftdi_devices[serial][0], product=self.ftdi_devices[serial][1], serial=serial)
-			except FtdiError:
-				pass
+			except FtdiError as e:
+				if sys.exc_info()[0] == LibraryMissingError:
+					wx.LogError(str(e))
+					break
 			except LibraryMissingError as e:
 				wx.LogError(str(e))
 				break
