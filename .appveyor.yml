@@ -3,6 +3,9 @@ image:
 
 stack: python 3.7
 
+cache:
+  - '%LOCALAPPDATA%\pip\Cache'
+
 environment:
   matrix:
     - platform: x86
