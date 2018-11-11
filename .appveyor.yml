@@ -1,7 +1,7 @@
 image:
   - Visual Studio 2017
 
-stack: python 3.7
+stack: python 3.5
 
 environment:
   matrix:
@@ -9,8 +9,8 @@ environment:
       LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll"
       LIBUSB: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libusb-1.0.dll"
       SUFFIX: "x86"
-      PYTHON_HOME: C:\Python37
-      PYTHON_VERSION: '3.7'
+      PYTHON_HOME: C:\Python35
+      PYTHON_VERSION: '3.5'
       PYTHON_ARCH: '32'
 
 build: off
