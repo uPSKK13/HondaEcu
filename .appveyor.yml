@@ -6,8 +6,7 @@ stack: python 3.5
 environment:
   matrix:
     - platform: x86
-      LIBUSB: "MS32/dll/libusb-1.0.dll"
-      LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/libftdi1.dll"
+      LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/*.dll"
       PYTHON_HOME: C:\Python35
       PYTHON_VERSION: '3.5'
       PYTHON_ARCH: '32'
@@ -15,15 +14,12 @@ environment:
 build: off
 
 install:
-  - ps: Start-FileDownload 'https://github.com/libusb/libusb/releases/download/v1.0.22/libusb-1.0.22.7z'
   - ps: Invoke-WebRequest -Uri 'https://sourceforge.net/projects/picusb/files/libftdi1-1.4git_devkit_x86_x64_14June2018.zip' -OutFile libftdi1-1.4git_devkit_x86_x64_14June2018.zip -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome
-  - cmd: 7z x libusb-1.0.22.7z
   - cmd: 7z x libftdi1-1.4git_devkit_x86_x64_14June2018.zip
-  - cmd: '%PYTHON_HOME%\Scripts\pip install wxPython'
-  - '%PYTHON_HOME%\Scripts\pip install pylibftdi pydispatcher pyinstaller'
+  - cmd: '%PYTHON_HOME%\Scripts\pip install pylibftdi pydispatcher wxPython pyinstaller'
 
 build_script:
-  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary images/honda.ico;images --add-binary images/power_off.png;images --add-binary images/power_on.png;images --add-binary images/flash_good.png;images --add-binary images/flash_bad.png;images --add-binary images/bullet_black.png;images --add-binary images/bullet_yellow.png;images --add-binary images/bullet_green.png;images --add-binary images/bullet_red.png;images --add-binary %LIBUSB%;. --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU --icon=images/honda.ico'
+  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary images/*;images --add-binary %LIBFTDI%;. HondaECU.py --name HondaECU --icon=images/honda.ico'
 
 artifacts:
   - path: dist\*
