@@ -269,69 +269,67 @@ class KlineWorker(Thread):
 						elif self.flash_mode < 0:
 							if not self.ecu.kline():
 								self.state = 0
-						if self.flash_mode >= 0:
-							if self.flash_mode == 0:
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweroff", value=None)
-								wx.LogMessage("Turn off bike")
-								time.sleep(.5)
-								while self.ecu.kline():
-									time.sleep(.2)
-								time.sleep(.5)
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweron", value=None)
-								wx.LogMessage("Turn on bike")
-								while not self.ecu.kline():
-									time.sleep(.2)
-								time.sleep(.5)
-								self.ecu.wakeup()
-								self.ecu.ping()
-								wx.LogMessage("Security access")
-								self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
-								self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
-								wx.LogMessage("Reading ECU")
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read", value=None)
-								status = self.do_read_flash(self.flash_data)
-								wx.LogMessage("Read %s" % (status))
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read%s" % status, value=None)
-							else:
-								if self.flash_mode == 1:
-									wx.LogMessage("Initializing write process")
-									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initwrite", value=None)
-									self.ecu.do_init_write()
-								elif self.flash_mode == 2:
-									wx.LogMessage("Initializing recovery process")
-									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initrecover", value=None)
-									self.ecu.do_init_recover()
-									wx.LogMessage("Entering enhanced diagnostic mode")
-									self.ecu.send_command([0x72],[0x00, 0xf1])
-									time.sleep(1)
-									self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
-								wx.LogMessage("Pre-erase wait")
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="wait", value=None)
-								for i in range(14):
-									w = 14-i
-									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100,str(w)))
-									time.sleep(1)
-								wx.LogMessage("Erasing ECU")
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
-								self.ecu.do_erase()
-								cont = 1
-								while cont:
-									info = self.ecu.send_command([0x7e], [0x01, 0x05])
-									if info:
-										if info[2][1] == 0x00:
-											cont = 0
-									else:
-										cont = -1
-									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,""))
-								wx.LogMessage("Writing ECU")
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
-								self.do_write_flash(self.flash_data)
-								wx.LogMessage("Finalizing write process")
-								ret = self.ecu.do_post_write()
-								status = "good" if ret else "bad"
-								wx.LogMessage("Write %s" % (status))
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write%s" % status, value=None)
-							self.state = 0
+					if self.flash_mode >= 0:
+						if self.flash_mode == 0:
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweroff", value=None)
+							wx.LogMessage("Turn off bike")
+							while self.ecu.kline():
+								time.sleep(.1)
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="poweron", value=None)
+							wx.LogMessage("Turn on bike")
+							while not self.ecu.kline():
+								time.sleep(.1)
+							time.sleep(.5)
+							self.ecu.wakeup()
+							self.ecu.ping()
+							wx.LogMessage("Security access")
+							self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
+							self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
+							wx.LogMessage("Reading ECU")
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read", value=None)
+							status = self.do_read_flash(self.flash_data)
+							wx.LogMessage("Read %s" % (status))
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read%s" % status, value=None)
+						else:
+							if self.flash_mode == 1:
+								wx.LogMessage("Initializing write process")
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initwrite", value=None)
+								self.ecu.do_init_write()
+							elif self.flash_mode == 2:
+								wx.LogMessage("Initializing recovery process")
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initrecover", value=None)
+								self.ecu.do_init_recover()
+								wx.LogMessage("Entering enhanced diagnostic mode")
+								self.ecu.send_command([0x72],[0x00, 0xf1])
+								time.sleep(1)
+								self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
+							wx.LogMessage("Pre-erase wait")
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="wait", value=None)
+							for i in range(14):
+								w = 14-i
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100,str(w)))
+								time.sleep(1)
+							wx.LogMessage("Erasing ECU")
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
+							self.ecu.do_erase()
+							cont = 1
+							while cont:
+								info = self.ecu.send_command([0x7e], [0x01, 0x05])
+								if info:
+									if info[2][1] == 0x00:
+										cont = 0
+								else:
+									cont = -1
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,""))
+							wx.LogMessage("Writing ECU")
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
+							self.do_write_flash(self.flash_data)
+							wx.LogMessage("Finalizing write process")
+							ret = self.ecu.do_post_write()
+							status = "good" if ret else "bad"
+							wx.LogMessage("Write %s" % (status))
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write%s" % status, value=None)
+						self.state = 0
 				except FtdiError:
 					pass
 				except AttributeError:
@@ -349,7 +347,8 @@ class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
 class ErrorPanel(wx.Panel):
 
 	def __init__(self, parent):
-		wx.Panel.__init__(self, parent)
+		self.parent = parent
+		wx.Panel.__init__(self, parent.notebook)
 
 		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT|wx.LC_HRULES)
 		self.errorlist.InsertColumn(1,"DTC",format=wx.LIST_FORMAT_CENTER,width=50)
@@ -374,7 +373,8 @@ class ErrorPanel(wx.Panel):
 class DataPanel(wx.Panel):
 
 	def __init__(self, parent):
-		wx.Panel.__init__(self, parent)
+		self.parent = parent
+		wx.Panel.__init__(self, parent.notebook)
 
 		enginespeedl = wx.StaticText(self, label="Engine speed")
 		vehiclespeedl = wx.StaticText(self, label="Vehicle speed")
@@ -723,7 +723,9 @@ class FlashPanel(wx.Panel):
 
 	def __init__(self, parent):
 		self.parent = parent
-		wx.Panel.__init__(self, parent)
+		self.write = False
+		self.read = False
+		wx.Panel.__init__(self, parent.notebook)
 
 		self.mode = wx.RadioBox(self, label="Mode", choices=["Read","Write","Recover"])
 		self.wfilel = wx.StaticText(self, label="File")
@@ -767,19 +769,34 @@ class FlashPanel(wx.Panel):
 		self.mode.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
 
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "state":
+			self.read = False
+			self.write = False
+			if value[0] in [1]:
+				self.read = True
+				self.write = True
+			elif value[0] in [2,3,4,5,6,7,8,9]:
+				self.write = True
+			elif value[0] in [11]:
+				self.read = True
+			self.OnValidateMode(None)
+
 	def OnValidateMode(self, event):
 		go = False
 		if self.mode.GetSelection() == 0:
 			if len(self.readfpicker.GetPath()) > 0:
-				go = True
+				go = self.read
 		else:
 			if len(self.writefpicker.GetPath()) > 0:
 				if os.path.isfile(self.writefpicker.GetPath()):
 					if self.fixchecksum.IsChecked():
 						if self.checksum.GetSelection() > -1:
-							go = True
+							go = self.write
 					else:
-						go = True
+						go = self.write
 				if go:
 					fbin = open(self.writefpicker.GetPath(), "rb")
 					nbyts = os.path.getsize(self.writefpicker.GetPath())
@@ -820,6 +837,7 @@ class FlashPanel(wx.Panel):
 			self.writefpicker.Show(True)
 			self.readfpicker.Show(False)
 		self.Layout()
+		self.OnValidateMode(None)
 
 	def OnGo(self, event):
 		mode = self.mode.GetSelection()
@@ -844,9 +862,9 @@ class FlashPanel(wx.Panel):
 class FlashDialog(wx.Dialog):
 
 	def __init__(self, parent):
+		self.parent = parent
 		wx.Dialog.__init__(self, parent)
 		self.SetSize(300,250)
-		self.parent = parent
 
 		self.lastpulse = 0
 
@@ -957,6 +975,7 @@ class FlashDialog(wx.Dialog):
 
 	def OnButton(self, event):
 		self.EndModal(1)
+		self.SetState(msg="", msg2="", bmp=None, pgrs=None, btn=None)
 
 class HondaECU_GUI(wx.Frame):
 
@@ -1024,9 +1043,9 @@ class HondaECU_GUI(wx.Frame):
 		devicebox.Add(self.m_devices, 1, wx.EXPAND | wx.ALL, 5)
 
 		self.notebook = wx.Notebook(self.panel, wx.ID_ANY)
-		self.flashp = FlashPanel(self.notebook)
-		self.datap = DataPanel(self.notebook)
-		self.errorp = ErrorPanel(self.notebook)
+		self.flashp = FlashPanel(self)
+		self.datap = DataPanel(self)
+		self.errorp = ErrorPanel(self)
 		self.notebook.AddPage(self.flashp, "Flash Operations")
 		self.notebook.AddPage(self.datap, "Data Logging")
 		self.notebook.AddPage(self.errorp, "Diagnostic Trouble Codes")
