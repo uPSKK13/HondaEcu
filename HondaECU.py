@@ -67,6 +67,7 @@ def Main():
 	args = parser.parse_args()
 
 	if args.mode == None:
+		app = wx.App()
 		if platform.system() == "Windows" and not (args.debug or args.verbose):
 			sys.__stdout__.close()
 			sys.__stderr__.close()
@@ -76,7 +77,6 @@ def Main():
 			os.close(2)
 			import win32console as con
 			con.FreeConsole()
-		app = wx.App()
 		gui = HondaECU_GUI(args, __VERSION__)
 		app.MainLoop()
 	else:
