@@ -67,9 +67,9 @@ def Main():
 
 	if args.mode == None:
 		if platform.system() == "Windows" and not (args.debug or args.verbose):
-			sys.stdout.close()
-			sys.stderr.close()
-			sys.stdin.close()
+			sys.__stdout__.close()
+			sys.__stderr__.close()
+			sys.__stdin__.close()
 			import win32console as con
 			con.FreeConsole()
 		app = wx.App()
