@@ -3,6 +3,7 @@ import argparse
 from cmd import *
 from gui import *
 
+import os
 import platform
 
 __VERSION__ = "2.0.0_rc1"
@@ -70,6 +71,9 @@ def Main():
 			sys.__stdout__.close()
 			sys.__stderr__.close()
 			sys.__stdin__.close()
+			os.close(0)
+			os.close(1)
+			os.close(2)
 			import win32console as con
 			con.FreeConsole()
 		app = wx.App()
