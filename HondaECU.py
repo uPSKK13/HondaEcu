@@ -3,6 +3,8 @@ import argparse
 from cmd import *
 from gui import *
 
+import platform
+
 __VERSION__ = "2.0.0_rc1"
 
 class Hex(object):
@@ -66,6 +68,9 @@ def Main():
 	if args.mode == None:
 		app = wx.App()
 		gui = HondaECU_GUI(args, __VERSION__)
+		if platform.system() == "Windows" and not (args.debug or args.verbose):
+			import win32console as con
+			con.FreeConsole()
 		app.MainLoop()
 	else:
 		HondaECU_CmdLine(args, __VERSION__)
