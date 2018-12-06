@@ -19,18 +19,20 @@ def HondaECU_CmdLine(args, version):
             nbyts = os.path.getsize(binfile)
             byts = bytearray(fbin.read(nbyts))
             fbin.close()
-            cksum = None
+            cksum = 0
             if args.fix_checksum:
-                if args.fix_checksum < nbyts:
-                    cksum = args.fix_checksum
+                if args.fix_checksum > 0:
+                    if args.fix_checksum < nbyts:
+                        cksum = args.fix_checksum
+                    else:
+                        sys.stdout.write("Invalid checksum location\n")
+                        sys.exit(-1)
                 else:
                     sys.stdout.write("Invalid checksum location\n")
                     sys.exit(-1)
-            else:
-                cksum = nbyts - 8
             print_header()
             sys.stdout.write("Validating checksum\n")
-            byts, status = do_validation(byts, cksum, args.fix_checksum)
+            ret, bootloader_offset, status, byts = do_validation(byts, cksum)
             if status == "fixed":
                 if args.mode == "checksum":
                     fbin = open(binfile, "wb")
@@ -129,7 +131,7 @@ def HondaECU_CmdLine(args, version):
                 with open(binfile, "rb") as fbin:
                     nbyts = os.path.getsize(binfile)
                     byts = bytearray(fbin.read(nbyts))
-                    _, status = do_validation(byts, nbyts-8)
+                    _, _, status, _ = do_validation(byts)
                     sys.stdout.write("  status: %s\n" % (status))
 
             elif args.mode == "write":

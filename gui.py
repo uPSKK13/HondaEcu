@@ -142,7 +142,7 @@ class KlineWorker(Thread):
 		with open(binfile, "rb") as fbin:
 			nbyts = os.path.getsize(binfile)
 			byts = bytearray(fbin.read(nbyts))
-			_, status = do_validation(byts, nbyts-8)
+			_, _, status, _ = do_validation(byts)
 			return status
 
 	def do_write_flash(self, byts, debug=False, offset=0):
@@ -809,7 +809,7 @@ class FlashPanel(wx.Panel):
 						else:
 							go = False
 					if go:
-						self.byts, status = do_validation(byts, cksum, self.fixchecksum.IsChecked())
+						ret, bootloader_offset, status, self.byts = do_validation(byts, cksum)
 						go = (status != "bad")
 		if go:
 			self.gobutton.Enable()
