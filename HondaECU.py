@@ -65,10 +65,9 @@ def Main():
 	db_grp.add_argument('--baudrate', type=int, default=10400, help="baudrate")
 	db_grp.add_argument('--skip-power-check', action='store_true', help="skip power check")
 	args = parser.parse_args()
-	del parser
 
 	if args.mode == None:
-		if platform.system() == "Windows" and not (args.debug or args.verbose):
+		if getattr(sys, 'frozen', False) and not (args.debug or args.verbose):
 			sys.__stdout__.close()
 			sys.__stderr__.close()
 			sys.__stdin__.close()
