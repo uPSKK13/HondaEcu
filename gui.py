@@ -85,10 +85,12 @@ class KlineWorker(Thread):
 		self.clear_codes = False
 		self.flash_mode = -1
 		self.flash_data = None
+		self.bootloader_offset = None
 
-	def FlashPanelHandler(self, mode, data):
+	def FlashPanelHandler(self, mode, data, bootloader_offset):
 		wx.LogMessage("Flash operation (%d) requested" % (mode))
 		self.flash_data = data
+		self.bootloader_offset = bootloader_offset
 		self.flash_mode = mode
 
 	def ErrorPanelHandler(self, action):
@@ -147,19 +149,20 @@ class KlineWorker(Thread):
 
 	def do_write_flash(self, byts, debug=False, offset=0):
 		writesize = 128
-		maxi = len(byts)/128
-		i = 0
+		maxi = int(len(byts)/128)
+		ossize = len(byts[offset:])
+		i = int(offset/128)
 		w = 0
 		t = time.time()
 		rate = 0
 		size = 0
 		while self.flash_mode > 0 and i < maxi:
 			w = (i*writesize)
-			bytstart = [s for s in struct.pack(">H",offset+(8*i))]
+			bytstart = [s for s in struct.pack(">H",(8*i))]
 			if i+1 == maxi:
-				bytend = [s for s in struct.pack(">H",offset)]
+				bytend = [s for s in struct.pack(">H",0)]
 			else:
-				bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
+				bytend = [s for s in struct.pack(">H",(8*(i+1)))]
 			d = list(byts[((i+0)*128):((i+1)*128)])
 			x = bytstart + d + bytend
 			c1 = checksum8bit(x)
@@ -169,7 +172,7 @@ class KlineWorker(Thread):
 			if not info or ord(info[1]) != 5:
 				return False
 			n = time.time()
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB of %.02fKB @ %s" % ((w-offset)/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 			if n-t > 1:
 				rate = (w-size)/(n-t)
 				t = n
@@ -178,7 +181,7 @@ class KlineWorker(Thread):
 			if i % 2 == 0:
 				self.ecu.send_command([0x7e], [0x01, 0x08])
 		if self.flash_mode > 0:
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB @ %s" % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB of %.02fKB @ %s" % ((w-offset)/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 			return True
 		else:
 			return False
@@ -199,6 +202,7 @@ class KlineWorker(Thread):
 					if self.state != 1:
 						self.flash_mode = -1
 						self.flash_data = None
+						self.bootloader_offset = None
 						self.ecmid = None
 						self.flashcount = -1
 						self.dtccount = -1
@@ -323,7 +327,7 @@ class KlineWorker(Thread):
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,""))
 							wx.LogMessage("Writing ECU")
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
-							self.do_write_flash(self.flash_data)
+							self.do_write_flash(self.flash_data, offset=self.bootloader_offset)
 							wx.LogMessage("Finalizing write process")
 							ret = self.ecu.do_post_write()
 							status = "good" if ret else "bad"
@@ -809,7 +813,7 @@ class FlashPanel(wx.Panel):
 						else:
 							go = False
 					if go:
-						ret, bootloader_offset, status, self.byts = do_validation(byts, cksum)
+						ret, self.bootloader_offset, status, self.byts = do_validation(byts, cksum)
 						go = (status != "bad")
 		if go:
 			self.gobutton.Enable()
@@ -843,10 +847,12 @@ class FlashPanel(wx.Panel):
 		mode = self.mode.GetSelection()
 		if mode == 0:
 			data = self.readfpicker.GetPath()
+			bo = None
 		else:
 			data = self.byts
+			bo = self.bootloader_offset
 		self.gobutton.Disable()
-		dispatcher.send(signal="FlashPanel", sender=self, mode=mode, data=data)
+		dispatcher.send(signal="FlashPanel", sender=self, mode=mode, data=data, bootloader_offset=bo)
 
 	def setEmergency(self, emergency):
 		if emergency:

@@ -7,6 +7,7 @@ def HondaECU_CmdLine(args, version):
     offset = 0
     binfile = None
     ret = 1
+    bootloader_offset = None
     if args.mode in ["read","write","recover","checksum"]:
         if os.path.isabs(args.binfile):
             binfile = args.binfile
@@ -160,7 +161,7 @@ def HondaECU_CmdLine(args, version):
 
             print_header()
             sys.stdout.write("Writing ECU\n")
-            do_write_flash(ecu, byts, offset=0, debug=args.debug)
+            do_write_flash(ecu, byts, offset=bootloader_offset, debug=args.debug)
 
             print_header()
             sys.stdout.write("Finalizing write process\n")

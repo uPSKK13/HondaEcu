@@ -455,19 +455,20 @@ def do_read_flash(ecu, binfile, debug=False):
 
 def do_write_flash(ecu, byts, debug=False, offset=0):
 	writesize = 128
-	maxi = len(byts)/128
-	i = 0
+	maxi = int(len(byts)/128)
+	ossize = len(byts[offset:])
+	i = int(offset/128)
 	t = time.time()
 	rate = 0
 	size = 0
 	nl = False
 	while i < maxi:
 		w = (i*writesize)
-		bytstart = [s for s in struct.pack(">H",offset+(8*i))]
+		bytstart = [s for s in struct.pack(">H",(8*i))]
 		if i+1 == maxi:
-			bytend = [s for s in struct.pack(">H",offset)]
+			bytend = [s for s in struct.pack(">H",0)]
 		else:
-			bytend = [s for s in struct.pack(">H",offset+(8*(i+1)))]
+			bytend = [s for s in struct.pack(">H",(8*(i+1)))]
 		d = list(byts[((i+0)*128):((i+1)*128)])
 		x = bytstart + d + bytend
 		c1 = checksum8bit(x)
@@ -479,7 +480,7 @@ def do_write_flash(ecu, byts, debug=False, offset=0):
 			sys.exit(1)
 		n = time.time()
 		if not debug:
-			sys.stdout.write(u"\r  %.02fKB @ %s        " % (w/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+			sys.stdout.write(u"\r  %.02fKB of %.02fKB @ %s        " % (w/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
 			sys.stdout.flush()
 			nl = True
 			if n-t > 1:
