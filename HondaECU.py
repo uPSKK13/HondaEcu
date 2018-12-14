@@ -6,7 +6,7 @@ from gui import *
 import os
 import platform
 
-__VERSION__ = "2.0.0_rc1"
+__VERSION__ = "2.0.0_rc2"
 
 class Hex(object):
 	def __call__(self, value):
