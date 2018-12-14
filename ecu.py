@@ -73,7 +73,7 @@ def validate_checksums(byts, cksum):
 	ret = False
 	bootloader_offset = None
 	fixed = False
-	for bo in [0x4000,0x6000]:
+	for bo in [0x4000,0x6000,0x8000]:
 		if (checksum8bitHonda(byts[:bo]) == 0):
 			bootloader_offset = bo
 			if (checksum8bitHonda(byts[bo:]) == 0):
