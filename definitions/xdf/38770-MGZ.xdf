@@ -1,4 +1,4 @@
-<!-- Written 09/28/2018 14:08:41 -->
+<!-- Written 12/14/2018 16:31:17 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -17,6 +17,8 @@
     <CATEGORY index="0x9" name="U3" />
     <CATEGORY index="0xA" name="Ignition" />
     <CATEGORY index="0xB" name="Unknown" />
+    <CATEGORY index="0xC" name="Settings" />
+    <CATEGORY index="0xD" name="Rev Limits" />
   </XDFHEADER>
   <XDFTABLE uniqueid="0x7D7F" flags="0x30">
     <title>Ign: Neutral</title>
@@ -361,6 +363,46 @@
       <min>0.000000</min>
       <max>8000.000000</max>
       <outputtype>1</outputtype>
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+  </XDFTABLE>
+  <XDFTABLE uniqueid="0x7277" flags="0x0">
+    <title>Rev Limit Hi</title>
+    <CATEGORYMEM index="0" category="13" />
+    <CATEGORYMEM index="1" category="14" />
+    <XDFAXIS id="x" uniqueid="0x0">
+      <EMBEDDEDDATA mmedelementsizebits="8" mmedmajorstridebits="-32" mmedminorstridebits="0" />
+      <indexcount>3</indexcount>
+      <outputtype>4</outputtype>
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <LABEL index="0" value="Group 1" />
+      <LABEL index="1" value="Group 2" />
+      <LABEL index="2" value="Group 3" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="y" uniqueid="0x0">
+      <EMBEDDEDDATA mmedelementsizebits="8" mmedmajorstridebits="-32" mmedminorstridebits="0" />
+      <indexcount>1</indexcount>
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <LABEL index="0" value="0.00" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="z">
+      <EMBEDDEDDATA mmedaddress="0x28038" mmedelementsizebits="16" mmedrowcount="1" mmedcolcount="3" mmedmajorstridebits="0" mmedminorstridebits="0" />
+      <decimalpl>0</decimalpl>
+      <min>0.000000</min>
+      <max>255.000000</max>
+      <outputtype>2</outputtype>
       <MATH equation="X">
         <VAR id="X" />
       </MATH>
