@@ -89,6 +89,8 @@ class KlineWorker(Thread):
 
 	def FlashPanelHandler(self, mode, data, bootloader_offset):
 		wx.LogMessage("Flash operation (%d) requested" % (mode))
+		if mode > 0 and bootloader_offset!=None and bootloader_offset>0:
+			wx.LogMessage("Skipping bootloader at offset %s" % (hex(bootloader_offset)))
 		self.flash_data = data
 		self.bootloader_offset = bootloader_offset
 		self.flash_mode = mode
@@ -295,11 +297,11 @@ class KlineWorker(Thread):
 							wx.LogMessage("Read %s" % (status))
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read%s" % status, value=None)
 						else:
-							if self.flash_mode == 1:
+							if self.flash_mode == 1 and self.state in [1,3]:
 								wx.LogMessage("Initializing write process")
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initwrite", value=None)
 								self.ecu.do_init_write()
-							elif self.flash_mode == 2:
+							elif self.flash_mode == 2 and self.state in [1,2]:
 								wx.LogMessage("Initializing recovery process")
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="initrecover", value=None)
 								self.ecu.do_init_recover()
@@ -307,24 +309,27 @@ class KlineWorker(Thread):
 								self.ecu.send_command([0x72],[0x00, 0xf1])
 								time.sleep(1)
 								self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
-							wx.LogMessage("Pre-erase wait")
-							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="wait", value=None)
-							for i in range(14):
-								w = 14-i
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100,str(w)))
-								time.sleep(1)
-							wx.LogMessage("Erasing ECU")
-							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
-							self.ecu.do_erase()
-							cont = 1
-							while cont:
-								info = self.ecu.send_command([0x7e], [0x01, 0x05])
-								if info:
-									if info[2][1] == 0x00:
-										cont = 0
-								else:
-									cont = -1
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,""))
+							if self.state < 7:
+								wx.LogMessage("Pre-erase wait")
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="wait", value=None)
+								for i in range(14):
+									w = 14-i
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100,str(w)))
+									time.sleep(1)
+								wx.LogMessage("Erasing ECU")
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
+								self.ecu.do_erase()
+								cont = 1
+								while cont:
+									info = self.ecu.send_command([0x7e], [0x01, 0x05])
+									if info:
+										if info[2][1] == 0x00:
+											cont = 0
+									else:
+										cont = -1
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,""))
+							# self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
+							# self.ecu.send_command([0x7e], [0x01, 0xa0, 0x02])
 							wx.LogMessage("Writing ECU")
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
 							self.do_write_flash(self.flash_data, offset=self.bootloader_offset)
@@ -737,11 +742,13 @@ class FlashPanel(wx.Panel):
 		self.readfpicker = wx.FilePickerCtrl(self, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.writefpicker = wx.FilePickerCtrl(self,wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.fixchecksum = wx.CheckBox(self, label="Fix")
+		self.skipbootloader = wx.CheckBox(self, label="Skip Bootloader")
 		self.checksum = wx.Choice(self, choices=list(checksums))
 		self.gobutton = wx.Button(self, label="Start")
 
 		self.writefpicker.Show(False)
 		self.fixchecksum.Show(False)
+		self.skipbootloader.Show(False)
 		self.checksum.Show(False)
 		self.wchecksuml.Show(False)
 		self.gobutton.Disable()
@@ -751,6 +758,7 @@ class FlashPanel(wx.Panel):
 		self.optsbox.Add(self.wchecksuml, 0, flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 		self.optsbox.Add(self.checksum, 0)
 		self.optsbox.Add(self.fixchecksum, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+		self.optsbox.Add(self.skipbootloader, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 
 		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
 		self.fpickerbox.Add(self.readfpicker, 1)
@@ -830,6 +838,7 @@ class FlashPanel(wx.Panel):
 	def OnModeChange(self, event):
 		if self.mode.GetSelection() == 0:
 			self.fixchecksum.Show(False)
+			self.skipbootloader.Show(False)
 			self.writefpicker.Show(False)
 			self.readfpicker.Show(True)
 			self.wchecksuml.Show(False)
@@ -838,6 +847,7 @@ class FlashPanel(wx.Panel):
 			self.wchecksuml.Show(True)
 			self.checksum.Show(True)
 			self.fixchecksum.Show(True)
+			self.skipbootloader.Show(True)
 			self.writefpicker.Show(True)
 			self.readfpicker.Show(False)
 		self.Layout()
@@ -846,11 +856,14 @@ class FlashPanel(wx.Panel):
 	def OnGo(self, event):
 		mode = self.mode.GetSelection()
 		if mode == 0:
-			data = self.readfpicker.GetPath()
 			bo = None
+			data = self.readfpicker.GetPath()
 		else:
 			data = self.byts
-			bo = self.bootloader_offset
+			if self.skipbootloader.IsChecked():
+				bo = self.bootloader_offset
+			else:
+				bo = 0
 		self.gobutton.Disable()
 		dispatcher.send(signal="FlashPanel", sender=self, mode=mode, data=data, bootloader_offset=bo)
 

@@ -264,8 +264,9 @@ class HondaECU(object):
 			"finalize",				# 8
 			"incomplete",			# 9
 			"reset",				# 10
-			"read",					# 11
-			"off"					# 12
+			"error",				# 11
+			"read",					# 12
+			"off",					# 13
 		]
 		state = 0
 		if wakeup:
@@ -296,17 +297,19 @@ class HondaECU(object):
 					state = 9
 				elif einfo[2][1] == 0x0f:
 					state = 10
+				elif einfo[2][1] == 0xfa:
+					state = 11
 				else:
-					print(einfo[2][1])
+					print(hex(einfo[2][1]))
 			else:
 				dinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08])
 				if dinfo:
-					state = 11
+					state = 12
 		if state == 0:
 			if not wakeup:
 				state, _ = self.detect_ecu_state(wakeup=True)
 			elif not self.kline():
-				state = 12
+				state = 13
 		return state, states[state]
 
 	def do_init_recover(self, debug=False):
