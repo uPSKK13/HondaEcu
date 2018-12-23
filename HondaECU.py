@@ -54,6 +54,7 @@ def Main():
 	parser_faults.add_argument('--clear', action='store_true', help="clear fault codes")
 
 	parser_log = subparsers.add_parser('log', help='log engine data')
+	parser_log.add_argument('--output', default=None, help="log output file")
 
 	parser_recover = subparsers.add_parser('kline', help='kline tests')
 	parser_recover.add_argument('--type', default=0, type=int, choices=[0,1,2,3], help="kline test type")
