@@ -33,8 +33,11 @@ def HondaECU_CmdLine(args, version):
 					sys.exit(-1)
 			print_header()
 			sys.stdout.write("Validating checksum\n")
-			ret, bootloader_offset, status, byts = do_validation(byts, cksum)
-			sys.stdout.write("  bootloader size: %s\n" % (hex(bootloader_offset)))
+			ret, bootloader_offset, status, byts = do_validation(byts, cksum, args.skip_bootloader)
+			bo = "None"
+			if bootloader_offset:
+				bo = hex(bootloader_offset)
+			sys.stdout.write("  bootloader size: %s\n" % (bo))
 			if status == "fixed":
 				if args.mode == "checksum":
 					fbin = open(binfile, "wb")
@@ -169,7 +172,11 @@ def HondaECU_CmdLine(args, version):
 
 				print_header()
 				sys.stdout.write("Reading ECU\n")
-				do_read_flash(ecu, binfile, debug=args.debug)
+				if args.offset:
+					offset = args.offset
+				else:
+					offset = 0x0
+				do_read_flash(ecu, binfile, offset=offset, debug=args.debug)
 				print_header()
 				sys.stdout.write("Validating checksum\n")
 				with open(binfile, "rb") as fbin:

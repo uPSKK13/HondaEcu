@@ -686,6 +686,8 @@ class DataPanel(wx.Panel):
 				u = ">H12BHB"
 				if value[0] == 0x11:
 					u += "BH"
+				elif value[0] == 0x17:
+					u += "BB"
 				data = struct.unpack(u, value[2][2:])
 				self.enginespeedl.SetLabel("%d" % (data[0]))
 				self.tpsensorl.SetLabel("%d" % (data[2]))
@@ -699,6 +701,8 @@ class DataPanel(wx.Panel):
 				if value[0] == 0x11:
 					self.iacvpl.SetLabel("%d" % (data[15]))
 					self.iacvcl.SetLabel("%.03f" % (data[16]/0xffff*8.0))
+				elif value[0] == 0x17:
+					print("0x17", "unknown", data[15], data[16])
 			elif value[0] in [0x20, 0x21]:
 				if value[1] == 5:
 					data = struct.unpack(">3B", value[2][2:])

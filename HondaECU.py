@@ -1,24 +1,13 @@
 import argparse
 
-from cmd import *
-from gui import *
-
-import os
+import os, sys
 import platform
 
-__VERSION__ = "2.0.0_rc2"
+__VERSION__ = "2.0.0_rc4"
 
 class Hex(object):
 	def __call__(self, value):
 		return int(value, 16)
-
-class MultOf8(object):
-	def __call__(self, value):
-		value = int(value)
-		if value % 8 == 0:
-			return value
-		else:
-			raise argparse.ArgumentTypeError("%d is not a multiple of 8" % (value))
 
 def Main():
 	default_checksum = '0x3fff8'
@@ -30,7 +19,7 @@ def Main():
 	parser_read = subparsers.add_parser('read', help='read ecu to binfile')
 	parser_read.add_argument('binfile', help="name of output binfile")
 	parser_read.add_argument('--rom-size', default=-1, type=int, help="size of ecu rom in kilobytes")
-	parser_read.add_argument('--offset', default=0, help="read offset (must be multiple of 8)", type=MultOf8())
+	parser_read.add_argument('--offset', help="read offset", type=Hex())
 
 	parser_write = subparsers.add_parser('write', help='write ecu from binfile')
 	parser_write.add_argument('binfile', help="name of input binfile")
@@ -47,6 +36,7 @@ def Main():
 	parser_checksum = subparsers.add_parser('checksum', help='validate binfile checksum')
 	parser_checksum.add_argument('binfile', help="name of input binfile")
 	parser_checksum.add_argument('--fix-checksum', type=Hex(), help="hex location to fix binfile checksum")
+	parser_checksum.add_argument('--skip-bootloader', action='store_true', help="skip checking bootloader")
 
 	parser_scan = subparsers.add_parser('scan', help='scan engine data')
 
@@ -69,6 +59,8 @@ def Main():
 	args = parser.parse_args()
 
 	if args.mode == None:
+		import wx
+		from gui import HondaECU_GUI
 		if getattr(sys, 'frozen', False) and not (args.debug or args.verbose):
 			sys.__stdout__.close()
 			sys.__stderr__.close()
@@ -82,6 +74,7 @@ def Main():
 		gui = HondaECU_GUI(args, __VERSION__)
 		app.MainLoop()
 	else:
+		from cmd import HondaECU_CmdLine
 		HondaECU_CmdLine(args, __VERSION__)
 
 if __name__ == '__main__':

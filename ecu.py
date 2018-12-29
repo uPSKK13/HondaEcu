@@ -69,24 +69,28 @@ def checksum8bitHonda(data):
 def checksum8bit(data):
 	return 0xff - ((sum(bytearray(data))-1) >> 8)
 
-def validate_checksums(byts, cksum):
+def validate_checksums(byts, cksum, skip_bootloader=False):
 	ret = False
 	bootloader_offset = None
 	fixed = False
-	for bo in [0x4000,0x6000,0x8000]:
-		if (checksum8bitHonda(byts[:bo]) == 0):
-			bootloader_offset = bo
-			if (checksum8bitHonda(byts[bo:]) == 0):
-				ret = checksum8bitHonda(byts) == 0
-			elif (cksum > bo):
-				byts[cksum] = checksum8bitHonda(byts[bo:cksum]+byts[(cksum+1):])
-				fixed = True
-				ret = (checksum8bitHonda(byts) == 0)
+	if not skip_bootloader:
+		for bo in [0x4000,0x6000,0x8000]:
+			if (checksum8bitHonda(byts[:bo]) == 0):
+				bootloader_offset = bo
+				break
+	else:
+		bootloader_offset = 0x00
+	if (checksum8bitHonda(byts[bootloader_offset:]) == 0):
+		ret = checksum8bitHonda(byts) == 0
+	elif bootloader_offset and (cksum > bootloader_offset):
+		byts[cksum] = checksum8bitHonda(byts[bootloader_offset:cksum]+byts[(cksum+1):])
+		fixed = True
+		ret = (checksum8bitHonda(byts) == 0)
 	return ret, bootloader_offset, fixed, byts
 
-def do_validation(byts, cksum=0):
+def do_validation(byts, cksum=0, skip_bootloader=False):
 	status = "good"
-	ret, bootloader_offset, fixed, byts = validate_checksums(byts, cksum)
+	ret, bootloader_offset, fixed, byts = validate_checksums(byts, cksum, skip_bootloader=skip_bootloader)
 	if not ret:
 		status = "bad"
 	elif fixed:
@@ -425,9 +429,9 @@ class HondaECU(object):
 def print_header():
 	sys.stdout.write("===================================================\n")
 
-def do_read_flash(ecu, binfile, debug=False):
+def do_read_flash(ecu, binfile, offset=0, debug=False):
 	readsize = 12
-	location = 0
+	location = offset
 	nl = False
 	with open(binfile, "wb") as fbin:
 		t = time.time()
