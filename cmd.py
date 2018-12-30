@@ -108,33 +108,38 @@ def HondaECU_CmdLine(args, version):
 				"battery_voltage","vehicle_speed",
 				"injector_duration","ignition_advance"
 			]
+			u = ">H12BHB"
+			h = header
+			table = None
 			for t in [0x10,0x11]:
-				u = ">H12BHB"
-				h = header
-				start = time.time()
-				if t == 0x11:
-					u += "BH"
-					h += ["iacv_pulse_count","iacv_command"]
-					args.output.write("%s\n" % "\t".join(h))
-				while True:
-					info = ecu.send_command([0x72], [0x71, t], debug=args.debug)
-					now = time.time() - start
-					if info and len(info[2][2:]) > 0:
-						data = list(struct.unpack(u, info[2][2:]))
-						data[1] = data[1]/0xff*5.0
-						data[3] = data[3]/0xff*5.0
-						data[4] = -40 + data[4]
-						data[5] = data[5]/0xff*5.0
-						data[6] = -40 + data[6]
-						data[7] = data[7]/0xff*5.0
-						data[11] = data[11]/10
-						data[13] = data[13]/0xffff*265.5
-						data[14] = -64 + data[14]/0xff*127.5
-						if t == 0x11:
-							data[16] = data[16]/0xffff*8.0
-						args.output.write("%f\t%s\n" % (now,"\t".join(map(str,data))))
-					else:
-						break
+				info = ecu.send_command([0x72], [0x71, t], debug=args.debug)
+				if info and len(info[2][2:]) > 0:
+					table = t
+					break
+			if t == 0x11:
+				u += "BH"
+				h += ["iacv_pulse_count","iacv_command"]
+			args.output.write("%s\n" % "\t".join(h))
+			start = time.time()
+			while True:
+				info = ecu.send_command([0x72], [0x71, table], debug=args.debug)
+				now = time.time() - start
+				if info and len(info[2][2:]) > 0:
+					data = list(struct.unpack(u, info[2][2:]))
+					data[1] = data[1]/0xff*5.0
+					data[3] = data[3]/0xff*5.0
+					data[4] = -40 + data[4]
+					data[5] = data[5]/0xff*5.0
+					data[6] = -40 + data[6]
+					data[7] = data[7]/0xff*5.0
+					data[11] = data[11]/10
+					data[13] = data[13]/0xffff*265.5
+					data[14] = -64 + data[14]/0xff*127.5
+					if table == 0x11:
+						data[16] = data[16]/0xffff*8.0
+					args.output.write("%f\t%s\n" % (now,"\t".join(map(str,data[:9]+data[11:]))))
+				else:
+					break
 		elif (state in [1,2,3]):
 			if args.mode == "scan":
 				print_header()
