@@ -1470,7 +1470,7 @@ class XDFGridTable(wx.grid.GridTableBase):
 			def formatCell(x):
 				if self.axisinfo['z']['zot'] == "0":
 					x = ord(x)
-				return int(nsp.eval(eq.replace("X",str(x))))
+				return int(np.ceil(nsp.eval(eq.replace("X",str(x)))))
 			d = np.vectorize(formatCell)(d)
 		s = "B"
 		if self.stride == 16:
