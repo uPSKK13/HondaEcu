@@ -24,6 +24,19 @@ ECUSTATES = [
 def lookup_ecu_state(state):
 	return ECUSTATES.index(state), state
 
+ECUSTATES = [
+	"unknown",
+	"ok",
+	"recover.old",
+	"recover.new",
+	"write.init",
+	"write.good",
+	"write.bad",
+	"read",
+]
+def lookup_ecu_state(state):
+	return ECUSTATES.index(state), state
+
 ECM_IDs = {
 	b"\x01\x00\x2b\x01\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-D21","checksum":"0x3fff8"},
 	b"\x01\x00\x2b\x04\x02": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-A22","checksum":"0x3fff8"},
@@ -305,6 +318,7 @@ class HondaECU(object):
 			"error",				# 11
 			"read",					# 12
 			"off",					# 13
+			"data",					# 14
 		]
 		state = 0
 		if wakeup:
@@ -312,10 +326,13 @@ class HondaECU(object):
 		if self.ping():
 			rinfo = self.send_command([0x7b], [0x00, 0x01, 0x01])
 			winfo = self.send_command([0x7d], [0x01, 0x01, 0x01])
+			table0 = self.send_command([0x72], [0x71, 0x00])
 			if winfo:
 				state = 1
-			else:
+			elif rinfo:
 				state = 2
+			elif table0:
+				state = 14
 		else:
 			einfo = self.send_command([0x7e], [0x01, 0x01, 0x00])
 			if einfo:
