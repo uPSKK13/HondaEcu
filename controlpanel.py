@@ -45,7 +45,7 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 	def __init__(self, appid, *args, **kwargs):
 		self.appid = appid
 		buttons.ThemedGenBitmapTextButton.__init__(self, *args,**kwargs)
-		self.SetInitialSize((128,96))
+		self.SetInitialSize((128,64))
 
 	def DrawLabel(self, dc, width, height, dx=0, dy=0):
 		bmp = self.bmpLabel
