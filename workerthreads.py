@@ -52,6 +52,13 @@ class KlineWorker(Thread):
 	def __clear_data(self):
 		self.ecu = None
 		self.ready = False
+		self.state = 0
+
+	def update_state(self):
+		state, status = self.ecu.detect_ecu_state_new()
+		if state != self.state:
+			self.state = state
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=(self.state,status))
 
 	def DeviceHandler(self, action, vendor, product, serial):
 		if action == "interrupt":
@@ -78,7 +85,12 @@ class KlineWorker(Thread):
 				time.sleep(.001)
 			else:
 				try:
-					time.sleep(.001)
+					if self.state == 0:
+						time.sleep(.250)
+						self.update_state()
+					else:
+						if self.ecu.ping():
+							pass
 				except FtdiError:
 					pass
 				except AttributeError:

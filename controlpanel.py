@@ -112,6 +112,7 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
 		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
 		self.usbmonitor.start()
@@ -185,6 +186,9 @@ class HondaECU_ControlPanel(wx.Frame):
 			if appid in self.appanels:
 				del self.appanels[appid]
 				self.appbuttons[appid].Enable()
+
+	def ECUDebugHandler(self, msg):
+		print(msg)
 
 if __name__ == '__main__':
 

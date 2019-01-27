@@ -9,6 +9,20 @@ import platform
 import os
 import math
 import code
+from pydispatch import dispatcher
+
+ECUSTATES = [
+	"unknown",
+	"ok",
+	"recover.old",
+	"recover.new",
+	"write.init",
+	"write.good",
+	"write.bad",
+	"read",
+]
+def lookup_ecu_state(state):
+	return ECUSTATES.index(state), state
 
 ECM_IDs = {
 	b"\x01\x00\x2b\x01\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-D21","checksum":"0x3fff8"},
@@ -112,7 +126,7 @@ def format_message(mtype, data):
 
 class HondaECU(object):
 
-	def __init__(self, device_id=None, dprint=None, latency=None, baudrate=10400):
+	def __init__(self, device_id=None, latency=None, baudrate=10400):
 		super(HondaECU, self).__init__()
 		self.device_id = device_id
 		self.dev = None
@@ -120,16 +134,7 @@ class HondaECU(object):
 		self.resets = 0
 		self.latency = latency
 		self.baudrate = baudrate
-		if not dprint:
-			self.dprint = self.__dprint
-		else:
-			self.dprint = dprint
 		self.reset()
-
-	def __dprint(self, msg):
-		sys.stderr.write(msg)
-		sys.stderr.write("\n")
-		sys.stderr.flush()
 
 	def reset(self):
 		if self.dev != None:
@@ -138,10 +143,6 @@ class HondaECU(object):
 
 		self.dev = Device(self.device_id, auto_detach=(platform.system()!="Windows"))
 		self.setup()
-		self.starttime = time.time()
-
-	def time(self):
-		return time.time() - self.starttime
 
 	def setup(self):
 		self.dev.ftdi_fn.ftdi_usb_reset()
@@ -153,7 +154,7 @@ class HondaECU(object):
 		latency = c_ubyte()
 		self.dev.ftdi_fn.ftdi_get_latency_timer(byref(latency))
 
-	def _break(self, ms, debug=False):
+	def _break(self, ms):
 		self.dev.ftdi_fn.ftdi_set_bitmode(1, 0x01)
 		self.dev._write(b'\x00')
 		time.sleep(ms)
@@ -165,8 +166,8 @@ class HondaECU(object):
 		self._break(.070)
 		time.sleep(.130)
 
-	def ping(self, debug=False):
-		return self.send_command([0xfe],[0x72])!=None
+	def ping(self):
+		return self.send_command([0xfe],[0x72], retries=0) != None
 
 	def probe_tables(self, tables=None):
 		if not tables:
@@ -181,9 +182,9 @@ class HondaECU(object):
 				return {}
 		return ret
 
-	def init(self, debug=False):
+	def init(self):
 		self.wakeup()
-		return self.ping(debug)
+		return self.ping()
 
 	def kline_new(self):
 		pin_byte = c_ubyte()
@@ -235,15 +236,15 @@ class HondaECU(object):
 			if time.time() - to > timeout: return None
 		return buf
 
-	def send_command(self, mtype, data=[], debug=False, retries=1):
+	def send_command(self, mtype, data=[], retries=1):
 		msg, ml, dl = format_message(mtype, data)
 		r = 0
 		while r <= retries:
-			self.dprint("%d > [%s]" % (r, ", ".join(["%02x" % m for m in msg])))
+			dispatcher.send(signal="ecu.debug", sender=self, msg="%d > [%s]" % (r, ", ".join(["%02x" % m for m in msg])))
 			resp = self.send(msg, ml)
 			if resp:
 				if checksum8bitHonda(resp[:-1]) == resp[-1]:
-					self.dprint("%d < [%s]" % (r, ", ".join(["%02x" % r for r in resp])))
+					dispatcher.send(signal="ecu.debug", sender=self, msg="%d < [%s]" % (r, ", ".join(["%02x" % r for r in resp])))
 					rmtype = resp[:ml]
 					valid = False
 					if ml == 3:
@@ -258,6 +259,35 @@ class HondaECU(object):
 					else:
 						print("shit")
 			r += 1
+
+	def detect_ecu_state_new(self):
+		t0 = self.send_command([0x72], [0x71, 0x00], retries=0)
+		if t0 is None:
+			self.wakeup()
+			self.ping()
+			t0 = self.send_command([0x72], [0x71, 0x00], retries=0)
+		if not t0 is None:
+			if bytes(t0[2][5:7]) != b"\x00\x00":
+				return lookup_ecu_state("ok")
+			else:
+				if self.send_command([0x7d], [0x01, 0x01, 0x00], retries=0):
+					return lookup_ecu_state("recover.old")
+				if self.send_command([0x7b], [0x00, 0x01, 0x01], retries=0):
+					return lookup_ecu_state("recover.new")
+		else:
+			writestatus = self.send_command([0x7e], [0x01, 0x01, 0x00], retries=0)
+			if not writestatus is None:
+				if writestatus[2][1] == 0x0f:
+					return lookup_ecu_state("write.good")
+				elif writestatus[2][1] < 0x30:
+					return lookup_ecu_state("write.init")
+				else:
+					return lookup_ecu_state("write.bad")
+			else:
+				readinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08], retries=0)
+				if not readinfo is None:
+					return lookup_ecu_state("read")
+		return lookup_ecu_state("unknown")
 
 	def detect_ecu_state(self, wakeup=False):
 		states = [
@@ -320,21 +350,21 @@ class HondaECU(object):
 				state = 13
 		return state, states[state]
 
-	def do_init_recover(self, debug=False):
+	def do_init_recover(self):
 		self.send_command([0x7b], [0x00, 0x01, 0x01])
 		self.send_command([0x7b], [0x00, 0x01, 0x02])
 		self.send_command([0x7b], [0x00, 0x01, 0x03])
 		self.send_command([0x7b], [0x00, 0x02, 0x76, 0x03, 0x17])
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13])
 
-	def do_init_write(self, debug=False):
+	def do_init_write(self):
 		self.send_command([0x7d], [0x01, 0x01, 0x01])
 		self.send_command([0x7d], [0x01, 0x01, 0x02])
 		self.send_command([0x7d], [0x01, 0x01, 0x03])
 		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d])
 		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49])
 
-	def do_erase(self, debug=False):
+	def do_erase(self):
 		self.send_command([0x7e], [0x01, 0x02])
 		self.send_command([0x7e], [0x01, 0x03, 0x00, 0x00])
 		self.send_command([0x7e], [0x01, 0x0b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff])
@@ -342,7 +372,7 @@ class HondaECU(object):
 		self.send_command([0x7e], [0x01, 0x01, 0x01])
 		self.send_command([0x7e], [0x01, 0x04, 0xff])
 
-	def do_erase_wait(self, debug=False):
+	def do_erase_wait(self):
 		cont = 1
 		while cont:
 			info = self.send_command([0x7e], [0x01, 0x05])
@@ -354,7 +384,7 @@ class HondaECU(object):
 		if cont == 0:
 			into = self.send_command([0x7e], [0x01, 0x01, 0x00])
 
-	def do_post_write(self, debug=False):
+	def do_post_write(self):
 		self.send_command([0x7e], [0x01, 0x09])
 		time.sleep(.5)
 		self.send_command([0x7e], [0x01, 0x0a])
@@ -364,7 +394,7 @@ class HondaECU(object):
 		info = self.send_command([0x7e], [0x01, 0x0d])
 		if info: return (info[2][1] == 0x0f)
 
-	def get_faults(self, debug=False):
+	def get_faults(self):
 		faults = {'past':[], 'current':[]}
 		for i in range(1,0x0c):
 			info_current = self.send_command([0x72],[0x74, i])[2]
@@ -381,83 +411,3 @@ class HondaECU(object):
 			if info_past[2] == 0:
 				break
 		return faults
-
-def print_header():
-	sys.stdout.write("===================================================\n")
-
-def do_read_flash(ecu, binfile, offset=0, debug=False):
-	readsize = 12
-	location = offset
-	nl = False
-	with open(binfile, "wb") as fbin:
-		t = time.time()
-		size = location
-		rate = 0
-		while True:
-			info = ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
-			if not info:
-				readsize -= 1
-				if readsize < 1:
-					break
-			else:
-				fbin.write(info[2])
-				fbin.flush()
-				location += readsize
-				n = time.time()
-				if not debug:
-					sys.stdout.write(u"\r  %.02fKB @ %s        " % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
-					sys.stdout.flush()
-					nl = True
-					if n-t > 1:
-						rate = (location-size)/(n-t)
-						t = n
-						size = location
-	if nl:
-		sys.stdout.write("\n")
-		sys.stdout.flush()
-	return location > offset
-
-def do_write_flash(ecu, byts, debug=False, offset=0):
-	writesize = 128
-	ossize = len(byts)
-	maxi = int(ossize/writesize)
-	offseti = int(offset/16)
-	i = 0
-	w = 0
-	t = time.time()
-	rate = 0
-	size = 0
-	nl = False
-	done = False
-	while i < maxi and not done:
-		w = (i*writesize)
-		bytstart = [s for s in struct.pack(">H",offseti+(8*i))]
-		if i+1 == maxi:
-			bytend = [s for s in struct.pack(">H",0)]
-		else:
-			bytend = [s for s in struct.pack(">H",offseti+(8*(i+1)))]
-		d = list(byts[((i+0)*writesize):((i+1)*writesize)])
-		x = bytstart + d + bytend
-		c1 = checksum8bit(x)
-		c2 = checksum8bitHonda(x)
-		x = [0x01, 0x06] + x + [c1, c2]
-		info = ecu.send_command([0x7e], x)
-		if ord(info[1]) != 5:
-			sys.stdout.write(" error\n")
-			sys.exit(1)
-		if info[2][1] == 0:
-			done = True
-		n = time.time()
-		if not debug:
-			sys.stdout.write(u"\r  %.02fKB of %.02fKB @ %s        " % (w/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
-			sys.stdout.flush()
-			nl = True
-			if n-t > 1:
-				rate = (w-size)/(n-t)
-				t = n
-				size = w
-		i += 1
-	if nl:
-		sys.stdout.write("\n")
-		sys.stdout.flush()
-	ecu.send_command([0x7e], [0x01, 0x08])
