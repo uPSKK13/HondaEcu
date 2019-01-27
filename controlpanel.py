@@ -46,7 +46,7 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
 	def DrawLabel(self, dc, width, height, dx=0, dy=0):
 		bmp = self.bmpLabel
-		if bmp is not None:     # if the bitmap is used
+		if bmp is not None:
 			if self.bmpDisabled and not self.IsEnabled():
 				bmp = self.bmpDisabled
 			if self.bmpFocus and self.hasFocus:
@@ -58,7 +58,7 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 				dx = dy = self.labelDelta
 			hasMask = bmp.GetMask() is not None
 		else:
-			bw = bh = 0     # no bitmap -> size is zero
+			bw = bh = 0
 			hasMask = False
 
 		dc.SetFont(self.GetFont())
@@ -68,12 +68,12 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 			dc.SetTextForeground(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
 
 		label = self.GetLabel()
-		tw, th = dc.GetTextExtent(label)        # size of text
+		tw, th = dc.GetTextExtent(label)
 		if not self.up:
 			dx = dy = self.labelDelta
 
 		if bmp is not None:
-			dc.DrawBitmap(bmp, (width-bw)/2, (height-bh-th-4)/2, hasMask) # draw bitmap if available
+			dc.DrawBitmap(bmp, (width-bw)/2, (height-bh-th-4)/2, hasMask)
 		dc.DrawText(label, (width-tw)/2, (height+bh-th+4)/2)
 
 class HondaECU_ControlPanel(wx.Frame):
@@ -89,13 +89,19 @@ class HondaECU_ControlPanel(wx.Frame):
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
 		self.apps = {
-			"Flash": {"icon":"pngs/controlpanel/upload.png"},
+			"Read ECU": {"icon":"pngs/controlpanel/download.png"},
+			"Tune": {"icon":"pngs/controlpanel/spanner.png"},
+			"Write ECU": {"icon":"pngs/controlpanel/upload.png"},
 			"Data Logging": {"icon":"pngs/controlpanel/chart.png"},
-			"Diagnostics": {"icon":"pngs/controlpanel/warning.png"}
+			"Trouble Codes": {"icon":"pngs/controlpanel/warning.png"},
+			"ECU Info": {"icon":"pngs/controlpanel/info.png"},
 		}
-		self.active_app = None
 
-		wx.Frame.__init__(self, None, title="HondaECU :: Control Panel", style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
+		wx.Frame.__init__(self, None, title="HondaECU :: Control Panel", style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500,300))
+
+		ib = wx.IconBundle()
+		ib.AddIcon(os.path.join(self.basepath,"images/honda.ico"))
+		self.SetIcons(ib)
 
 		self.menubar = wx.MenuBar()
 		self.SetMenuBar(self.menubar)
@@ -124,15 +130,13 @@ class HondaECU_ControlPanel(wx.Frame):
 		for a,d in self.apps.items():
 			icon = wx.Image(os.path.join(self.basepath, d["icon"]), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 			self.appbuttons[a] = HondaECU_AppButton(self.wrappanel, wx.ID_ANY, icon, label=a)
-			self.appbuttons[a].SetSizeHints((128,128))
+			self.appbuttons[a].SetInitialSize((128,96))
 			self.appbuttons[a].Disable()
 			wrapsizer.Add(self.appbuttons[a], 0)
 			self.Bind(wx.EVT_BUTTON, self.OnAppButtonClicked, self.appbuttons[a])
 		self.wrappanel.SetSizer(wrapsizer)
 		mainsizer = wx.BoxSizer(wx.VERTICAL)
-		mainsizer.AddStretchSpacer(1)
 		mainsizer.Add(self.wrappanel,0,wx.ALIGN_CENTER)
-		mainsizer.AddStretchSpacer(1)
 		self.SetSizer(mainsizer)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -142,7 +146,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.usbmonitor.start()
 
 		self.Layout()
-		self.Fit()
+		mainsizer.Fit(self)
 		self.Center()
 		self.Show()
 
@@ -157,22 +161,13 @@ class HondaECU_ControlPanel(wx.Frame):
 
 	def OnAppButtonClicked(self, event):
 		b = event.GetEventObject()
-		if self.active_app is None:
-			for a,d in self.appbuttons.items():
-				if b != d:
-					d.Disable()
-			self.active_app = b
 
 	def EnableAppButtons(self, enable=True):
 		for a,d in self.appbuttons.items():
 			if enable:
-				if self.active_app is None:
-					d.Enable()
-					continue
-				elif self.active_app is d:
-					d.Enable()
-					continue
-			d.Disable()
+				d.Enable()
+			else:
+				d.Disable()
 
 	def USBMonitorHandler(self, action, vendor, product, serial):
 		dirty = False
