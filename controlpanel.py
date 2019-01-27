@@ -162,10 +162,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		pass
 
 	def OnAppButtonClicked(self, event):
-		self.wrappanel.Disable()
 		b = event.GetEventObject()
 		if not b.appid in self.appanels:
 			self.appanels[b.appid] = HondaECU_AppPanel(self, b.appid, self.apps[b.appid])
+			self.appbuttons[b.appid].Disable()
 		self.appanels[b.appid].Raise()
 
 	def USBMonitorHandler(self, action, vendor, product, serial):
@@ -213,7 +213,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		if action == "close":
 			if appid in self.appanels:
 				del self.appanels[appid]
-				self.wrappanel.Enable()
+				self.appbuttons[appid].Enable()
 
 if __name__ == '__main__':
 
