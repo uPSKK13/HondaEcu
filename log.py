@@ -22,9 +22,8 @@ def Main():
 	else:
 		ecu = HondaECU(dprint=lambda x: False)
 	while True:
-		if ecu.kline():
-			ecu.wakeup()
-			ecu.ping()
+		_, state = ecu.detect_ecu_state_new()
+		if state == 0:
 			if not skip_header:
 				header = [
 					"time","engine_speed",
@@ -70,6 +69,8 @@ def Main():
 					args.output.write("%f\t%s\n" % (now,"\t".join(map(str,data[:9]+data[11:]))))
 				else:
 					break
+		else:
+			time.sleep(.250)
 
 if __name__ == '__main__':
 	Main()

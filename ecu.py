@@ -10,6 +10,19 @@ import os
 import math
 import code
 
+ECUSTATES = [
+	"ok",
+	"recover.old",
+	"recover.new",
+	"write.init",
+	"write.good",
+	"write.bad",
+	"read",
+	"unknown",
+]
+def lookup_ecu_state(state):
+	return state, ECUSTATES.index(state)
+
 ECM_IDs = {
 	"\x01\x00\x2b\x01\x01": ("CBR1000RR","2006-2007","38770-MEL-D21"),
 	"\x01\x00\x2b\x04\x02": ("CBR1000RR","2006-2007","38770-MEL-A22"),
@@ -245,6 +258,35 @@ class HondaECU(object):
 					else:
 						print("shit")
 			r += 1
+
+	def detect_ecu_state_new(self):
+			t0 = self.send_command([0x72], [0x71, 0x00], retries=0)
+			if t0 is None:
+				self.wakeup()
+				self.ping()
+				t0 = self.send_command([0x72], [0x71, 0x00], retries=0)
+			if not t0 is None:
+				if bytes(t0[2][5:7]) != b"\x00\x00":
+					return lookup_ecu_state("ok")
+				else:
+					if self.send_command([0x7d], [0x01, 0x01, 0x00], retries=0):
+						return lookup_ecu_state("recover.old")
+					if self.send_command([0x7b], [0x00, 0x01, 0x01], retries=0):
+						return lookup_ecu_state("recover.new")
+			else:
+				writestatus = self.send_command([0x7e], [0x01, 0x01, 0x00], retries=0)
+				if not writestatus is None:
+					if writestatus[2][1] == 0x0f:
+						return lookup_ecu_state("write.good")
+					elif writestatus[2][1] < 0x30:
+						return lookup_ecu_state("write.init")
+					else:
+						return lookup_ecu_state("write.bad")
+				else:
+					readinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08])
+					if not readinfo is None:
+						return lookup_ecu_state("read")
+			return lookup_ecu_state("unknown")
 
 	def detect_ecu_state(self, wakeup=False):
 		states = [
