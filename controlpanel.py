@@ -1,44 +1,13 @@
 import sys
 import os
-import time
 
-from threading import Thread
-from pylibftdi import Driver, FtdiError, LibraryMissingError
 from pydispatch import dispatcher
 
 import wx
 import wx.lib.buttons as buttons
 
 from appanels import *
-
-class USBMonitor(Thread):
-
-	def __init__(self, parent):
-		self.parent = parent
-		self.ftdi_devices = {}
-		Thread.__init__(self)
-
-	def run(self):
-		while self.parent.run:
-			time.sleep(.5)
-			new_devices = {}
-			try:
-				for device in Driver().list_devices():
-					vendor, product, serial = map(lambda x: x.decode('latin1'), device)
-					new_devices[serial] = (vendor, product)
-					if not serial in self.ftdi_devices:
-						wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", vendor=vendor, product=product, serial=serial)
-				for serial in self.ftdi_devices:
-					if not serial in new_devices:
-						wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", vendor=self.ftdi_devices[serial][0], product=self.ftdi_devices[serial][1], serial=serial)
-			except FtdiError as e:
-				if sys.exc_info()[0] == LibraryMissingError:
-					wx.LogError(str(e))
-					break
-			except LibraryMissingError as e:
-				wx.LogError(str(e))
-				break
-			self.ftdi_devices = new_devices
+from workerthreads import *
 
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
@@ -91,12 +60,12 @@ class HondaECU_ControlPanel(wx.Frame):
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
 		self.apps = {
-			"read": {"label":"Read ECU", "icon":"pngs/controlpanel/download.png"},
+			"read": {"label":"Read ECU", "icon":"pngs/controlpanel/download.png","conflicts":["write"]},
 			"tune": {"label":"Tune", "icon":"pngs/controlpanel/spanner.png"},
-			"write": {"label":"Write ECU", "icon":"pngs/controlpanel/upload.png"},
-			"data": {"label":"Data Logging", "icon":"pngs/controlpanel/chart.png"},
-			"dtc": {"label":"Trouble Codes", "icon":"pngs/controlpanel/warning.png"},
-			"info": {"label":"ECU Info", "icon":"pngs/controlpanel/info.png"},
+			"write": {"label":"Write ECU", "icon":"pngs/controlpanel/upload.png","conflicts":["read"]},
+			"data": {"label":"Data Logging", "icon":"pngs/controlpanel/chart.png","conflicts":["read","write"]},
+			"dtc": {"label":"Trouble Codes", "icon":"pngs/controlpanel/warning.png","conflicts":["read","write"]},
+			"info": {"label":"ECU Info", "icon":"pngs/controlpanel/info.png","conflicts":["read","write"]},
 		}
 		self.appanels = {}
 
@@ -146,6 +115,8 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		self.usbmonitor = USBMonitor(self)
 		self.usbmonitor.start()
+		self.klineworker = KlineWorker(self)
+		self.klineworker.start()
 
 		self.Layout()
 		mainsizer.Fit(self)
