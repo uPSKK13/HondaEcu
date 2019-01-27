@@ -11,6 +11,7 @@ import math
 import code
 
 ECUSTATES = [
+	"unknown",
 	"ok",
 	"recover.old",
 	"recover.new",
@@ -18,10 +19,9 @@ ECUSTATES = [
 	"write.good",
 	"write.bad",
 	"read",
-	"unknown",
 ]
 def lookup_ecu_state(state):
-	return state, ECUSTATES.index(state)
+	return ECUSTATES.index(state), state
 
 ECM_IDs = {
 	"\x01\x00\x2b\x01\x01": ("CBR1000RR","2006-2007","38770-MEL-D21"),

@@ -22,8 +22,8 @@ def Main():
 	else:
 		ecu = HondaECU(dprint=lambda x: False)
 	while True:
-		_, state = ecu.detect_ecu_state_new()
-		if state == 0:
+		state, _ = ecu.detect_ecu_state_new()
+		if state == 1:
 			if not skip_header:
 				header = [
 					"time","engine_speed",
