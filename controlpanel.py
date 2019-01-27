@@ -9,6 +9,7 @@ from pydispatch import dispatcher
 import wx
 import wx.lib.buttons as buttons
 
+from appanels import *
 
 class USBMonitor(Thread):
 
@@ -41,8 +42,10 @@ class USBMonitor(Thread):
 
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, appid, *args, **kwargs):
+		self.appid = appid
 		buttons.ThemedGenBitmapTextButton.__init__(self, *args,**kwargs)
+		self.SetInitialSize((128,96))
 
 	def DrawLabel(self, dc, width, height, dx=0, dy=0):
 		bmp = self.bmpLabel
@@ -79,7 +82,6 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 class HondaECU_ControlPanel(wx.Frame):
 
 	def __init__(self):
-
 		self.run = True
 		self.active_ftdi_device = None
 		self.ftdi_devices = {}
@@ -89,13 +91,14 @@ class HondaECU_ControlPanel(wx.Frame):
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
 		self.apps = {
-			"Read ECU": {"icon":"pngs/controlpanel/download.png"},
-			"Tune": {"icon":"pngs/controlpanel/spanner.png"},
-			"Write ECU": {"icon":"pngs/controlpanel/upload.png"},
-			"Data Logging": {"icon":"pngs/controlpanel/chart.png"},
-			"Trouble Codes": {"icon":"pngs/controlpanel/warning.png"},
-			"ECU Info": {"icon":"pngs/controlpanel/info.png"},
+			"read": {"label":"Read ECU", "icon":"pngs/controlpanel/download.png"},
+			"tune": {"label":"Tune", "icon":"pngs/controlpanel/spanner.png"},
+			"write": {"label":"Write ECU", "icon":"pngs/controlpanel/upload.png"},
+			"data": {"label":"Data Logging", "icon":"pngs/controlpanel/chart.png"},
+			"dtc": {"label":"Trouble Codes", "icon":"pngs/controlpanel/warning.png"},
+			"info": {"label":"ECU Info", "icon":"pngs/controlpanel/info.png"},
 		}
+		self.appanels = {}
 
 		wx.Frame.__init__(self, None, title="HondaECU :: Control Panel", style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500,300))
 
@@ -129,9 +132,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.appbuttons = {}
 		for a,d in self.apps.items():
 			icon = wx.Image(os.path.join(self.basepath, d["icon"]), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-			self.appbuttons[a] = HondaECU_AppButton(self.wrappanel, wx.ID_ANY, icon, label=a)
-			self.appbuttons[a].SetInitialSize((128,96))
-			self.appbuttons[a].Disable()
+			self.appbuttons[a] = HondaECU_AppButton(a, self.wrappanel, wx.ID_ANY, icon, label=d["label"])
 			wrapsizer.Add(self.appbuttons[a], 0)
 			self.Bind(wx.EVT_BUTTON, self.OnAppButtonClicked, self.appbuttons[a])
 		self.wrappanel.SetSizer(wrapsizer)
@@ -141,6 +142,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
+		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
 		self.usbmonitor.start()
@@ -160,14 +162,11 @@ class HondaECU_ControlPanel(wx.Frame):
 		pass
 
 	def OnAppButtonClicked(self, event):
+		self.wrappanel.Disable()
 		b = event.GetEventObject()
-
-	def EnableAppButtons(self, enable=True):
-		for a,d in self.appbuttons.items():
-			if enable:
-				d.Enable()
-			else:
-				d.Disable()
+		if not b.appid in self.appanels:
+			self.appanels[b.appid] = HondaECU_AppPanel(self, b.appid, self.apps[b.appid])
+		self.appanels[b.appid].Raise()
 
 	def USBMonitorHandler(self, action, vendor, product, serial):
 		dirty = False
@@ -190,7 +189,6 @@ class HondaECU_ControlPanel(wx.Frame):
 		else:
 				pass
 		if dirty:
-			self.EnableAppButtons(self.active_ftdi_device != None)
 			for i in self.devicesMenu.GetMenuItems():
 				self.devicesMenu.Remove(i)
 			for s in self.ftdi_devices:
@@ -210,6 +208,12 @@ class HondaECU_ControlPanel(wx.Frame):
 			self.active_ftdi_device = s
 			dispatcher.send(signal="FTDIDevice", sender=self, action="activate", vendor=self.ftdi_devices[self.active_ftdi_device], product=self.ftdi_devices[self.active_ftdi_device], serial=self.active_ftdi_device)
 			self.statusbar.SetStatusText("%s : %s : %s" % (self.ftdi_devices[self.active_ftdi_device][0], self.ftdi_devices[self.active_ftdi_device][1], self.active_ftdi_device), 0)
+
+	def AppPanelHandler(self, appid, action):
+		if action == "close":
+			if appid in self.appanels:
+				del self.appanels[appid]
+				self.wrappanel.Enable()
 
 if __name__ == '__main__':
 
