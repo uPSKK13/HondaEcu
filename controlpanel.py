@@ -63,36 +63,36 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.apps = {
 			"read": {
 				"label":"Read ECU",
-				"icon":"pngs/controlpanel/download.png",
+				"icon":"pngs/download.png",
 				"conflicts":["write"],
 				"panel":HondaECU_AppPanel,
 			},
 			"tune": {
 				"label":"Tune",
-				"icon":"pngs/controlpanel/spanner.png",
+				"icon":"pngs/spanner.png",
 				"panel":HondaECU_AppPanel,
 			},
 			"write": {
 				"label":"Write ECU",
-				"icon":"pngs/controlpanel/upload.png",
+				"icon":"pngs/upload.png",
 				"conflicts":["read"],
 				"panel":HondaECU_AppPanel,
 			},
 			"data": {
 				"label":"Data Logging",
-				"icon":"pngs/controlpanel/chart.png",
+				"icon":"pngs/chart.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_AppPanel,
 			},
 			"dtc": {
 				"label":"Trouble Codes",
-				"icon":"pngs/controlpanel/warning.png",
+				"icon":"pngs/warning.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_AppPanel,
 			},
 			"info": {
 				"label":"ECU Info",
-				"icon":"pngs/controlpanel/info.png",
+				"icon":"pngs/info.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_InfoPanel,
 			},
