@@ -53,8 +53,7 @@ class HondaECU_ControlPanel(wx.Frame):
 	def __init__(self):
 		self.run = True
 		self.active_ftdi_device = None
-		self.ftdi_devices = {}
-		self.ecuinfo = {}
+		self.__clear_data()
 
 		if getattr(sys, 'frozen', False):
 			self.basepath = sys._MEIPASS
@@ -66,23 +65,26 @@ class HondaECU_ControlPanel(wx.Frame):
 				"icon":"pngs/download.png",
 				"conflicts":["write"],
 				"panel":HondaECU_AppPanel,
+				"disabled": True,
 			},
 			"tune": {
 				"label":"Tune",
 				"icon":"pngs/spanner.png",
 				"panel":HondaECU_AppPanel,
+				"disabled": True,
 			},
 			"write": {
 				"label":"Write ECU",
 				"icon":"pngs/upload.png",
 				"conflicts":["read"],
 				"panel":HondaECU_AppPanel,
+				"disabled": True,
 			},
 			"data": {
 				"label":"Data Logging",
 				"icon":"pngs/chart.png",
 				"conflicts":["read","write"],
-				"panel":HondaECU_AppPanel,
+				"panel":HondaECU_DatalogPanel,
 			},
 			"dtc": {
 				"label":"Trouble Codes",
@@ -132,6 +134,8 @@ class HondaECU_ControlPanel(wx.Frame):
 		for a,d in self.apps.items():
 			icon = wx.Image(os.path.join(self.basepath, d["icon"]), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 			self.appbuttons[a] = HondaECU_AppButton(a, self.wrappanel, wx.ID_ANY, icon, label=d["label"])
+			if "disabled" in d and d["disabled"]:
+				self.appbuttons[a].Disable()
 			wrapsizer.Add(self.appbuttons[a], 0)
 			self.Bind(wx.EVT_BUTTON, self.OnAppButtonClicked, self.appbuttons[a])
 		self.wrappanel.SetSizer(wrapsizer)
@@ -155,9 +159,17 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.Center()
 		self.Show()
 
+	def __clear_data(self):
+		self.ftdi_devices = {}
+		self.ecuinfo = {}
+
 	def KlineWorkerHandler(self, info, value):
 		if info in ["ecmid","flashcount","dtc","dtccount"]:
 			self.ecuinfo[info] = value
+		elif info == "data":
+			if not info in self.ecuinfo:
+				self.ecuinfo[info] = {}
+			self.ecuinfo[info][value[0]] = value[1:]
 
 	def OnClose(self, event):
 		self.run = False
@@ -186,6 +198,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				if serial == self.active_ftdi_device:
 					dispatcher.send(signal="FTDIDevice", sender=self, action="deactivate", vendor=vendor, product=product, serial=serial)
 					self.active_ftdi_device = None
+					self.__clear_data()
 				del self.ftdi_devices[serial]
 				dirty = True
 		if len(self.ftdi_devices) > 0:
@@ -212,6 +225,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		if s != self.active_ftdi_device:
 			if self.active_ftdi_device != None:
 				dispatcher.send(signal="FTDIDevice", sender=self, action="deactivate", vendor=self.ftdi_devices[self.active_ftdi_device], product=self.ftdi_devices[self.active_ftdi_device], serial=self.active_ftdi_device)
+			self.__clear_data()
 			self.active_ftdi_device = s
 			dispatcher.send(signal="FTDIDevice", sender=self, action="activate", vendor=self.ftdi_devices[self.active_ftdi_device], product=self.ftdi_devices[self.active_ftdi_device], serial=self.active_ftdi_device)
 			self.statusbar.SetStatusText("%s : %s : %s" % (self.ftdi_devices[self.active_ftdi_device][0], self.ftdi_devices[self.active_ftdi_device][1], self.active_ftdi_device), 0)

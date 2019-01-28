@@ -42,6 +42,7 @@ class KlineWorker(Thread):
 		self.__clear_data()
 		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 		dispatcher.connect(self.ErrorPanelHandler, signal="ErrorPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.DatalogPanelHandler, signal="DatalogPanel", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -63,8 +64,16 @@ class KlineWorker(Thread):
 		self.clear_codes = False
 		self.flashcount = -1
 		self.dtccount = -1
+		self.update_tables = False
+		self.tables = None
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+
+	def DatalogPanelHandler(self, action):
+		if action == "data.on":
+			self.update_tables = True
+		elif action == "data.off":
+			self.update_tables = False
 
 	def ErrorPanelHandler(self, action):
 		if action == "dtc.clear":
@@ -149,6 +158,22 @@ class KlineWorker(Thread):
 								if self.errorcodes != errorcodes:
 									self.errorcodes = errorcodes
 									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="dtc", value=self.errorcodes)
+							if not self.tables:
+								tables = self.ecu.probe_tables()
+								if len(tables) > 0:
+									self.tables = tables
+									tables = " ".join([hex(x) for x in self.tables.keys()])
+									# print("HDS tables: %s" % tables)
+									for t, d in self.tables.items():
+										wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="data", value=(t,d[0],d[1]))
+							else:
+								if self.update_tables:
+									for t in self.tables:
+										info = self.ecu.send_command([0x72], [0x71, t])
+										if info:
+											if info[3] > 2:
+												self.tables[t] = [info[3],info[2]]
+												wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="data", value=(t,info[3],info[2]))
 						else:
 							self.state = 0
 				except FtdiError:
