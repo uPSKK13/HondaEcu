@@ -7,7 +7,6 @@ from pylibftdi import FtdiError
 def Main():
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--output', default=None, help="log output file")
-	parser.add_argument('--debug', action='store_true', help="turn on debugging output")
 	args = parser.parse_args()
 
 	if args.output == None:
@@ -16,11 +15,9 @@ def Main():
 		args.output = open(args.output,"w")
 
 	skip_header = False
-
-	if args.debug:
-		ecu = HondaECU()
-	else:
-		ecu = HondaECU(dprint=lambda x: False)
+	table = None
+	start = None
+	ecu = HondaECU()
 	while True:
 		state, _ = ecu.detect_ecu_state_new()
 		if state == 1:
@@ -36,9 +33,8 @@ def Main():
 				]
 				u = ">H12BHB"
 				h = header
-				table = None
 				for t in [0x10,0x11,0x17]:
-					info = ecu.send_command([0x72], [0x71, t], debug=args.debug)
+					info = ecu.send_command([0x72], [0x71, t])
 					if info and len(info[2][2:]) > 0:
 						table = t
 						break
@@ -51,7 +47,7 @@ def Main():
 				start = time.time()
 				skip_header = True
 			while True:
-				info = ecu.send_command([0x72], [0x71, table], debug=args.debug)
+				info = ecu.send_command([0x72], [0x71, table])
 				now = time.time() - start
 				if info and len(info[2][2:]) > 0:
 					data = list(struct.unpack(u, info[2][2:]))
