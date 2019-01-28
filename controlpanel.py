@@ -102,7 +102,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		wx.Frame.__init__(self, None, title="HondaECU :: Control Panel", style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500,300))
 
 		ib = wx.IconBundle()
-		ib.AddIcon(os.path.join(self.basepath,"images/honda.ico"))
+		ib.AddIcon(os.path.join(self.basepath,"honda.ico"))
 		self.SetIcons(ib)
 
 		self.menubar = wx.MenuBar()
