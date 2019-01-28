@@ -270,7 +270,7 @@ class HondaECU(object):
 						rdata = resp[(ml+1):-1]
 						return (rmtype, rml, rdata, rdl)
 					else:
-						print("shit")
+						return None
 			r += 1
 
 	def detect_ecu_state_new(self):

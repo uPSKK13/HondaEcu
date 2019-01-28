@@ -102,6 +102,8 @@ class KlineWorker(Thread):
 								if info:
 									self.flashcount = int(info[2][4])
 									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+						else:
+							self.state = 0
 				except FtdiError:
 					pass
 				except AttributeError:
