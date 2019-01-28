@@ -63,7 +63,7 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		infopsizer.Add(self.flashcount, pos=(3,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		self.infop.SetSizer(infopsizer)
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
-		self.mainsizer.Add(self.infop, 0, wx.ALL, border=20)
+		self.mainsizer.Add(self.infop, 1, wx.EXPAND|wx.ALL, border=20)
 		self.SetSizer(self.mainsizer)
 		self.Layout()
 		self.mainsizer.Fit(self)
