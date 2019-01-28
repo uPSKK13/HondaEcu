@@ -169,8 +169,11 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
 	def Build(self):
 		self.datap = wx.Panel(self)
-		self.datapsizer = wx.GridBagSizer()
-		self.init = False
+
+		self.d1pbox = wx.Panel(self)
+		self.d1p = wx.Panel(self.d1pbox)
+		self.d1psizer = wx.GridBagSizer()
+		self.maintable = None
 		self.sensors = {
 			"Engine speed": [None,None,None,"rpm",0,True],
 			"TPS sensor": [None,None,None,"°",2,True],
@@ -185,14 +188,13 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 			"IACV command": [None,None,None,"",16,True],
 		}
 		for i,l in enumerate(self.sensors.keys()):
-			self.sensors[l][0] = wx.StaticText(self.datap, label="%s:" % l)
-			self.sensors[l][1] = wx.StaticText(self.datap, label="---")
-			self.sensors[l][2] = wx.StaticText(self.datap, label=self.sensors[l][3])
-			self.datapsizer.Add(self.sensors[l][0], pos=(i,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
-			self.datapsizer.Add(self.sensors[l][1], pos=(i,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
-			self.datapsizer.Add(self.sensors[l][2], pos=(i,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL, border=5)
+			self.sensors[l][0] = wx.StaticText(self.d1p, label="%s:" % l)
+			self.sensors[l][1] = wx.StaticText(self.d1p, label="---")
+			self.sensors[l][2] = wx.StaticText(self.d1p, label=self.sensors[l][3])
+			self.d1psizer.Add(self.sensors[l][0], pos=(i,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
+			self.d1psizer.Add(self.sensors[l][1], pos=(i,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
+			self.d1psizer.Add(self.sensors[l][2], pos=(i,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL, border=5)
 		if "data" in self.parent.ecuinfo:
-			self.init = True
 			u = ">H12BHB"
 			if not 0x11 in self.parent.ecuinfo["data"]:
 				for s in ["IACV pulse count","IACV command"]:
@@ -221,8 +223,21 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					for s in self.sensors:
 						if self.sensors[s][5]:
 							self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
+					self.maintable = t
+					break
+		self.d1p.SetSizer(self.d1psizer)
 
+		mt = "0x%x" % 0x11
+		if not self.maintable is None:
+			mt = "0x%x" % self.maintable
+		self.d1pboxsizer = wx.StaticBoxSizer(wx.VERTICAL, self.d1pbox, "Table " + mt)
+		self.d1pboxsizer.Add(self.d1p, 0, wx.ALL, border=10)
+		self.d1pbox.SetSizer(self.d1pboxsizer)
+
+		self.datapsizer = wx.GridBagSizer()
+		self.datapsizer.Add(self.d1pbox, pos=(0,0), flag=wx.ALL, border=10)
 		self.datap.SetSizer(self.datapsizer)
+
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
 		self.mainsizer.Add(self.datap, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
@@ -240,6 +255,15 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 			t = value[0]
 			d = value[2][2:]
 			if t in [0x10,0x11,0x17]:
+				if self.maintable is None and t != 0x11:
+					for s in ["IACV pulse count","IACV command"]:
+						self.sensors[s][0].Hide()
+						self.sensors[s][1].Hide()
+						self.sensors[s][2].Hide()
+						self.sensors[s][5] = False
+					self.maintable = t
+					mt = "0x%x" % self.maintable
+					self.d1pboxsizer.SetLabel(mt)
 				u = ">H12BHB"
 				if t == 0x11:
 					u += "BH"
