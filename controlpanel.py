@@ -54,18 +54,48 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.run = True
 		self.active_ftdi_device = None
 		self.ftdi_devices = {}
+		self.ecuinfo = {}
 
 		if getattr(sys, 'frozen', False):
 			self.basepath = sys._MEIPASS
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
 		self.apps = {
-			"read": {"label":"Read ECU", "icon":"pngs/controlpanel/download.png","conflicts":["write"]},
-			"tune": {"label":"Tune", "icon":"pngs/controlpanel/spanner.png"},
-			"write": {"label":"Write ECU", "icon":"pngs/controlpanel/upload.png","conflicts":["read"]},
-			"data": {"label":"Data Logging", "icon":"pngs/controlpanel/chart.png","conflicts":["read","write"]},
-			"dtc": {"label":"Trouble Codes", "icon":"pngs/controlpanel/warning.png","conflicts":["read","write"]},
-			"info": {"label":"ECU Info", "icon":"pngs/controlpanel/info.png","conflicts":["read","write"]},
+			"read": {
+				"label":"Read ECU",
+				"icon":"pngs/controlpanel/download.png",
+				"conflicts":["write"],
+				"panel":HondaECU_AppPanel,
+			},
+			"tune": {
+				"label":"Tune",
+				"icon":"pngs/controlpanel/spanner.png",
+				"panel":HondaECU_AppPanel,
+			},
+			"write": {
+				"label":"Write ECU",
+				"icon":"pngs/controlpanel/upload.png",
+				"conflicts":["read"],
+				"panel":HondaECU_AppPanel,
+			},
+			"data": {
+				"label":"Data Logging",
+				"icon":"pngs/controlpanel/chart.png",
+				"conflicts":["read","write"],
+				"panel":HondaECU_AppPanel,
+			},
+			"dtc": {
+				"label":"Trouble Codes",
+				"icon":"pngs/controlpanel/warning.png",
+				"conflicts":["read","write"],
+				"panel":HondaECU_AppPanel,
+			},
+			"info": {
+				"label":"ECU Info",
+				"icon":"pngs/controlpanel/info.png",
+				"conflicts":["read","write"],
+				"panel":HondaECU_InfoPanel,
+			},
 		}
 		self.appanels = {}
 
@@ -112,6 +142,7 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
 		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
 		dispatcher.connect(self.ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
@@ -123,6 +154,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		mainsizer.Fit(self)
 		self.Center()
 		self.Show()
+
+	def KlineWorkerHandler(self, info, value):
+		if info in ["ecmid","flashcount"]:
+			self.ecuinfo[info] = value
 
 	def OnClose(self, event):
 		self.run = False
@@ -136,7 +171,7 @@ class HondaECU_ControlPanel(wx.Frame):
 	def OnAppButtonClicked(self, event):
 		b = event.GetEventObject()
 		if not b.appid in self.appanels:
-			self.appanels[b.appid] = HondaECU_AppPanel(self, b.appid, self.apps[b.appid])
+			self.appanels[b.appid] = self.apps[b.appid]["panel"](self, b.appid, self.apps[b.appid])
 			self.appbuttons[b.appid].Disable()
 		self.appanels[b.appid].Raise()
 

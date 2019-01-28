@@ -53,6 +53,8 @@ class KlineWorker(Thread):
 		self.ecu = None
 		self.ready = False
 		self.state = 0
+		self.ecmid = None
+		self.flashcount = -1
 
 	def update_state(self):
 		state, status = self.ecu.detect_ecu_state_new()
@@ -90,7 +92,16 @@ class KlineWorker(Thread):
 						self.update_state()
 					else:
 						if self.ecu.ping():
-							pass
+							if not self.ecmid:
+								info = self.ecu.send_command([0x72], [0x71, 0x00])
+								if info:
+									self.ecmid = info[2][2:7]
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
+							if self.flashcount < 0:
+								info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03])
+								if info:
+									self.flashcount = int(info[2][4])
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
 				except FtdiError:
 					pass
 				except AttributeError:
