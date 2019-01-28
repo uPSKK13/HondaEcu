@@ -233,6 +233,7 @@ class HondaECU_ControlPanel(wx.Frame):
 	def OnClose(self, event):
 		self.run = False
 		self.usbmonitor.join()
+		self.klineworker.join()
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
