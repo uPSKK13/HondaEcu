@@ -1,4 +1,5 @@
 import wx
+from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from pydispatch import dispatcher
 from ecu import ECM_IDs
 
@@ -91,3 +92,33 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 			self.flashcount.SetLabel(flashcount)
 			self.Layout()
 			self.mainsizer.Fit(self)
+
+class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
+	def __init__(self, parent, ID, pos=wx.DefaultPosition,
+				 size=wx.DefaultSize, style=0):
+		wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
+		ListCtrlAutoWidthMixin.__init__(self)
+		self.setResizeColumn(2)
+
+class HondaECU_ErrorPanel(HondaECU_AppPanel):
+
+	def Build(self):
+		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT|wx.LC_HRULES)
+		self.errorlist.InsertColumn(1,"DTC",format=wx.LIST_FORMAT_CENTER,width=50)
+		self.errorlist.InsertColumn(2,"Description",format=wx.LIST_FORMAT_CENTER,width=-1)
+		self.errorlist.InsertColumn(3,"Occurance",format=wx.LIST_FORMAT_CENTER,width=80)
+
+		self.resetbutton = wx.Button(self, label="Clear Codes")
+		self.resetbutton.Disable()
+
+		self.errorsizer = wx.BoxSizer(wx.VERTICAL)
+		self.errorsizer.Add(self.errorlist, 1, flag=wx.EXPAND|wx.ALL, border=10)
+		self.errorsizer.Add(self.resetbutton, 0, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.RIGHT, border=10)
+		self.SetSizer(self.errorsizer)
+
+		self.Bind(wx.EVT_BUTTON, self.OnClearCodes)
+
+	def OnClearCodes(self, event):
+		self.resetbutton.Disable()
+		self.errorlist.DeleteAllItems()
+		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="cleardtc")

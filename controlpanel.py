@@ -88,7 +88,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				"label":"Trouble Codes",
 				"icon":"pngs/warning.png",
 				"conflicts":["read","write"],
-				"panel":HondaECU_AppPanel,
+				"panel":HondaECU_ErrorPanel,
 			},
 			"info": {
 				"label":"ECU Info",
