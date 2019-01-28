@@ -1,7 +1,7 @@
 import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from pydispatch import dispatcher
-from ecu import ECM_IDs
+from ecu import ECM_IDs, DTC
 
 class HondaECU_AppPanel(wx.Frame):
 
@@ -118,7 +118,28 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 
 		self.Bind(wx.EVT_BUTTON, self.OnClearCodes)
 
+		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.on")
+
+	def OnClose(self, event):
+		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.off")
+		HondaECU_AppPanel.OnClose(self, event)
+
 	def OnClearCodes(self, event):
 		self.resetbutton.Disable()
 		self.errorlist.DeleteAllItems()
-		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="cleardtc")
+		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.clear")
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "dtccount":
+			if value > 0:
+				self.resetbutton.Enable(True)
+			else:
+				self.resetbutton.Enable(False)
+				self.errorlist.DeleteAllItems()
+		elif info == "dtc":
+			self.errorlist.DeleteAllItems()
+			self.Layout()
+			for code in value[hex(0x74)]:
+				self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
+			for code in value[hex(0x73)]:
+				self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])

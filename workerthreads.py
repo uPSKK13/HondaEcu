@@ -41,6 +41,7 @@ class KlineWorker(Thread):
 		self.parent = parent
 		self.__clear_data()
 		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
+		dispatcher.connect(self.ErrorPanelHandler, signal="ErrorPanel", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -54,14 +55,24 @@ class KlineWorker(Thread):
 		self.ready = False
 		self.state = 0
 		self.reset_state()
-		self.ecmid = bytearray()
-		self.flashcount = -1
 
 	def reset_state(self):
 		self.ecmid = bytearray()
+		self.errorcodes = {}
+		self.update_errors = False
+		self.clear_codes = False
 		self.flashcount = -1
+		self.dtccount = -1
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+
+	def ErrorPanelHandler(self, action):
+		if action == "dtc.clear":
+			self.clear_codes = True
+		elif action == "dtc.on":
+			self.update_errors = True
+		elif action == "dtc.off":
+			self.update_errors = False
 
 	def update_state(self):
 		state, status = self.ecu.detect_ecu_state_new()
@@ -106,6 +117,38 @@ class KlineWorker(Thread):
 								if info:
 									self.flashcount = int(info[2][4])
 									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+							while self.clear_codes:
+								info = self.ecu.send_command([0x72],[0x60, 0x03])
+								if info:
+									if info[2][1] == 0x00:
+										self.dtccount = -1
+										self.errorcodes = {}
+										self.clear_codes = False
+								else:
+									self.dtccount = -1
+									self.errorcodes = {}
+									self.clear_codes = False
+							if self.update_errors or self.dtccount < 0:
+								errorcodes = {}
+								for type in [0x74,0x73]:
+									errorcodes[hex(type)] = []
+									for i in range(1,0x0c):
+										info = self.ecu.send_command([0x72],[type, i])
+										if info:
+											for j in [3,5,7]:
+												if info[2][j] != 0:
+													errorcodes[hex(type)].append("%02d-%02d" % (info[2][j],info[2][j+1]))
+											if info[2] == 0:
+												break
+										else:
+											break
+								dtccount = sum([len(c) for c in errorcodes.values()])
+								if self.dtccount != dtccount:
+									self.dtccount = dtccount
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="dtccount", value=self.dtccount)
+								if self.errorcodes != errorcodes:
+									self.errorcodes = errorcodes
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="dtc", value=self.errorcodes)
 						else:
 							self.state = 0
 				except FtdiError:
