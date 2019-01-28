@@ -48,6 +48,59 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 			dc.DrawBitmap(bmp, (width-bw)/2, (height-bh-th-4)/2, hasMask)
 		dc.DrawText(label, (width-tw)/2, (height+bh-th+4)/2)
 
+class HondaECU_LogPanel(wx.Frame):
+
+	def __init__(self, parent):
+		self.auto = True
+		wx.Frame.__init__(self, parent, title="HondaECU :: Debug Log", size=(640,480))
+		self.SetMinSize((640,480))
+
+		self.menubar = wx.MenuBar()
+		self.SetMenuBar(self.menubar)
+		fileMenu = wx.Menu()
+		self.menubar.Append(fileMenu, '&File')
+		saveItem = wx.MenuItem(fileMenu, wx.ID_SAVEAS, '&Save As\tCtrl+S')
+		self.Bind(wx.EVT_MENU, self.OnSave, saveItem)
+		fileMenu.Append(saveItem)
+		fileMenu.AppendSeparator()
+		quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
+		self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
+		fileMenu.Append(quitItem)
+		viewMenu = wx.Menu()
+		self.menubar.Append(viewMenu, '&View')
+		self.autoscrollItem = viewMenu.AppendCheckItem(wx.ID_ANY, 'Auto scroll log')
+		self.autoscrollItem.Check()
+		self.logText = wx.TextCtrl(self, style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+		sizer = wx.BoxSizer(wx.VERTICAL)
+		sizer.Add(self.logText, 1, wx.EXPAND|wx.ALL, 5)
+		self.SetSizer(sizer)
+		self.Bind(wx.EVT_CLOSE, self.OnClose)
+		self.Layout()
+		sizer.Fit(self)
+		self.Center()
+
+		wx.CallAfter(dispatcher.connect, self.ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
+
+	def OnSave(self, event):
+		with wx.FileDialog(self, "Save debug log", wildcard="Debug log files (*.txt)|*.txt", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+			if fileDialog.ShowModal() == wx.ID_CANCEL:
+				return
+			pathname = fileDialog.GetPath()
+			try:
+				with open(pathname, 'w') as file:
+					file.write(self.logText.GetValue())
+			except IOError:
+				print("Cannot save current data in file '%s'." % pathname)
+
+	def OnClose(self, event):
+		self.Hide()
+
+	def ECUDebugHandler(self, msg):
+		if self.autoscrollItem.IsChecked():
+			wx.CallAfter(self.logText.AppendText, msg+"\n")
+		else:
+			wx.CallAfter(self.logText.WriteText, msg+"\n")
+
 class HondaECU_ControlPanel(wx.Frame):
 
 	def __init__(self):
@@ -120,6 +173,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		fileMenu.Append(quitItem)
 		helpMenu = wx.Menu()
 		self.menubar.Append(helpMenu, '&Help')
+		debugItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Show debug log')
+		self.Bind(wx.EVT_MENU, self.OnDebug, debugItem)
+		helpMenu.Append(debugItem)
+		helpMenu.AppendSeparator()
 		aboutItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'About')
 		self.Bind(wx.EVT_MENU, self.OnAbout, aboutItem)
 		helpMenu.Append(aboutItem)
@@ -145,20 +202,22 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.SetSizer(mainsizer)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+		self.debuglog = HondaECU_LogPanel(self)
+
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
 		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
-		dispatcher.connect(self.ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
-		self.usbmonitor.start()
 		self.klineworker = KlineWorker(self)
-		self.klineworker.start()
 
 		self.Layout()
 		mainsizer.Fit(self)
 		self.Center()
 		self.Show()
+
+		self.usbmonitor.start()
+		self.klineworker.start()
 
 	def __clear_data(self):
 		self.ecuinfo = {}
@@ -179,6 +238,9 @@ class HondaECU_ControlPanel(wx.Frame):
 
 	def OnAbout(self, event):
 		pass
+
+	def OnDebug(self, event):
+		self.debuglog.Show()
 
 	def OnAppButtonClicked(self, event):
 		b = event.GetEventObject()
@@ -235,9 +297,6 @@ class HondaECU_ControlPanel(wx.Frame):
 			if appid in self.appanels:
 				del self.appanels[appid]
 				self.appbuttons[appid].Enable()
-
-	def ECUDebugHandler(self, msg):
-		pass#print(msg)
 
 if __name__ == '__main__':
 
