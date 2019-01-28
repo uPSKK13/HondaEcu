@@ -53,6 +53,7 @@ class HondaECU_ControlPanel(wx.Frame):
 	def __init__(self):
 		self.run = True
 		self.active_ftdi_device = None
+		self.ftdi_devices = {}
 		self.__clear_data()
 
 		if getattr(sys, 'frozen', False):
@@ -160,7 +161,6 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.Show()
 
 	def __clear_data(self):
-		self.ftdi_devices = {}
 		self.ecuinfo = {}
 
 	def KlineWorkerHandler(self, info, value):

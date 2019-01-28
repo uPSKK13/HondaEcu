@@ -13,6 +13,7 @@ class HondaECU_AppPanel(wx.Frame):
 		self.appinfo = appinfo
 		self.Build()
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		self.Center()
 		self.Show()
@@ -22,6 +23,9 @@ class HondaECU_AppPanel(wx.Frame):
 		self.Destroy()
 
 	def KlineWorkerHandler(self, info, value):
+		pass
+
+	def DeviceHandler(self, action, vendor, product, serial):
 		pass
 
 	def Build(self):
@@ -227,7 +231,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					break
 		self.d1p.SetSizer(self.d1psizer)
 
-		mt = "0x%x" % 0x11
+		mt = "0x??"
 		if not self.maintable is None:
 			mt = "0x%x" % self.maintable
 		self.d1pboxsizer = wx.StaticBoxSizer(wx.VERTICAL, self.d1pbox, "Table " + mt)
@@ -255,15 +259,16 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 			t = value[0]
 			d = value[2][2:]
 			if t in [0x10,0x11,0x17]:
-				if self.maintable is None and t != 0x11:
-					for s in ["IACV pulse count","IACV command"]:
-						self.sensors[s][0].Hide()
-						self.sensors[s][1].Hide()
-						self.sensors[s][2].Hide()
-						self.sensors[s][5] = False
+				if self.maintable is None:
+					if t != 0x11:
+						for s in ["IACV pulse count","IACV command"]:
+							self.sensors[s][0].Hide()
+							self.sensors[s][1].Hide()
+							self.sensors[s][2].Hide()
+							self.sensors[s][5] = False
 					self.maintable = t
 					mt = "0x%x" % self.maintable
-					self.d1pboxsizer.SetLabel(mt)
+					self.d1pboxsizer.GetStaticBox().SetLabel("Table " + mt)
 				u = ">H12BHB"
 				if t == 0x11:
 					u += "BH"
@@ -284,5 +289,14 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				for s in self.sensors:
 					if self.sensors[s][5]:
 						self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
+			self.Layout()
+			self.mainsizer.Fit(self)
+
+	def DeviceHandler(self, action, vendor, product, serial):
+		if action == "deactivate":
+			for s in self.sensors:
+				if self.sensors[s][5]:
+					self.sensors[s][1].SetLabel("---")
+			self.d1pboxsizer.GetStaticBox().SetLabel("Table 0x??")
 			self.Layout()
 			self.mainsizer.Fit(self)
