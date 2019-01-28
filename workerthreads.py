@@ -64,15 +64,11 @@ class KlineWorker(Thread):
 
 	def DeviceHandler(self, action, vendor, product, serial):
 		if action == "interrupt":
-			pass
-			# self.flash_mode = -1
-			# self.update_state()
+			raise Exception()
 		elif action == "deactivate":
 			if self.ecu:
-				# print("Deactivating device (%s : %s : %s)" % (vendor, product, serial))
 				self.__cleanup()
 		elif action == "activate":
-			# print("Activating device (%s : %s : %s)" % (vendor, product, serial))
 			self.__clear_data()
 			try:
 				self.ecu = HondaECU(device_id=serial)
