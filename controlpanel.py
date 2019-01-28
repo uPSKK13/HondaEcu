@@ -223,7 +223,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				self.appbuttons[appid].Enable()
 
 	def ECUDebugHandler(self, msg):
-		print(msg)
+		pass#print(msg)
 
 if __name__ == '__main__':
 

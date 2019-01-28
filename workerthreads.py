@@ -53,8 +53,14 @@ class KlineWorker(Thread):
 		self.ecu = None
 		self.ready = False
 		self.state = 0
-		self.ecmid = None
+		self.ecmid = bytearray()
 		self.flashcount = -1
+
+	def reset_state(self):
+		self.ecmid = bytearray()
+		self.flashcount = -1
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
 
 	def update_state(self):
 		state, status = self.ecu.detect_ecu_state_new()
@@ -84,6 +90,7 @@ class KlineWorker(Thread):
 			else:
 				try:
 					if self.state == 0:
+						self.reset_state()
 						time.sleep(.250)
 						self.update_state()
 					else:
