@@ -53,6 +53,7 @@ class KlineWorker(Thread):
 		self.ecu = None
 		self.ready = False
 		self.state = 0
+		self.reset_state()
 		self.ecmid = bytearray()
 		self.flashcount = -1
 
