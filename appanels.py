@@ -116,6 +116,14 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 		self.errorsizer.Add(self.resetbutton, 0, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.RIGHT, border=10)
 		self.SetSizer(self.errorsizer)
 
+		if "dtccount" in self.parent.ecuinfo and self.parent.ecuinfo["dtccount"] > 0:
+			self.resetbutton.Enable(True)
+		if "dtc" in self.parent.ecuinfo:
+			for code in self.parent.ecuinfo["dtc"][hex(0x74)]:
+				self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
+			for code in self.parent.ecuinfo["dtc"][hex(0x73)]:
+				self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
+
 		self.Bind(wx.EVT_BUTTON, self.OnClearCodes)
 
 		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.on")
@@ -138,8 +146,8 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 				self.errorlist.DeleteAllItems()
 		elif info == "dtc":
 			self.errorlist.DeleteAllItems()
-			self.Layout()
 			for code in value[hex(0x74)]:
 				self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
 			for code in value[hex(0x73)]:
 				self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
+			self.Layout()
