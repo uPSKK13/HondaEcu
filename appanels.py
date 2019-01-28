@@ -108,14 +108,15 @@ class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
 class HondaECU_ErrorPanel(HondaECU_AppPanel):
 
 	def Build(self):
+		self.SetMinSize((400,250))
 		self.errorp = wx.Panel(self)
 
-		self.errorlist = ErrorListCtrl(self, wx.ID_ANY, style=wx.LC_REPORT|wx.LC_HRULES)
+		self.errorlist = ErrorListCtrl(self.errorp, wx.ID_ANY, style=wx.LC_REPORT|wx.LC_HRULES)
 		self.errorlist.InsertColumn(1,"DTC",format=wx.LIST_FORMAT_CENTER,width=50)
 		self.errorlist.InsertColumn(2,"Description",format=wx.LIST_FORMAT_CENTER,width=-1)
 		self.errorlist.InsertColumn(3,"Occurance",format=wx.LIST_FORMAT_CENTER,width=80)
 
-		self.resetbutton = wx.Button(self, label="Clear Codes")
+		self.resetbutton = wx.Button(self.errorp, label="Clear Codes")
 		self.resetbutton.Disable()
 
 		self.errorsizer = wx.BoxSizer(wx.VERTICAL)
