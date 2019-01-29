@@ -19,8 +19,8 @@ def Main():
 	start = None
 	ecu = HondaECU()
 	while True:
-		state, _ = ecu.detect_ecu_state_new()
-		if state == 1:
+		state = ecu.detect_ecu_state_new()
+		if state == ECUSTATE.OK:
 			if not skip_header:
 				header = [
 					"time","engine_speed",
