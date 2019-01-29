@@ -3,7 +3,7 @@ import time
 import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from pydispatch import dispatcher
-from ecu import ECM_IDs, DTC
+from ecu import ECM_IDs, DTC, ECUSTATE
 
 class HondaECU_AppPanel(wx.Frame):
 
@@ -306,6 +306,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 	def __init__(self, *args, **kwargs):
+		self.bootwait = False
 		kwargs["style"] = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
 		HondaECU_AppPanel.__init__(self, *args, **kwargs)
 		self.SetInitialSize((500,200))
@@ -365,11 +366,23 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 			self.statusbar.SetStatusText("Read " + value[1], 0)
 		elif info == "read.result":
 			self.statusbar.SetStatusText("Read complete (result=%s)" % value, 0)
+		elif info == "state":
+			if value == ECUSTATE.OFF:
+				if self.bootwait:
+					self.statusbar.SetStatusText("Turn on ECU!", 0)
+		elif info == "password":
+			if value:
+				self.bootwait = False
+			else:
+				print("shit")
 
 	def OnGo(self, event):
 		offset = int(self.offset.GetValue(), 16)
 		data = self.readfpicker.GetPath()
 		self.gobutton.Disable()
+		if self.parent.ecuinfo["state"] != ECUSTATE.READ:
+			self.bootwait = True
+			self.statusbar.SetStatusText("Turn off ECU!", 0)
 		dispatcher.send(signal="ReadPanel", sender=self, data=data, offset=offset)
 
 	def OnValidateMode(self, event):

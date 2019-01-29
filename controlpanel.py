@@ -222,7 +222,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.ecuinfo = {}
 
 	def KlineWorkerHandler(self, info, value):
-		if info in ["ecmid","flashcount","dtc","dtccount"]:
+		if info in ["ecmid","flashcount","dtc","dtccount","state"]:
 			self.ecuinfo[info] = value
 		elif info == "data":
 			if not info in self.ecuinfo:

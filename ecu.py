@@ -10,32 +10,18 @@ import os
 import math
 import code
 from pydispatch import dispatcher
+from enum import Enum
 
-ECUSTATES = [
-	"unknown",
-	"ok",
-	"recover.old",
-	"recover.new",
-	"write.init",
-	"write.good",
-	"write.bad",
-	"read",
-]
-def lookup_ecu_state(state):
-	return ECUSTATES.index(state), state
-
-ECUSTATES = [
-	"unknown",
-	"ok",
-	"recover.old",
-	"recover.new",
-	"write.init",
-	"write.good",
-	"write.bad",
-	"read",
-]
-def lookup_ecu_state(state):
-	return ECUSTATES.index(state), state
+class ECUSTATE(Enum):
+	UNKNOWN = -1
+	OFF = 0
+	OK = 1
+	RECOVER_OLD = 2
+	RECOVER_NEW = 3
+	WRITE_INIT = 4
+	WRITE_GOOD = 5
+	WRITE_BAD = 6
+	READ = 7
 
 ECM_IDs = {
 	b"\x01\x00\x2b\x01\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-D21","checksum":"0x3fff8"},
@@ -281,91 +267,26 @@ class HondaECU(object):
 			t0 = self.send_command([0x72], [0x71, 0x00], retries=0)
 		if not t0 is None:
 			if bytes(t0[2][5:7]) != b"\x00\x00":
-				return lookup_ecu_state("ok")
+				return ECUSTATE.OK
 			else:
 				if self.send_command([0x7d], [0x01, 0x01, 0x00], retries=0):
-					return lookup_ecu_state("recover.old")
+					return ECUSTATE.RECOVER_OLD
 				if self.send_command([0x7b], [0x00, 0x01, 0x01], retries=0):
-					return lookup_ecu_state("recover.new")
+					return ECUSTATE.RECOVER_NEW
 		else:
 			writestatus = self.send_command([0x7e], [0x01, 0x01, 0x00], retries=0)
 			if not writestatus is None:
 				if writestatus[2][1] == 0x0f:
-					return lookup_ecu_state("write.good")
+					return ECUSTATE.WRITE_GOOD
 				elif writestatus[2][1] < 0x30:
-					return lookup_ecu_state("write.init")
+					return ECUSTATE.WRITE_INIT
 				else:
-					return lookup_ecu_state("write.bad")
+					return ECUSTATE.WRITE_BAD
 			else:
 				readinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08], retries=0)
 				if not readinfo is None:
-					return lookup_ecu_state("read")
-		return lookup_ecu_state("unknown")
-
-	def detect_ecu_state(self, wakeup=False):
-		states = [
-			"unknown",				# 0
-			"ok",					# 1
-			"recover",				# 2
-			"recover (old)",		# 3
-			"init",					# 4
-			"unlock",				# 5
-			"erase",				# 6
-			"write",				# 7
-			"finalize",				# 8
-			"incomplete",			# 9
-			"reset",				# 10
-			"error",				# 11
-			"read",					# 12
-			"off",					# 13
-			"data",					# 14
-		]
-		state = 0
-		if wakeup:
-			self.wakeup()
-		if self.ping():
-			rinfo = self.send_command([0x7b], [0x00, 0x01, 0x01])
-			winfo = self.send_command([0x7d], [0x01, 0x01, 0x01])
-			table0 = self.send_command([0x72], [0x71, 0x00])
-			if winfo:
-				state = 1
-			elif rinfo:
-				state = 2
-			elif table0:
-				state = 14
-		else:
-			einfo = self.send_command([0x7e], [0x01, 0x01, 0x00])
-			if einfo:
-				if einfo[2][1] == 0x00:
-					state = 3
-				elif einfo[2][1] == 0x10:
-					state = 4
-				elif einfo[2][1] == 0x20:
-					state = 5
-				elif einfo[2][1] == 0x30:
-					state = 6
-				elif einfo[2][1] == 0x40:
-					state = 7
-				elif einfo[2][1] == 0x50:
-					state = 8
-				elif einfo[2][1] == 0x0d:
-					state = 9
-				elif einfo[2][1] == 0x0f:
-					state = 10
-				elif einfo[2][1] == 0xfa:
-					state = 11
-				else:
-					print(hex(einfo[2][1]))
-			else:
-				dinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08])
-				if dinfo:
-					state = 12
-		if state == 0:
-			if not wakeup:
-				state, _ = self.detect_ecu_state(wakeup=True)
-			elif not self.kline():
-				state = 13
-		return state, states[state]
+					return ECUSTATE.READ
+		return ECUSTATE.OFF if not self.kline() else ECUSTATE.UNKNOWN
 
 	def do_init_recover(self):
 		self.send_command([0x7b], [0x00, 0x01, 0x01])

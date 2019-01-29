@@ -57,7 +57,7 @@ class KlineWorker(Thread):
 		self.ready = False
 		self.sendpassword = False
 		self.readinfo = None
-		self.state = 0
+		self.state = ECUSTATE.UNKNOWN
 		self.reset_state()
 
 	def reset_state(self):
@@ -73,7 +73,7 @@ class KlineWorker(Thread):
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
 
 	def ReadPanelHandler(self, data, offset):
-		if self.state != 7:
+		if self.state != ECUSTATE.READ:
 			self.sendpassword = True
 		self.readinfo = [data,offset,None]
 
@@ -92,10 +92,10 @@ class KlineWorker(Thread):
 			self.update_errors = False
 
 	def update_state(self):
-		state, status = self.ecu.detect_ecu_state_new()
+		state = self.ecu.detect_ecu_state_new()
 		if state != self.state:
 			self.state = state
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=(self.state,status))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 
 	def DeviceHandler(self, action, vendor, product, serial):
 		if action == "interrupt":
@@ -145,26 +145,31 @@ class KlineWorker(Thread):
 				_, status, _ = do_validation(byts, nbyts)
 			return status
 
+	def do_unknown(self):
+		self.reset_state()
+		time.sleep(.250)
+		self.update_state()
+
 	def run(self):
 		while self.parent.run:
 			if not self.ready:
 				time.sleep(.001)
 			else:
 				try:
-					if self.state == 0:
-						self.reset_state()
-						time.sleep(.250)
-						self.update_state()
-						if self.state == 1 and self.sendpassword:
-							print(self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f]))
-							print(self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75]))
+					if self.state == ECUSTATE.UNKNOWN:
+						self.do_unknown()
+						if self.state == ECUSTATE.OK and self.sendpassword:
+							p1 = self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
+							p2 = self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
+							passok = (p1 != None) and (p2 != None)
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 							self.sendpassword = False
-					elif self.state == 7:
+					elif self.state == ECUSTATE.READ:
 						if not self.readinfo is None and self.readinfo[2] == None:
 							self.readinfo[2] = self.do_read_flash()
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.result", value=self.readinfo[2])
 						else:
-							time.sleep(.001)
+							self.do_unknown()
 					else:
 						if self.ecu.ping():
 							if not self.ecmid:
@@ -226,7 +231,7 @@ class KlineWorker(Thread):
 												self.tables[t] = [info[3],info[2]]
 												wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="data", value=(t,info[3],info[2]))
 						else:
-							self.state = 0
+							self.state = ECUSTATE.UNKNOWN
 				except FtdiError:
 					pass
 				except AttributeError:
