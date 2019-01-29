@@ -1,4 +1,4 @@
-FDTCimport sys
+import sys
 import os
 import ast
 import time

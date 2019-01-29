@@ -43,6 +43,7 @@ class KlineWorker(Thread):
 		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 		dispatcher.connect(self.ErrorPanelHandler, signal="ErrorPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.DatalogPanelHandler, signal="DatalogPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.ReadPanelHandler, signal="ReadPanel", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -54,6 +55,8 @@ class KlineWorker(Thread):
 	def __clear_data(self):
 		self.ecu = None
 		self.ready = False
+		self.sendpassword = False
+		self.readinfo = None
 		self.state = 0
 		self.reset_state()
 
@@ -68,6 +71,11 @@ class KlineWorker(Thread):
 		self.tables = None
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+
+	def ReadPanelHandler(self, data, offset):
+		if self.state != 7:
+			self.sendpassword = True
+		self.readinfo = [data,offset,None]
 
 	def DatalogPanelHandler(self, action):
 		if action == "data.on":
@@ -104,6 +112,39 @@ class KlineWorker(Thread):
 			except FtdiError:
 				pass
 
+	def do_read_flash(self):
+		readsize = 12
+		location = self.readinfo[1]
+		binfile = self.readinfo[0]
+		status = "bad"
+		with open(binfile, "wb") as fbin:
+			t = time.time()
+			size = location
+			rate = 0
+			while not self.readinfo is None:
+				info = self.ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
+				if not info:
+					readsize -= 1
+					if readsize < 1:
+						break
+				else:
+					fbin.write(info[2])
+					fbin.flush()
+					location += readsize
+					n = time.time()
+					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+					if n-t > 1:
+						rate = (location-size)/(n-t)
+						t = n
+						size = location
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+		with open(binfile, "rb") as fbin:
+			nbyts = os.path.getsize(binfile)
+			if nbyts > 0:
+				byts = bytearray(fbin.read(nbyts))
+				_, status, _ = do_validation(byts, nbyts)
+			return status
+
 	def run(self):
 		while self.parent.run:
 			if not self.ready:
@@ -114,6 +155,16 @@ class KlineWorker(Thread):
 						self.reset_state()
 						time.sleep(.250)
 						self.update_state()
+						if self.state == 1 and self.sendpassword:
+							print(self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f]))
+							print(self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75]))
+							self.sendpassword = False
+					elif self.state == 7:
+						if not self.readinfo is None and self.readinfo[2] == None:
+							self.readinfo[2] = self.do_read_flash()
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.result", value=self.readinfo[2])
+						else:
+							time.sleep(.001)
 					else:
 						if self.ecu.ping():
 							if not self.ecmid:

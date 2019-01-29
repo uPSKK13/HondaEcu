@@ -118,8 +118,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				"label":"Read ECU",
 				"icon":"pngs/download.png",
 				"conflicts":["write"],
-				"panel":HondaECU_AppPanel,
-				"disabled": True,
+				"panel":HondaECU_ReadPanel,
 			},
 			"tune": {
 				"label":"Tune",
