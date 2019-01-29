@@ -130,8 +130,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				"label":"Write ECU",
 				"icon":"pngs/upload.png",
 				"conflicts":["read"],
-				"panel":HondaECU_AppPanel,
-				"disabled": True,
+				"panel":HondaECU_WritePanel,
 			},
 			"data": {
 				"label":"Data Logging",

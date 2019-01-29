@@ -15,13 +15,16 @@ from enum import Enum
 class ECUSTATE(Enum):
 	UNKNOWN = -1
 	OFF = 0
-	OK = 1
-	RECOVER_OLD = 2
-	RECOVER_NEW = 3
-	WRITE_INIT = 4
-	WRITE_GOOD = 5
-	WRITE_BAD = 6
-	READ = 7
+	READ = 1
+	OK = 2
+	RECOVER_OLD = 3
+	RECOVER_NEW = 4
+	WRITE_INIT_OLD = 5
+	WRITE_INIT_NEW = 6
+	ERASE = 7
+	WRITE = 8
+	WRITE_GOOD = 9
+	ERROR = 10
 
 ECM_IDs = {
 	b"\x01\x00\x2b\x01\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-D21","checksum":"0x3fff8"},
@@ -278,10 +281,16 @@ class HondaECU(object):
 			if not writestatus is None:
 				if writestatus[2][1] == 0x0f:
 					return ECUSTATE.WRITE_GOOD
-				elif writestatus[2][1] < 0x30:
-					return ECUSTATE.WRITE_INIT
+				elif writestatus[2][1] == 0x10:
+					return ECUSTATE.WRITE_INIT_OLD
+				elif writestatus[2][1] == 0x20:
+					return ECUSTATE.WRITE_INIT_NEW
+				elif writestatus[2][1] == 0x30:
+					return ECUSTATE.ERASE
+				elif writestatus[2][1] == 0x40:
+					return ECUSTATE.WRITE
 				else:
-					return ECUSTATE.WRITE_BAD
+					return ECUSTATE.ERROR
 			else:
 				readinfo = self.send_command([0x82, 0x82, 0x00], [0x00, 0x00, 0x00, 0x08], retries=0)
 				if not readinfo is None:

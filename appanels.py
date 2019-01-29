@@ -1,9 +1,10 @@
 import struct
 import time
 import wx
+import os
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from pydispatch import dispatcher
-from ecu import ECM_IDs, DTC, ECUSTATE
+from ecu import ECM_IDs, DTC, ECUSTATE, do_validation
 
 class HondaECU_AppPanel(wx.Frame):
 
@@ -17,7 +18,7 @@ class HondaECU_AppPanel(wx.Frame):
 		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		self.Center()
-		self.Show()
+		wx.CallAfter(self.Show)
 
 	def OnClose(self, event):
 		dispatcher.send(signal="AppPanel", sender=self, appid=self.appid, action="close")
@@ -395,3 +396,117 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 			self.gobutton.Enable()
 		else:
 			self.gobutton.Disable()
+
+class HondaECU_WritePanel(HondaECU_AppPanel):
+
+	def __init__(self, *args, **kwargs):
+		kwargs["style"] = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
+		HondaECU_AppPanel.__init__(self, *args, **kwargs)
+		self.SetInitialSize((500,200))
+		self.byts = None
+
+	def Build(self):
+		self.statusbar = self.CreateStatusBar(1)
+		self.statusbar.SetSize((-1, 28))
+		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
+		self.SetStatusBar(self.statusbar)
+
+		self.writep = wx.Panel(self)
+		self.wfilel = wx.StaticText(self.writep, label="File")
+		self.writefpicker = wx.FilePickerCtrl(self.writep,wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+		self.wchecksuml = wx.StaticText(self.writep,label="Checksum Location")
+		self.fixchecksum = wx.CheckBox(self.writep, label="Fix")
+		self.checksum = wx.TextCtrl(self.writep)
+		self.offsetl = wx.StaticText(self.writep,label="Start Offset")
+		self.offset = wx.TextCtrl(self.writep)
+		self.offset.SetValue("0x0")
+		self.gobutton = wx.Button(self.writep, label="Start")
+		self.gobutton.Disable()
+		self.checksum.Disable()
+
+		self.optsbox = wx.BoxSizer(wx.HORIZONTAL)
+		self.optsbox.Add(self.offsetl, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+		self.optsbox.Add(self.offset, 0)
+		self.optsbox.Add(self.wchecksuml, 0, flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+		self.optsbox.Add(self.checksum, 0)
+		self.optsbox.Add(self.fixchecksum, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+
+		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
+		self.fpickerbox.Add(self.writefpicker, 1)
+
+		self.lastpulse = time.time()
+		self.progress = wx.Gauge(self.writep, size=(400,-1))
+		self.progress.SetRange(100)
+
+		self.flashpsizer = wx.GridBagSizer()
+		self.flashpsizer.Add(self.wfilel, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT, border=10)
+		self.flashpsizer.Add(self.optsbox, pos=(1,0), span=(1,6), flag=wx.TOP, border=5)
+		self.flashpsizer.Add(self.progress, pos=(2,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, border=20)
+		self.flashpsizer.Add(self.gobutton, pos=(3,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.RIGHT, border=10)
+		self.flashpsizer.AddGrowableRow(3,1)
+		self.flashpsizer.AddGrowableCol(5,1)
+		self.writep.SetSizer(self.flashpsizer)
+
+		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
+		self.mainsizer.Add(self.writep, 1, wx.EXPAND|wx.ALL, border=10)
+		self.SetSizer(self.mainsizer)
+		self.Layout()
+		self.mainsizer.Fit(self)
+
+		self.offset.Bind(wx.EVT_TEXT, self.OnValidateMode)
+		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.fixchecksum.Bind(wx.EVT_CHECKBOX, self.OnFix)
+		self.checksum.Bind(wx.EVT_TEXT, self.OnValidateMode)
+		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
+
+	def OnFix(self, event):
+		if self.fixchecksum.IsChecked():
+			self.checksum.Enable()
+		else:
+			self.checksum.Disable()
+		self.OnValidateMode(None)
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "progress":
+			if value[0]!= None and value[0] >= 0:
+				self.progress.SetValue(value[0])
+				self.statusbar.SetStatusText("Write: " + value[1], 0)
+		elif info == "write.result":
+			self.statusbar.SetStatusText("Write complete (result=%s)" % value, 0)
+
+	def OnGo(self, event):
+		offset = int(self.offset.GetValue(), 16)
+		self.gobutton.Disable()
+		dispatcher.send(signal="WritePanel", sender=self, data=self.byts, offset=offset)
+
+	def OnValidateMode(self, event):
+		offset = None
+		try:
+			offset = int(self.offset.GetValue(), 16)
+		except:
+			self.gobutton.Disable()
+			return
+		checksum = None
+		try:
+			if self.fixchecksum.IsChecked():
+				checksum = int(self.checksum.GetValue(), 16)
+			else:
+				checksum = 0
+		except:
+			self.gobutton.Disable()
+			return
+		if len(self.writefpicker.GetPath()) > 0:
+			if os.path.isfile(self.writefpicker.GetPath()):
+				fbin = open(self.writefpicker.GetPath(), "rb")
+				nbyts = os.path.getsize(self.writefpicker.GetPath())
+				byts = bytearray(fbin.read(nbyts))
+				fbin.close()
+				if checksum >= nbyts:
+					self.gobutton.Disable()
+					return
+				ret, status, self.byts = do_validation(byts, nbyts, checksum)
+				if status != "bad":
+					self.gobutton.Enable()
+					return
+		self.gobutton.Disable()
