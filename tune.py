@@ -636,24 +636,19 @@ class TablePanel(wx.Panel):
 
 class TunePanel(wx.Frame):
 
-	def __init__(self, parent, ecupn, ecmid, xdf, bin):
+	def __init__(self, parent, ecupn, xdf, binorig, binmod=None):
 		wx.Frame.__init__(self, parent)
 		self.SetMinSize((800,600))
 		self.parent = parent
 		self.ecupn = ecupn
-		self.ecmid = ecmid
 		self.xdf = xdf
-		self.bin = bin
+		self.bin = binorig
+		self.byts = binmod
 		self.currenthtf = None
-
-		fbin = open(self.bin, "rb")
-		self.nbyts = os.path.getsize(self.bin)
-		self.byts = bytearray(fbin.read(self.nbyts))
-		fbin.close()
-
-		xdftree = None
-		with open(self.xdf, "r") as fxdf:
-			xdftree = etree.fromstring(fxdf.read())
+		if self.byts == None:
+			self.byts = bytearray()
+			self.byts[:] = self.bin
+		xdftree = etree.fromstring(self.xdf)
 
 		self.mainpanel = wx.Panel(self)
 
@@ -723,16 +718,14 @@ class TunePanel(wx.Frame):
 	def doSaveData(self):
 		htf = io.BytesIO()
 		with tarfile.open(mode="w:xz",fileobj=htf) as tar_handle:
-			with open(self.xdf, "rb") as d:
-				t = tarfile.TarInfo(name=os.path.split(self.xdf)[-1])
-				t.size = os.path.getsize(self.xdf)
-				tar_handle.addfile(tarinfo=t, fileobj=d)
-			with open(self.bin, "rb") as d:
-				t = tarfile.TarInfo(name=os.path.split(self.bin)[-1]+".orig")
-				t.size = os.path.getsize(self.bin)
-				tar_handle.addfile(tarinfo=t, fileobj=d)
-			t = tarfile.TarInfo(name=os.path.split(self.bin)[-1])
-			t.size = self.nbyts
+			t = tarfile.TarInfo(name="-".join(self.ecupn.split("-")[:2])+".xdf")
+			t.size = len(self.xdf)
+			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.xdf))
+			t = tarfile.TarInfo(name=self.ecupn+".orig.bin")
+			t.size = len(self.bin)
+			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.bin))
+			t = tarfile.TarInfo(name=self.ecupn+".mod.bin")
+			t.size = len(self.byts)
 			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.byts))
 		with open(self.currenthtf,"wb") as f:
 			f.write(htf.getvalue())

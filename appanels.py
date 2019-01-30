@@ -576,17 +576,18 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.mainsizer.Fit(self)
 
 		self.Bind(wx.EVT_BUTTON, self.OnContinue, self.continueb)
+		self.Bind(wx.EVT_FILEPICKER_CHANGED, self.ValidateContinueButton, self.openpicker)
 
 	def OnContinue(self, event):
 		if self.newrp.GetValue():
 			ecupn = self.ecu.GetValue()
-			ecmid, xdf, bin = self.modeltree[self.model.GetValue()][self.year.GetValue()][ecupn]
-			dispatcher.send(signal="TunePanelHelper", sender=self, ecupn=ecupn, ecmid=ecmid, xdf=xdf, bin=bin)
+			_, xdf, bin = self.modeltree[self.model.GetValue()][self.year.GetValue()][ecupn]
+			dispatcher.send(signal="TunePanelHelper", sender=self, ecupn=ecupn, xdf=xdf, bin=bin, htf=None)
 			wx.CallAfter(self.Destroy)
 		elif self.openrp.GetValue():
-			pass
+			dispatcher.send(signal="TunePanelHelper", sender=self, ecupn=None, xdf=None, bin=None, htf=self.openpicker.GetPath())
 
-	def ValidateContinueButton(self):
+	def ValidateContinueButton(self, event):
 		if self.newrp.GetValue():
 			if self.ecu.GetValue() != "":
 				self.continueb.Enable()
@@ -607,7 +608,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		elif event.GetEventObject().GetName() == "new":
 			self.openp.Disable()
 			self.newp.Enable()
-		self.ValidateContinueButton()
+		self.ValidateContinueButton(None)
 
 	def ModelHandler(self, event):
 		self.year.Clear()
@@ -622,7 +623,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		else:
 			self.year.Disable()
 			self.ecu.Disable()
-		self.ValidateContinueButton()
+		self.ValidateContinueButton(None)
 
 	def YearHandler(self, event):
 		self.ecu.Clear()
@@ -634,7 +635,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 			self.ecu.Enable()
 		else:
 			self.ecu.Disable()
-		self.ValidateContinueButton()
+		self.ValidateContinueButton(None)
 
 	def ECUHandler(self, event):
-		self.ValidateContinueButton()
+		self.ValidateContinueButton(None)
