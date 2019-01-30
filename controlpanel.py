@@ -123,8 +123,7 @@ class HondaECU_ControlPanel(wx.Frame):
 			"tune": {
 				"label":"Tune",
 				"icon":"pngs/spanner.png",
-				"panel":HondaECU_AppPanel,
-				"disabled": True,
+				"panel":HondaECU_TunePanel,
 			},
 			"write": {
 				"label":"Write ECU",

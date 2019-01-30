@@ -35,7 +35,8 @@ ECM_IDs = {
 	b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-A92","checksum":"0x3fff8"},
 	b"\x01\x01\x25\x05\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-A03","checksum":"0x3fff8"},
 	b"\x01\x01\x25\x0b\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-C02","checksum":"0x3fff8"},
-	b"\x01\x01\x25\x01\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-D02","checksum":"0x3fff8"}
+	b"\x01\x01\x25\x01\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-D02","checksum":"0x3fff8"},
+	b"\x01\x02\xf2\x05\x11": {"model":"CBR500R","year":"2017-2018","pn":"38770-MJW-AQ1","checksum":"0x3fff8"},
 	# b"\x01\x01\x25\x05\x01": ("CBR500R","2017-2018","38770-MJW-AQ1"},
 	# b"\x01\x01\xf2\x01\x01": {"model":"CB500F","year":"2016","pn":"38770-MJW-D51","checksum":"0x3fff8"}
 	# b"\x01\x01\x28\x01\x01": {"model":"CB500X","?2013?","?"},
