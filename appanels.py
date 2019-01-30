@@ -9,7 +9,7 @@ from ecu import ECM_IDs, DTC, ECUSTATE, do_validation
 class HondaECU_AppPanel(wx.Frame):
 
 	def __init__(self, parent, appid, appinfo, *args, **kwargs):
-		wx.Frame.__init__(self, parent, title="HondaECU :: %s" % (appinfo["label"]), *args, **kwargs)
+		wx.Frame.__init__(self, parent, title="HondaECU :: %s" % (appinfo["label"]), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, *args, **kwargs)
 		self.parent = parent
 		self.appid = appid
 		self.appinfo = appinfo
@@ -34,10 +34,6 @@ class HondaECU_AppPanel(wx.Frame):
 		pass
 
 class HondaECU_InfoPanel(HondaECU_AppPanel):
-
-	def __init__(self, *args, **kwargs):
-		kwargs["style"] = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-		HondaECU_AppPanel.__init__(self, *args, **kwargs)
 
 	def Build(self):
 		self.infop = wx.Panel(self)
@@ -169,10 +165,6 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 			self.Layout()
 
 class HondaECU_DatalogPanel(HondaECU_AppPanel):
-
-	def __init__(self, *args, **kwargs):
-		kwargs["style"] = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-		HondaECU_AppPanel.__init__(self, *args, **kwargs)
 
 	def Build(self):
 		self.datap = wx.Panel(self)
@@ -306,13 +298,8 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
 class HondaECU_ReadPanel(HondaECU_AppPanel):
 
-	def __init__(self, *args, **kwargs):
-		self.bootwait = False
-		kwargs["style"] = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-		HondaECU_AppPanel.__init__(self, *args, **kwargs)
-		self.SetInitialSize((500,200))
-
 	def Build(self):
+		self.bootwait = False
 		self.statusbar = self.CreateStatusBar(1)
 		self.statusbar.SetSize((-1, 28))
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
@@ -399,13 +386,8 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
-	def __init__(self, *args, **kwargs):
-		kwargs["style"] = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-		HondaECU_AppPanel.__init__(self, *args, **kwargs)
-		self.SetInitialSize((500,200))
-		self.byts = None
-
 	def Build(self):
+		self.byts = None
 		self.statusbar = self.CreateStatusBar(1)
 		self.statusbar.SetSize((-1, 28))
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
