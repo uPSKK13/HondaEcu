@@ -503,7 +503,23 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 			if not info["year"] in modeltree[info["model"]]:
 				modeltree[info["model"]][info["year"]] = {}
 			if not info["pn"] in modeltree[info["model"]][info["year"]]:
-				modeltree[info["model"]][info["year"]][info["pn"]] = ecmid
+				blcode = info["pn"].split("-")[1]
+				modelstring = "%s_%s_%s" % (info["model"],blcode,info["year"])
+				xdfdir = os.path.join(self.parent.basepath,"xdfs",modelstring)
+				bindir = os.path.join(self.parent.basepath,"bins",modelstring)
+				if os.path.exists(xdfdir) and os.path.exists(bindir):
+					xdf = os.path.join(xdfdir,"38770-%s.xdf" % (blcode))
+					bin = os.path.join(bindir,"%s.bin" % (info["pn"]))
+					if os.path.isfile(xdf) and os.path.isfile(bin):
+						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,xdf,bin)
+		models = list(modeltree.keys())
+		for m in models:
+			years = list(modeltree[m].keys())
+			for y in years:
+				if len(modeltree[m][y].keys()) == 0:
+					del modeltree[m][y]
+			if len(modeltree[m].keys()) == 0:
+				del modeltree[m]
 		return modeltree
 
 	def Build(self):
@@ -590,4 +606,6 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 			self.ecu.Disable()
 
 	def ECUHandler(self, event):
-		print(event.GetEventObject().GetValue())
+		ecupn = event.GetEventObject().GetValue()
+		ecmid, xdf, bin = self.modeltree[self.model.GetValue()][self.year.GetValue()][ecupn]
+		print(ecupn, ecmid, xdf, bin)
