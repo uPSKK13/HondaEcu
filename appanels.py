@@ -558,7 +558,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.openp = wx.Panel(self.tunepickerp)
 		self.openp.Disable()
 		openpsizer = wx.StaticBoxSizer(wx.VERTICAL, self.openp, "Open an existing tune")
-		self.openpicker = wx.FilePickerCtrl(self.openp, wildcard="HondaECU tune file (*.hec)|*.hec", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL, size=(400,-1))
+		self.openpicker = wx.FilePickerCtrl(self.openp, wildcard="HondaECU tune file (*.htf)|*.htf", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL, size=(400,-1))
 		openpsizer.Add(self.openpicker, 1, wx.EXPAND|wx.ALL, border=10)
 		self.openp.SetSizer(openpsizer)
 		self.continueb = wx.Button(self.tunepickerp, label="Continue")

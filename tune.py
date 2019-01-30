@@ -1,4 +1,5 @@
 import os
+import io
 import wx
 import wx.aui
 import wx.lib.agw.aui.auibook
@@ -9,6 +10,7 @@ from lxml import etree
 import struct
 import operator
 import math
+import tarfile
 from pyparsing import (Literal, CaselessLiteral, Word, Combine, Group, Optional,
 					   ZeroOrMore, Forward, nums, alphas, oneOf)
 
@@ -642,6 +644,7 @@ class TunePanel(wx.Frame):
 		self.ecmid = ecmid
 		self.xdf = xdf
 		self.bin = bin
+		self.currenthtf = None
 
 		fbin = open(self.bin, "rb")
 		self.nbyts = os.path.getsize(self.bin)
@@ -653,6 +656,22 @@ class TunePanel(wx.Frame):
 			xdftree = etree.fromstring(fxdf.read())
 
 		self.mainpanel = wx.Panel(self)
+
+		self.menubar = wx.MenuBar()
+		self.SetMenuBar(self.menubar)
+		fileMenu = wx.Menu()
+		self.menubar.Append(fileMenu, '&File')
+		self.saveItem = wx.MenuItem(fileMenu, wx.ID_SAVE, '&Save\tCtrl+S')
+		self.Bind(wx.EVT_MENU, self.OnSave, self.saveItem)
+		self.saveAsItem = wx.MenuItem(fileMenu, wx.ID_SAVEAS, 'Save As')
+		self.Bind(wx.EVT_MENU, self.OnSaveAs, self.saveAsItem)
+		fileMenu.Append(self.saveItem)
+		fileMenu.Append(self.saveAsItem)
+		fileMenu.AppendSeparator()
+		quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
+		self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
+		fileMenu.Append(quitItem)
+		self.menubar.Enable(wx.ID_SAVE, 0)
 
 		self.mgr = wx.aui.AuiManager(self.mainpanel)
 
@@ -696,6 +715,38 @@ class TunePanel(wx.Frame):
 		self.mgr.Update()
 		self.Center()
 		wx.CallAfter(self.Show)
+
+	def OnClose(self, event):
+		print("OnClose", event)
+		self.Destroy()
+
+	def doSaveData(self):
+		htf = io.BytesIO()
+		with tarfile.open(mode="w:xz",fileobj=htf) as tar_handle:
+			with open(self.xdf, "rb") as d:
+				t = tarfile.TarInfo(name=os.path.split(self.xdf)[-1])
+				t.size = os.path.getsize(self.xdf)
+				tar_handle.addfile(tarinfo=t, fileobj=d)
+			with open(self.bin, "rb") as d:
+				t = tarfile.TarInfo(name=os.path.split(self.bin)[-1]+".orig")
+				t.size = os.path.getsize(self.bin)
+				tar_handle.addfile(tarinfo=t, fileobj=d)
+			t = tarfile.TarInfo(name=os.path.split(self.bin)[-1])
+			t.size = self.nbyts
+			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.byts))
+		with open(self.currenthtf,"wb") as f:
+			f.write(htf.getvalue())
+
+	def OnSave(self, event):
+		self.doSaveData()
+
+	def OnSaveAs(self, event):
+		with wx.FileDialog(self, "HondaECU :: Save tune file", wildcard="HondaECU tune file (*.htf)|*.htf", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+			if fileDialog.ShowModal() == wx.ID_CANCEL:
+				return
+			self.currenthtf = fileDialog.GetPath()
+			self.menubar.Enable(wx.ID_SAVE, 1)
+			self.doSaveData()
 
 	def OnTableChanged(self, event):
 		self.currentSelection = self.nb.GetSelection()
