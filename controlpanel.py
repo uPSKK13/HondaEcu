@@ -7,6 +7,7 @@ import wx
 import wx.lib.buttons as buttons
 
 from appanels import *
+from tune import *
 from workerthreads import *
 
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
@@ -120,10 +121,10 @@ class HondaECU_ControlPanel(wx.Frame):
 				"conflicts":["write"],
 				"panel":HondaECU_ReadPanel,
 			},
-			"tune": {
+			"tunehelper": {
 				"label":"Tune",
 				"icon":"pngs/spanner.png",
-				"panel":HondaECU_TunePanel,
+				"panel":HondaECU_TunePanelHelper,
 			},
 			"write": {
 				"label":"Write ECU",
@@ -204,6 +205,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
 		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+		dispatcher.connect(self.TunePanelHelperHandler, signal="TunePanelHelper", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
 		self.klineworker = KlineWorker(self)
@@ -218,6 +220,9 @@ class HondaECU_ControlPanel(wx.Frame):
 
 	def __clear_data(self):
 		self.ecuinfo = {}
+
+	def TunePanelHelperHandler(self, ecupn, ecmid, xdf, bin):
+		tp = TunePanel(self, ecupn, ecmid, xdf, bin)
 
 	def KlineWorkerHandler(self, info, value):
 		if info in ["ecmid","flashcount","dtc","dtccount","state"]:

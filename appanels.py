@@ -493,7 +493,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 					return
 		self.gobutton.Disable()
 
-class HondaECU_TunePanel(HondaECU_AppPanel):
+class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 
 	def gen_model_tree(self):
 		modeltree = {}
@@ -527,10 +527,10 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 		self.tunepickerp = wx.Panel(self)
 		tunepickerpsizer = wx.GridBagSizer()
 		self.tunepickerp.SetSizer(tunepickerpsizer)
-		newrp = wx.RadioButton(self.tunepickerp, wx.ID_ANY, "", style=wx.RB_GROUP, name="new")
-		self.Bind(wx.EVT_RADIOBUTTON, self.HandleRadioButtons, newrp)
-		openrp = wx.RadioButton(self.tunepickerp, wx.ID_ANY, "", name="open")
-		self.Bind(wx.EVT_RADIOBUTTON, self.HandleRadioButtons, openrp)
+		self.newrp = wx.RadioButton(self.tunepickerp, wx.ID_ANY, "", style=wx.RB_GROUP, name="new")
+		self.Bind(wx.EVT_RADIOBUTTON, self.HandleRadioButtons, self.newrp)
+		self.openrp = wx.RadioButton(self.tunepickerp, wx.ID_ANY, "", name="open")
+		self.Bind(wx.EVT_RADIOBUTTON, self.HandleRadioButtons, self.openrp)
 		self.newp = wx.Panel(self.tunepickerp)
 		newpsizer = wx.StaticBoxSizer(wx.VERTICAL, self.newp, "Start a new tune")
 		modelp = wx.Panel(self.newp)
@@ -561,16 +561,44 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 		self.openpicker = wx.FilePickerCtrl(self.openp, wildcard="HondaECU tune file (*.hec)|*.hec", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL, size=(400,-1))
 		openpsizer.Add(self.openpicker, 1, wx.EXPAND|wx.ALL, border=10)
 		self.openp.SetSizer(openpsizer)
-		tunepickerpsizer.Add(newrp, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
-		tunepickerpsizer.Add(openrp, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
+		self.continueb = wx.Button(self.tunepickerp, label="Continue")
+		self.continueb.Disable()
+		tunepickerpsizer.Add(self.newrp, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
+		tunepickerpsizer.Add(self.openrp, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
 		tunepickerpsizer.Add(self.newp, pos=(0,1), flag=wx.ALIGN_RIGHT|wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
 		tunepickerpsizer.Add(self.openp, pos=(1,1), flag=wx.ALIGN_RIGHT|wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
+		tunepickerpsizer.Add(self.continueb, pos=(2,0), span=(1,2), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=10)
 
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
 		self.mainsizer.Add(self.tunepickerp, 1, wx.EXPAND|wx.ALL, border=10)
 		self.SetSizer(self.mainsizer)
 		self.Layout()
 		self.mainsizer.Fit(self)
+
+		self.Bind(wx.EVT_BUTTON, self.OnContinue, self.continueb)
+
+	def OnContinue(self, event):
+		if self.newrp.GetValue():
+			ecupn = self.ecu.GetValue()
+			ecmid, xdf, bin = self.modeltree[self.model.GetValue()][self.year.GetValue()][ecupn]
+			dispatcher.send(signal="TunePanelHelper", sender=self, ecupn=ecupn, ecmid=ecmid, xdf=xdf, bin=bin)
+			wx.CallAfter(self.Destroy)
+		elif self.openrp.GetValue():
+			pass
+
+	def ValidateContinueButton(self):
+		if self.newrp.GetValue():
+			if self.ecu.GetValue() != "":
+				self.continueb.Enable()
+			else:
+				self.continueb.Disable()
+		elif self.openrp.GetValue():
+			if os.path.isfile(self.openpicker.GetPath()):
+				self.continueb.Enable()
+			else:
+				self.continueb.Disable()
+		else:
+			self.continueb.Disable()
 
 	def HandleRadioButtons(self, event):
 		if event.GetEventObject().GetName() == "open":
@@ -579,6 +607,7 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 		elif event.GetEventObject().GetName() == "new":
 			self.openp.Disable()
 			self.newp.Enable()
+		self.ValidateContinueButton()
 
 	def ModelHandler(self, event):
 		self.year.Clear()
@@ -593,6 +622,7 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 		else:
 			self.year.Disable()
 			self.ecu.Disable()
+		self.ValidateContinueButton()
 
 	def YearHandler(self, event):
 		self.ecu.Clear()
@@ -604,8 +634,7 @@ class HondaECU_TunePanel(HondaECU_AppPanel):
 			self.ecu.Enable()
 		else:
 			self.ecu.Disable()
+		self.ValidateContinueButton()
 
 	def ECUHandler(self, event):
-		ecupn = event.GetEventObject().GetValue()
-		ecmid, xdf, bin = self.modeltree[self.model.GetValue()][self.year.GetValue()][ecupn]
-		print(ecupn, ecmid, xdf, bin)
+		self.ValidateContinueButton()
