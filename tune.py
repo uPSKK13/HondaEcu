@@ -228,8 +228,8 @@ class XDFModel(dv.PyDataViewModel):
 	def __init__(self, parent, xdf):
 		dv.PyDataViewModel.__init__(self)
 		self.parent = parent
-		self.foldericon = wx.Icon(os.path.join(self.parent.parent.basepath, "images/folder.png"), wx.BITMAP_TYPE_ANY)
-		self.tableicon = wx.Icon(os.path.join(self.parent.parent.basepath, "images/table.png"), wx.BITMAP_TYPE_ANY)
+		self.foldericon = wx.Icon(os.path.join(self.parent.parent.basepath, "pngs/folder.png"), wx.BITMAP_TYPE_ANY)
+		self.tableicon = wx.Icon(os.path.join(self.parent.parent.basepath, "pngs/table.png"), wx.BITMAP_TYPE_ANY)
 		categories = {}
 		for c in xdf.xpath('/XDFFORMAT/XDFHEADER/CATEGORY'):
 			categories[c.get("index")] = c.get("name")
@@ -626,7 +626,7 @@ class TablePanel(wx.Panel):
 		self.uid = node.uniqueid
 		wx.Panel.__init__(self, parent)
 		self.tb = wx.ToolBar(self)
-		save = wx.Image(os.path.join(self.parent.parent.basepath, "images/save.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		save = wx.Image(os.path.join(self.parent.parent.basepath, "pngs/save.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 		sb = self.tb.AddTool(wx.ID_SAVE,"Save",save)
 		self.Bind(wx.EVT_MENU, self.OnSave, sb)
 		self.tb.EnableTool(wx.ID_SAVE, False)
