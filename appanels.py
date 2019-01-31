@@ -517,8 +517,11 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 				if os.path.exists(xdfdir) and os.path.exists(bindir):
 					xdf = os.path.join(xdfdir,"38770-%s.xdf" % (blcode))
 					bin = os.path.join(bindir,"%s.bin" % (info["pn"]))
+					checksum = info["checksum"] if "checksum" in info else None
+					ecmidaddr = info["ecmidaddr"] if "ecmidaddr" in info else None
+					keihinaddr = info["keihinaddr"] if "keihinaddr" in info else None
 					if os.path.isfile(xdf) and os.path.isfile(bin):
-						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,xdf,bin)
+						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,xdf,bin,checksum,ecmidaddr,keihinaddr)
 		models = list(modeltree.keys())
 		for m in models:
 			years = list(modeltree[m].keys())
@@ -530,6 +533,9 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		return modeltree
 
 	def Build(self):
+		self.rid = {
+			"MotoAmerica 2019: Junior Cup": "MAJC190"
+		}
 		self.restrictions = {
 			"CBR500R": {
 				"MotoAmerica 2019: Junior Cup": {
@@ -605,19 +611,25 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 			year = self.year.GetValue()
 			r = self.race.GetValue()
 			restrictions = None
+			rid = None
 			if r != "":
-				if r in self.restrictions[model]:
+				if r in self.restrictions[model] and self.rid[r]:
 					restrictions = self.restrictions[model][r]
+					rid = self.rid[r]
 			else:
 				r = None
+			_, xdf, bin, checksum, ecmidaddr, keihinaddr = self.modeltree[model][year][ecupn]
 			metainfo = {
 				"model": model,
 				"year": year,
 				"ecupn": ecupn,
 				"restriction":	r,
-				"restrictions":	restrictions
+				"rid": rid,
+				"restrictions":	restrictions,
+				"checksum": checksum,
+				"ecmidaddr": ecmidaddr,
+				"keihinaddr": keihinaddr,
 			}
-			_, xdf, bin = self.modeltree[model][year][ecupn]
 			dispatcher.send(signal="TunePanelHelper", sender=self, xdf=xdf, bin=bin, metainfo=metainfo, htf=None)
 			wx.CallAfter(self.Destroy)
 		elif self.openrp.GetValue():
