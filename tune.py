@@ -14,6 +14,11 @@ import tarfile
 from pyparsing import (Literal, CaselessLiteral, Word, Combine, Group, Optional,
 					   ZeroOrMore, Forward, nums, alphas, oneOf)
 
+import colour
+red = colour.Color("blue")
+colors = list(red.range_to(colour.Color("red"),100))
+colors = [wx.Colour(c.red*255,c.green*255,c.blue*255) for c in colors]
+
 class NumericStringParser(object):
 	'''
 	Most of this code comes from the fourFn.py pyparsing example
@@ -174,14 +179,24 @@ def get_table_info(t):
 		zdp = zdp[0].text
 	else:
 		zdp = None
+	zmin = zzz.xpath("min")
+	if len(zmin) > 0:
+		zmin = zmin[0].text
+	else:
+		zmax = None
+	zmax = zzz.xpath("max")
+	if len(zmax) > 0:
+		zmax = zmax[0].text
+	else:
+		zmax = None
 	e = zzz.xpath("EMBEDDEDDATA")[0]
 	a = int(e.get("mmedaddress"),16)
 	s = int(e.get("mmedelementsizebits"))
 	######
 	axisinfo = {
-		'x': {'indexcount': xindexcount, 'type': xtype, 'linkobjid': xlinkobjid, 'xot': xot, 'xdp': xdp},
-		'y': {'indexcount': yindexcount, 'type': ytype, 'linkobjid': ylinkobjid, 'yot': yot, 'ydp': ydp},
-		'z': {'eq':eq, 'zot': zot, 'zdp': zdp}
+		'x': {'indexcount': xindexcount, 'type': xtype, 'linkobjid': xlinkobjid, 'xot': xot, 'xdp': xdp},# 'xmin': xmin, 'xmax': xmax},
+		'y': {'indexcount': yindexcount, 'type': ytype, 'linkobjid': ylinkobjid, 'yot': yot, 'ydp': ydp},# 'ymin': ymin, 'ymax': ymax},
+		'z': {'eq':eq, 'zot': zot, 'zdp': zdp, 'zmin': zmin, 'zmax': zmax}
 	}
 	return n,a,s,axisinfo
 
@@ -366,11 +381,17 @@ class XDFGridTable(wx.grid.GridTableBase):
 			def formatCell(x):
 				x = nsp.eval(self.axisinfo['z']['eq'].replace("X",str(x)))
 				if self.axisinfo['z']['zot'] == "0":
-					return chr(x)
+					if stride == 16:
+						return "%04X" % (x)
+					else:
+						return "%02X" % (x)
 				elif self.axisinfo['z']['zot'] == "1":
-					return float(x)
+					if not self.axisinfo['z']['zdp'] is None:
+						dp = int(self.axisinfo['z']['zdp'])
+						return "%s" % (round(x,dp))
+					return "%s" % (float(x))
 				elif self.axisinfo['z']['zot'] == "2":
-					return int(x)
+					return "%s" % (x)
 			self.data = np.vectorize(formatCell)(self.data)
 		self.data = self.data.reshape(rows, cols)
 
@@ -452,12 +473,7 @@ class XDFGridTable(wx.grid.GridTableBase):
 		return self.data[row][col]
 
 	def GetTypeName(self, row, col):
-		if self.axisinfo['z']['zot'] == "0":
-			return wx.grid.GRID_VALUE_STRING
-		elif self.axisinfo['z']['zot'] == "1":
-			return wx.grid.GRID_VALUE_FLOAT
-		elif self.axisinfo['z']['zot'] == "2":
-			return wx.grid.GRID_VALUE_NUMBER
+		return wx.grid.GRID_VALUE_STRING
 
 	def GetColLabelValue(self, col):
 		if not self.cols is None:
@@ -468,6 +484,12 @@ class XDFGridTable(wx.grid.GridTableBase):
 		if not self.rows is None:
 			return str(self.rows[row][0])
 		return str(row)
+
+	def GetAttr(self, row, col, kind):
+		attr = wx.grid.GridCellAttr()
+		if not self.axisinfo['z']['zmin'] is None and not self.axisinfo['z']['zmax'] is None:
+			attr.SetBackgroundColour(colors[int(np.interp(self.data[row][col],[self.axisinfo['z']['zmin'],self.axisinfo['z']['zmax']],[0,99]))])
+		return attr
 
 class MyGrid(wx.grid.Grid):
 	""" A Copy&Paste enabled grid class"""

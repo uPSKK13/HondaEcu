@@ -5,3 +5,4 @@ wxPython
 requests
 lxml
 numpy
+colour
