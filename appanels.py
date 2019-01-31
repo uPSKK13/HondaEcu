@@ -531,6 +531,12 @@ class HondaECU_WriteTunePanel(HondaECU_WritePanel):
 							if y == ".mod":
 								binmod = bytearray(tar.extractfile(f).read())
 				if binmod != None and metainfo != None:
+					ea = int(metainfo["ecmidaddr"],16)
+					ka = int(metainfo["keihinaddr"],16)
+					for i in range(5):
+						binmod[ea+i] ^= 0xFF
+					for i in range(7):
+						binmod[ka+i] = ord(metainfo["rid"][i])
 					ret, status, self.byts = do_validation(binmod, len(binmod), int(metainfo["checksum"],16))
 					if status != "bad":
 						self.gobutton.Enable()
