@@ -203,13 +203,14 @@ def get_table_info(t):
 
 class Table(object):
 
-	def __init__(self, name, address, stride, axisinfo, parent, uniqueid=None):
+	def __init__(self, name, address, stride, axisinfo, parent, uniqueid=None, flags=0):
 		self.name = name
 		self.address = address
 		self.stride = stride
 		self.axisinfo = axisinfo
 		self.parent = parent
 		self.uniqueid = uniqueid
+		self.flags = flags
 
 	def __repr__(self):
 		return 'Table: ' + self.name
@@ -238,6 +239,7 @@ class XDFModel(dv.PyDataViewModel):
 		self.data = {"0.0.0":Folder("0.0.0","")}
 		for t in xdf.xpath('/XDFFORMAT/XDFTABLE'):
 			uid = t.get("uniqueid")
+			flags = int(t.get("flags"),16)
 			parent = ["0","0","0"]
 			c0 = t.xpath('CATEGORYMEM[@index=0]')
 			if len(c0) > 0:
@@ -270,7 +272,7 @@ class XDFModel(dv.PyDataViewModel):
 					self.data[pp].children.append(self.data[p])
 			pp = ".".join(parent)
 			n,a,s,i = get_table_info(t)
-			self.data[pp].children.append(Table(n,a,s,i,pp,uniqueid=uid))
+			self.data[pp].children.append(Table(n,a,s,i,pp,uniqueid=uid,flags=flags))
 			self.uids[uid] = self.data[pp].children[-1]
 		self.UseWeakRefs(True)
 
@@ -366,12 +368,13 @@ class XDFModel(dv.PyDataViewModel):
 
 class XDFGridTable(wx.grid.GridTableBase):
 
-	def __init__(self, uids, byts, address, stride, axisinfo):
+	def __init__(self, uids, byts, address, stride, axisinfo, flags):
 		wx.grid.GridTableBase.__init__(self)
 		self.dirty = False
 		self.address = address
 		self.stride = stride
 		self.axisinfo = axisinfo
+		self.flags = flags
 		rows = self.axisinfo['y']['indexcount']
 		cols = self.axisinfo['x']['indexcount']
 		s = "B"
@@ -488,7 +491,7 @@ class XDFGridTable(wx.grid.GridTableBase):
 
 	def GetAttr(self, row, col, kind):
 		attr = wx.grid.GridCellAttr()
-		if not self.axisinfo['z']['zmin'] is None and not self.axisinfo['z']['zmax'] is None:
+		if self.flags & 0x30 and not self.axisinfo['z']['zmin'] is None and not self.axisinfo['z']['zmax'] is None:
 			attr.SetBackgroundColour(colors[int(np.interp(self.data[row][col],[self.axisinfo['z']['zmin'],self.axisinfo['z']['zmax']],[0,99]))])
 		return attr
 
@@ -632,7 +635,7 @@ class TablePanel(wx.Panel):
 		self.Bind(wx.EVT_MENU, self.OnSave, sb)
 		self.tb.EnableTool(wx.ID_SAVE, False)
 		self.g = MyGrid(self)
-		self.gt = XDFGridTable(self.parent.ptreemodel.uids, self.parent.byts, node.address, node.stride, node.axisinfo)
+		self.gt = XDFGridTable(self.parent.ptreemodel.uids, self.parent.byts, node.address, node.stride, node.axisinfo, node.flags)
 		self.g.SetTable(self.gt, True)
 		self.g.AutoSize()
 		for c in range(node.axisinfo['x']['indexcount']):
