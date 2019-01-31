@@ -523,6 +523,13 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		return modeltree
 
 	def Build(self):
+		self.restrictions = {
+			"CBR500R": {
+				"MotoAmerica 2019: Junior Cup": {
+					"Ignition": [10,4]
+				}
+			}
+		}
 		self.modeltree = self.gen_model_tree()
 		self.tunepickerp = wx.Panel(self)
 		tunepickerpsizer = wx.GridBagSizer()
@@ -538,6 +545,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		modell = wx.StaticText(modelp, wx.ID_ANY, label="Model")
 		yearl = wx.StaticText(modelp, wx.ID_ANY, label="Year")
 		ecul = wx.StaticText(modelp, wx.ID_ANY, label="ECU")
+		racel = wx.StaticText(modelp, wx.ID_ANY, label="Restrictions")
 		self.model = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1), choices=list(self.modeltree.keys()))
 		self.Bind(wx.EVT_COMBOBOX, self.ModelHandler, self.model)
 		self.year = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1))
@@ -546,12 +554,17 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.ecu = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1))
 		self.Bind(wx.EVT_COMBOBOX, self.ECUHandler, self.ecu)
 		self.ecu.Disable()
+		self.race = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1))
+		self.Bind(wx.EVT_COMBOBOX, self.RaceHandler, self.race)
+		self.race.Disable()
 		modelpsizer.Add(modell, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(yearl, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(ecul, pos=(2,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
+		modelpsizer.Add(racel, pos=(3,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(self.model, pos=(0,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(self.year, pos=(1,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(self.ecu, pos=(2,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
+		modelpsizer.Add(self.race, pos=(3,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelp.SetSizer(modelpsizer)
 		newpsizer.Add(modelp, 1, wx.EXPAND|wx.ALL, border=10)
 		self.newp.SetSizer(newpsizer)
@@ -581,11 +594,27 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 	def OnContinue(self, event):
 		if self.newrp.GetValue():
 			ecupn = self.ecu.GetValue()
-			_, xdf, bin = self.modeltree[self.model.GetValue()][self.year.GetValue()][ecupn]
-			dispatcher.send(signal="TunePanelHelper", sender=self, ecupn=ecupn, xdf=xdf, bin=bin, htf=None)
+			model = self.model.GetValue()
+			year = self.year.GetValue()
+			r = self.race.GetValue()
+			restrictions = None
+			if r != "":
+				if r in self.restrictions[model]:
+					restrictions = self.restrictions[model][r]
+			else:
+				r = None
+			metainfo = {
+				"model": model,
+				"year": year,
+				"ecupn": ecupn,
+				"restriction":	r,
+				"restrictions":	restrictions
+			}
+			_, xdf, bin = self.modeltree[model][year][ecupn]
+			dispatcher.send(signal="TunePanelHelper", sender=self, xdf=xdf, bin=bin, metainfo=metainfo, htf=None)
 			wx.CallAfter(self.Destroy)
 		elif self.openrp.GetValue():
-			dispatcher.send(signal="TunePanelHelper", sender=self, ecupn=None, xdf=None, bin=None, htf=self.openpicker.GetPath())
+			dispatcher.send(signal="TunePanelHelper", sender=self, xdf=None, bin=None, metainfo=None, htf=self.openpicker.GetPath())
 
 	def ValidateContinueButton(self, event):
 		if self.newrp.GetValue():
@@ -615,14 +644,22 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.year.SetValue("")
 		self.ecu.Clear()
 		self.ecu.SetValue("")
-		years = self.modeltree[event.GetEventObject().GetValue()].keys()
+		self.race.Clear()
+		self.race.SetValue("")
+		model = event.GetEventObject().GetValue()
+		if model in self.restrictions:
+			for r in self.restrictions[model]:
+				self.race.Append(r)
+		years = self.modeltree[model].keys()
 		if len(years) > 0:
 			for y in years:
 				self.year.Append(y)
 			self.year.Enable()
+			self.race.Enable()
 		else:
 			self.year.Disable()
 			self.ecu.Disable()
+			self.race.Disable()
 		self.ValidateContinueButton(None)
 
 	def YearHandler(self, event):
@@ -638,4 +675,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.ValidateContinueButton(None)
 
 	def ECUHandler(self, event):
+		self.ValidateContinueButton(None)
+
+	def RaceHandler(self, event):
 		self.ValidateContinueButton(None)

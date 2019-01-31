@@ -1,5 +1,6 @@
 import os
 import io
+import json
 import wx
 import wx.aui
 import wx.lib.agw.aui.auibook
@@ -658,11 +659,11 @@ class TablePanel(wx.Panel):
 
 class TunePanel(wx.Frame):
 
-	def __init__(self, parent, ecupn, xdf, binorig, binmod=None):
+	def __init__(self, parent, metainfo, xdf, binorig, binmod=None):
 		wx.Frame.__init__(self, parent)
 		self.SetMinSize((800,600))
 		self.parent = parent
-		self.ecupn = ecupn
+		self.metainfo = metainfo
 		self.xdf = xdf
 		self.bin = binorig
 		self.byts = binmod
@@ -740,13 +741,17 @@ class TunePanel(wx.Frame):
 	def doSaveData(self):
 		htf = io.BytesIO()
 		with tarfile.open(mode="w:xz",fileobj=htf) as tar_handle:
-			t = tarfile.TarInfo(name="-".join(self.ecupn.split("-")[:2])+".xdf")
+			t = tarfile.TarInfo(name="metainfo.json")
+			metainfo = bytearray(json.dumps(self.metainfo),'utf8')
+			t.size = len(metainfo)
+			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(metainfo))
+			t = tarfile.TarInfo(name="-".join(self.metainfo["ecupn"].split("-")[:2])+".xdf")
 			t.size = len(self.xdf)
 			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.xdf))
-			t = tarfile.TarInfo(name=self.ecupn+".orig.bin")
+			t = tarfile.TarInfo(name=self.metainfo["ecupn"]+".orig.bin")
 			t.size = len(self.bin)
 			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.bin))
-			t = tarfile.TarInfo(name=self.ecupn+".mod.bin")
+			t = tarfile.TarInfo(name=self.metainfo["ecupn"]+".mod.bin")
 			t.size = len(self.byts)
 			tar_handle.addfile(tarinfo=t, fileobj=io.BytesIO(self.byts))
 		with open(self.currenthtf,"wb") as f:
