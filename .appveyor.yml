@@ -7,8 +7,8 @@ image:
 
 stack: python 3.7
 
-cache:
-  - '%LOCALAPPDATA%\pip\Cache'
+# cache:
+  # - '%LOCALAPPDATA%\pip\Cache'
 
 environment:
   matrix:
@@ -17,7 +17,6 @@ environment:
       PYTHON_HOME: C:\Python37
       PYTHON_VERSION: '3.7'
       PYTHON_ARCH: '32'
-      CONDA_DEPENDENCIES: "numpy"
 
 build: off
 
@@ -28,7 +27,7 @@ install:
   - cmd: '%PYTHON_HOME%\Scripts\pip install -r requirements.txt'
 
 build_script:
-  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary pngs/*;pngs --add-binary %LIBFTDI%;. controlpanel.py --name HondaECU --icon=honda.ico'
+  - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary honda.ico;. --add-binary pngs/*;pngs --add-binary %LIBFTDI%;. --hidden-import numpy controlpanel.py --name HondaECU --icon=honda.ico'
   - cmd: '%PYTHON_HOME%\python -m PyInstaller --onefile --clean --add-binary %LIBFTDI%;. log.py --name log --icon=honda.ico'
 
 artifacts:
