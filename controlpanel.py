@@ -165,7 +165,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		fileMenu = wx.Menu()
 		self.menubar.Append(fileMenu, '&File')
 		self.devicesMenu = wx.Menu()
-		fileMenu.Append(wx.ID_ANY, "Devices", self.devicesMenu)
+		fileMenu.AppendSubMenu(self.devicesMenu, "Devices")
 		fileMenu.AppendSeparator()
 		quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
 		self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
