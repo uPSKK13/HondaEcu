@@ -333,6 +333,6 @@ class HondaECU_ControlPanel(wx.Frame):
 if __name__ == '__main__':
 
 
-	app = wx.App(redirect=True)
+	app = wx.App(redirect=False)
 	gui = HondaECU_ControlPanel()
 	app.MainLoop()

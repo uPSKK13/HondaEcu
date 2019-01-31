@@ -203,7 +203,7 @@ def get_table_info(t):
 
 class Table(object):
 
-	def __init__(self, name, address, stride, axisinfo, parent, uniqueid=None, flags=0):
+	def __init__(self, name, address, stride, axisinfo, parent, uniqueid=None, flags=0, categories=[], metainfo=None):
 		self.name = name
 		self.address = address
 		self.stride = stride
@@ -211,6 +211,8 @@ class Table(object):
 		self.parent = parent
 		self.uniqueid = uniqueid
 		self.flags = flags
+		self.categories = categories
+		self.metainfo = metainfo
 
 	def __repr__(self):
 		return 'Table: ' + self.name
@@ -237,6 +239,7 @@ class XDFModel(dv.PyDataViewModel):
 			categories[c.get("index")] = c.get("name")
 		self.uids = {}
 		self.data = {"0.0.0":Folder("0.0.0","")}
+		cats = []
 		for t in xdf.xpath('/XDFFORMAT/XDFTABLE'):
 			uid = t.get("uniqueid")
 			flags = int(t.get("flags"),16)
@@ -247,12 +250,14 @@ class XDFModel(dv.PyDataViewModel):
 				p = ".".join(parent)
 				if not p in self.data:
 					self.data[p] = Folder(p,categories["0x%X" % (int(parent[0])-1)])
+					cats.append(self.data[p].label)
 			c1 = t.xpath('CATEGORYMEM[@index=1]')
 			if len(c1) > 0:
 				parent[1] = c1[0].get("category")
 				p = ".".join(parent)
 				if not p in self.data:
 					self.data[p] = Folder(p,categories["0x%X" % (int(parent[1])-1)])
+					cats.append(self.data[p].label)
 				pp = ["0","0","0"]
 				pp[0] = parent[0]
 				pp = ".".join(pp)
@@ -264,6 +269,7 @@ class XDFModel(dv.PyDataViewModel):
 				p = ".".join(parent)
 				if not p in self.data:
 					self.data[p] = Folder(p,categories["0x%X" % (int(parent[2])-1)])
+					cats.append(self.data[p].label)
 				pp = ["0","0","0"]
 				pp[0] = parent[0]
 				pp[1] = parent[1]
@@ -272,7 +278,7 @@ class XDFModel(dv.PyDataViewModel):
 					self.data[pp].children.append(self.data[p])
 			pp = ".".join(parent)
 			n,a,s,i = get_table_info(t)
-			self.data[pp].children.append(Table(n,a,s,i,pp,uniqueid=uid,flags=flags))
+			self.data[pp].children.append(Table(n,a,s,i,pp,uniqueid=uid,flags=flags,categories=cats,metainfo=self.parent.metainfo))
 			self.uids[uid] = self.data[pp].children[-1]
 		self.UseWeakRefs(True)
 
@@ -368,24 +374,30 @@ class XDFModel(dv.PyDataViewModel):
 
 class XDFGridTable(wx.grid.GridTableBase):
 
-	def __init__(self, uids, byts, address, stride, axisinfo, flags):
+	def __init__(self, uids, byts, bin, node):
 		wx.grid.GridTableBase.__init__(self)
 		self.dirty = False
-		self.address = address
-		self.stride = stride
-		self.axisinfo = axisinfo
-		self.flags = flags
+		self.address = node.address
+		self.stride = node.stride
+		self.axisinfo = node.axisinfo
+		self.flags = node.flags
+		self.categories = node.categories
+		self.metainfo = node.metainfo
+		self.restriction = None
+		if self.metainfo["restriction"] != None and self.metainfo["restrictions"] != None:
+			self.restriction = self.metainfo["restrictions"][list(self.metainfo["restrictions"].keys())[0]]
 		rows = self.axisinfo['y']['indexcount']
 		cols = self.axisinfo['x']['indexcount']
 		s = "B"
-		if stride == 16:
+		if self.stride == 16:
 			s = "H"
-		self.data = np.array(struct.unpack_from(">%d%s" % (rows*cols, s), byts, offset=address))
+		self.origdata = np.array(struct.unpack_from(">%d%s" % (rows*cols, s), bin, offset=self.address))
+		self.data = np.array(struct.unpack_from(">%d%s" % (rows*cols, s), byts, offset=self.address))
 		if not self.axisinfo['z']['eq'] is None:
 			def formatCell(x):
 				x = nsp.eval(self.axisinfo['z']['eq'].replace("X",str(x)))
 				if self.axisinfo['z']['zot'] == "0":
-					if stride == 16:
+					if self.stride == 16:
 						return "%04X" % (x)
 					else:
 						return "%02X" % (x)
@@ -397,7 +409,9 @@ class XDFGridTable(wx.grid.GridTableBase):
 				elif self.axisinfo['z']['zot'] == "2":
 					return "%s" % (x)
 			self.data = np.vectorize(formatCell)(self.data)
+			self.origdata = np.vectorize(formatCell)(self.origdata)
 		self.data = self.data.reshape(rows, cols)
+		self.origdata = self.origdata.reshape(rows, cols)
 
 		self.cols = None
 		if "linkobjid" in self.axisinfo["x"]:
@@ -470,8 +484,22 @@ class XDFGridTable(wx.grid.GridTableBase):
 		return False
 
 	def SetValue(self, row, col, value):
-		self.dirty = True
-		self.data[row][col] = value
+		if self.restriction is None:
+			self.dirty = True
+			self.data[row][col] = value
+		else:
+			od = float(self.origdata[row][col])
+			delta = float(value) - od
+			if delta < 0:
+				if delta < self.restriction[0]:
+					delta = self.restriction[0]
+			elif delta > 0:
+				if delta > self.restriction[1]:
+					delta = self.restriction[1]
+			nd = "%s" % (float(od+delta))
+			self.data[row][col] = nd
+			self.dirty = True
+
 
 	def GetValue(self, row, col):
 		return self.data[row][col]
@@ -636,7 +664,7 @@ class TablePanel(wx.Panel):
 		self.Bind(wx.EVT_MENU, self.OnSave, sb)
 		self.tb.EnableTool(wx.ID_SAVE, False)
 		self.g = MyGrid(self)
-		self.gt = XDFGridTable(self.parent.ptreemodel.uids, self.parent.byts, node.address, node.stride, node.axisinfo, node.flags)
+		self.gt = XDFGridTable(self.parent.ptreemodel.uids, self.parent.byts, self.parent.bin, node)
 		self.g.SetTable(self.gt, True)
 		self.g.AutoSize()
 		for c in range(node.axisinfo['x']['indexcount']):
@@ -664,7 +692,10 @@ class TablePanel(wx.Panel):
 class TunePanel(wx.Frame):
 
 	def __init__(self, parent, metainfo, xdf, binorig, binmod=None):
-		wx.Frame.__init__(self, parent, title="HondaECU :: Tune [%s (%s) - %s]" % (metainfo["model"],metainfo["year"],metainfo["ecupn"]))
+		restrictions = ""
+		if metainfo["restriction"] != None and metainfo["restrictions"] != None:
+			restrictions = " | Restrictions: " + metainfo["restriction"]
+		wx.Frame.__init__(self, parent, title="%s (%s) - %s%s" % (metainfo["model"],metainfo["year"],metainfo["ecupn"],restrictions))
 		self.SetMinSize((800,600))
 		self.parent = parent
 		self.metainfo = metainfo
