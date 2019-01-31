@@ -660,7 +660,7 @@ class TablePanel(wx.Panel):
 class TunePanel(wx.Frame):
 
 	def __init__(self, parent, metainfo, xdf, binorig, binmod=None):
-		wx.Frame.__init__(self, parent)
+		wx.Frame.__init__(self, parent, title="HondaECU :: Tune [%s (%s) - %s]" % (metainfo["model"],metainfo["year"],metainfo["ecupn"]))
 		self.SetMinSize((800,600))
 		self.parent = parent
 		self.metainfo = metainfo
