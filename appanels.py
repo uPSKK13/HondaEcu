@@ -42,10 +42,14 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		flashcountl = wx.StaticText(self.infop, label="Flash count:")
 		modell = wx.StaticText(self.infop, label="Model:")
 		ecul = wx.StaticText(self.infop, label="ECU P/N:")
+		statel = wx.StaticText(self.infop, label="State:")
 		ecmids = "unknown"
 		models = "unknown"
 		ecus = "unknown"
 		flashcounts = "unknown"
+		state = ECUSTATE.UNKNOWN
+		if "state" in self.parent.ecuinfo:
+			state = self.parent.ecuinfo["state"]
 		if "ecmid" in self.parent.ecuinfo:
 			ecmids = " ".join(["%02x" % i for i in self.parent.ecuinfo["ecmid"]])
 			if self.parent.ecuinfo["ecmid"] in ECM_IDs:
@@ -57,14 +61,17 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		self.flashcount = wx.StaticText(self.infop, label=flashcounts)
 		self.model = wx.StaticText(self.infop, label=models)
 		self.ecu = wx.StaticText(self.infop, label=ecus)
+		self.state = wx.StaticText(self.infop, label=str(state))
 		infopsizer.Add(ecmidl, pos=(0,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(modell, pos=(1,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(ecul, pos=(2,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(flashcountl, pos=(3,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
+		infopsizer.Add(statel, pos=(4,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(self.ecmid, pos=(0,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(self.model, pos=(1,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(self.ecu, pos=(2,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(self.flashcount, pos=(3,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
+		infopsizer.Add(self.state, pos=(4,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		self.infop.SetSizer(infopsizer)
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
 		self.mainsizer.Add(self.infop, 1, wx.EXPAND|wx.ALL, border=20)
