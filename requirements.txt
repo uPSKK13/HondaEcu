@@ -4,5 +4,5 @@ pydispatcher
 wxPython
 requests
 lxml
-numpy
+numpy==1.15.4
 colour
