@@ -176,9 +176,9 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.OnDebug, debugItem)
 		helpMenu.Append(debugItem)
 		helpMenu.AppendSeparator()
-		aboutItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'About')
-		self.Bind(wx.EVT_MENU, self.OnAbout, aboutItem)
-		helpMenu.Append(aboutItem)
+		detectmapItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Detect map id')
+		self.Bind(wx.EVT_MENU, self.OnDetectMap, detectmapItem)
+		helpMenu.Append(detectmapItem)
 
 		self.statusbar = self.CreateStatusBar(1)
 		self.statusbar.SetSize((-1, 28))
@@ -268,8 +268,22 @@ class HondaECU_ControlPanel(wx.Frame):
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
-	def OnAbout(self, event):
-		pass
+	def OnDetectMap(self, event):
+		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+			if fileDialog.ShowModal() == wx.ID_CANCEL:
+				return
+		pathname = fileDialog.GetPath()
+		ecupn = os.path.splitext(os.path.split(pathname)[-1])[0]
+		for i in ECM_IDs.values():
+			if ecupn == i["pn"] and "keihinaddr" in i:
+				fbin = open(pathname, "rb")
+				nbyts = os.path.getsize(pathname)
+				byts = bytearray(fbin.read(nbyts))
+				fbin.close()
+				idadr = int(i["keihinaddr"],16)
+				self.statusbar.SetStatusText("Map ID: " + byts[idadr:(idadr+7)].decode("ascii"), 0)
+				return
+		self.statusbar.SetStatusText("Map ID: unknown", 0)
 
 	def OnDebug(self, event):
 		self.debuglog.Show()
