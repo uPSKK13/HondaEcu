@@ -59,12 +59,13 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 				ecus = ECM_IDs[self.parent.ecuinfo["ecmid"]]["pn"]
 			else:
 				et = bytearray(self.parent.ecuinfo["ecmid"])
-				for i in range(5):
-					et[i] ^= 0xFF
-				et = bytes(et)
-				if et in ECM_IDs:
-					models = "%s (%s) Restricted" % (ECM_IDs[et]["model"], ECM_IDs[et]["year"])
-					ecus = ECM_IDs[et]["pn"]
+				if len(et) > 0:
+					for i in range(5):
+						et[i] ^= 0xFF
+					et = bytes(et)
+					if et in ECM_IDs:
+						models = "%s (%s) Restricted" % (ECM_IDs[et]["model"], ECM_IDs[et]["year"])
+						ecus = ECM_IDs[et]["pn"]
 		self.ecmid = wx.StaticText(self.infop, label=ecmids)
 		if "flashcount" in self.parent.ecuinfo:
 			flashcounts = str(self.parent.ecuinfo["flashcount"])
