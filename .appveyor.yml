@@ -17,6 +17,7 @@ environment:
       PYTHON_HOME: C:\Python37
       PYTHON_VERSION: '3.7'
       PYTHON_ARCH: '32'
+      CONDA_DEPENDENCIES: "numpy"
 
 build: off
 
