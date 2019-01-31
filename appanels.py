@@ -689,7 +689,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 
 	def ValidateContinueButton(self, event):
 		if self.newrp.GetValue():
-			if self.ecu.GetValue() != "":
+			if self.ecu.GetValue() != "" and self.race.GetValue() != "":
 				self.continueb.Enable()
 			else:
 				self.continueb.Disable()
