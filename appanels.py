@@ -2,6 +2,8 @@ import struct
 import time
 import wx
 import os
+import tarfile
+import json
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from pydispatch import dispatcher
 from ecu import ECM_IDs, DTC, ECUSTATE, do_validation
@@ -393,6 +395,8 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
+	wildcard = "ECU dump (*.bin)|*.bin"
+
 	def Build(self):
 		self.byts = None
 		self.statusbar = self.CreateStatusBar(1)
@@ -402,13 +406,15 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 
 		self.writep = wx.Panel(self)
 		self.wfilel = wx.StaticText(self.writep, label="File")
-		self.writefpicker = wx.FilePickerCtrl(self.writep,wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
-		self.wchecksuml = wx.StaticText(self.writep,label="Checksum Location")
-		self.fixchecksum = wx.CheckBox(self.writep, label="Fix")
-		self.checksum = wx.TextCtrl(self.writep)
-		self.offsetl = wx.StaticText(self.writep,label="Start Offset")
-		self.offset = wx.TextCtrl(self.writep)
+		self.writefpicker = wx.FilePickerCtrl(self.writep,wildcard=self.wildcard, style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+		self.optsp = wx.Panel(self.writep)
+		self.wchecksuml = wx.StaticText(self.optsp,label="Checksum Location")
+		self.fixchecksum = wx.CheckBox(self.optsp, label="Fix")
+		self.checksum = wx.TextCtrl(self.optsp)
+		self.offsetl = wx.StaticText(self.optsp,label="Start Offset")
+		self.offset = wx.TextCtrl(self.optsp)
 		self.offset.SetValue("0x0")
+
 		self.gobutton = wx.Button(self.writep, label="Start")
 		self.gobutton.Disable()
 		self.checksum.Disable()
@@ -419,6 +425,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.optsbox.Add(self.wchecksuml, 0, flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 		self.optsbox.Add(self.checksum, 0)
 		self.optsbox.Add(self.fixchecksum, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
+		self.optsp.SetSizer(self.optsbox)
 
 		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
 		self.fpickerbox.Add(self.writefpicker, 1)
@@ -430,7 +437,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.flashpsizer = wx.GridBagSizer()
 		self.flashpsizer.Add(self.wfilel, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT, border=10)
-		self.flashpsizer.Add(self.optsbox, pos=(1,0), span=(1,6), flag=wx.TOP, border=5)
+		self.flashpsizer.Add(self.optsp, pos=(1,0), span=(1,6), flag=wx.TOP, border=5)
 		self.flashpsizer.Add(self.progress, pos=(2,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, border=20)
 		self.flashpsizer.Add(self.gobutton, pos=(3,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.RIGHT, border=10)
 		self.flashpsizer.AddGrowableRow(3,1)
@@ -498,6 +505,36 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 				if status != "bad":
 					self.gobutton.Enable()
 					return
+		self.gobutton.Disable()
+
+class HondaECU_WriteTunePanel(HondaECU_WritePanel):
+
+	wildcard = "HondaECU tune file (*.htf)|*.htf"
+
+	def Build(self):
+		HondaECU_WritePanel.Build(self)
+		self.optsp.Hide()
+
+	def OnValidateMode(self, event):
+		if len(self.writefpicker.GetPath()) > 0:
+			if os.path.isfile(self.writefpicker.GetPath()):
+				tar = tarfile.open(self.writefpicker.GetPath(), "r:xz")
+				binmod = None
+				metainfo = None
+				for f in tar.getnames():
+					if f == "metainfo.json":
+						metainfo = json.load(tar.extractfile(f))
+					else:
+						b,e = os.path.splitext(f)
+						if e == ".bin":
+							x, y = os.path.splitext(b)
+							if y == ".mod":
+								binmod = bytearray(tar.extractfile(f).read())
+				if binmod != None and metainfo != None:
+					ret, status, self.byts = do_validation(binmod, len(binmod), int(metainfo["checksum"],16))
+					if status != "bad":
+						self.gobutton.Enable()
+						return
 		self.gobutton.Disable()
 
 class HondaECU_TunePanelHelper(HondaECU_AppPanel):
