@@ -632,6 +632,7 @@ class TablePanel(wx.Panel):
 		self.tb = wx.ToolBar(self)
 		save = wx.Image(os.path.join(self.parent.parent.basepath, "pngs/save.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 		sb = self.tb.AddTool(wx.ID_SAVE,"Save",save)
+		self.tb.Realize()
 		self.Bind(wx.EVT_MENU, self.OnSave, sb)
 		self.tb.EnableTool(wx.ID_SAVE, False)
 		self.g = MyGrid(self)
