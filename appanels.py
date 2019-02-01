@@ -404,7 +404,7 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
-	wildcard = "ECU dump (*.bin)|*.bin"
+	wildcard = "HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 
 	def Build(self):
 		self.byts = None
@@ -460,10 +460,24 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.mainsizer.Fit(self)
 
 		self.offset.Bind(wx.EVT_TEXT, self.OnValidateMode)
-		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnFileSelected)
 		self.fixchecksum.Bind(wx.EVT_CHECKBOX, self.OnFix)
 		self.checksum.Bind(wx.EVT_TEXT, self.OnValidateMode)
 		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
+		self.optsp.Hide()
+
+	def OnFileSelected(self, event):
+		if len(self.writefpicker.GetPath()) > 0 and os.path.splitext(self.writefpicker.GetPath())[-1] == ".htf":
+			self.optsp.Hide()
+			self.doHTF = True
+		else:
+			self.optsp.Show()
+			self.doHTF = False
+	def OnValidateMode(self, event):
+		if self.doHTF:
+			self.OnValidateModeHTF(event)
+		else:
+			self.OnValidateModeBin(event)
 
 	def OnFix(self, event):
 		if self.fixchecksum.IsChecked():
@@ -485,7 +499,35 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.gobutton.Disable()
 		dispatcher.send(signal="WritePanel", sender=self, data=self.byts, offset=offset)
 
-	def OnValidateMode(self, event):
+	def OnValidateModeHTF(self, event):
+		if len(self.writefpicker.GetPath()) > 0:
+			if os.path.isfile(self.writefpicker.GetPath()):
+				tar = tarfile.open(self.writefpicker.GetPath(), "r:xz")
+				binmod = None
+				metainfo = None
+				for f in tar.getnames():
+					if f == "metainfo.json":
+						metainfo = json.load(tar.extractfile(f))
+					else:
+						b,e = os.path.splitext(f)
+						if e == ".bin":
+							x, y = os.path.splitext(b)
+							if y == ".mod":
+								binmod = bytearray(tar.extractfile(f).read())
+				if binmod != None and metainfo != None:
+					ea = int(metainfo["ecmidaddr"],16)
+					ka = int(metainfo["keihinaddr"],16)
+					for i in range(5):
+						binmod[ea+i] ^= 0xFF
+					for i in range(7):
+						binmod[ka+i] = ord(metainfo["rid"][i])
+					ret, status, self.byts = do_validation(binmod, len(binmod), int(metainfo["checksum"],16))
+					if status != "bad":
+						self.gobutton.Enable()
+						return
+		self.gobutton.Disable()
+
+	def OnValidateModeBin(self, event):
 		offset = None
 		try:
 			offset = int(self.offset.GetValue(), 16)
@@ -514,42 +556,6 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 				if status != "bad":
 					self.gobutton.Enable()
 					return
-		self.gobutton.Disable()
-
-class HondaECU_WriteTunePanel(HondaECU_WritePanel):
-
-	wildcard = "HondaECU tune file (*.htf)|*.htf"
-
-	def Build(self):
-		HondaECU_WritePanel.Build(self)
-		self.optsp.Hide()
-
-	def OnValidateMode(self, event):
-		if len(self.writefpicker.GetPath()) > 0:
-			if os.path.isfile(self.writefpicker.GetPath()):
-				tar = tarfile.open(self.writefpicker.GetPath(), "r:xz")
-				binmod = None
-				metainfo = None
-				for f in tar.getnames():
-					if f == "metainfo.json":
-						metainfo = json.load(tar.extractfile(f))
-					else:
-						b,e = os.path.splitext(f)
-						if e == ".bin":
-							x, y = os.path.splitext(b)
-							if y == ".mod":
-								binmod = bytearray(tar.extractfile(f).read())
-				if binmod != None and metainfo != None:
-					ea = int(metainfo["ecmidaddr"],16)
-					ka = int(metainfo["keihinaddr"],16)
-					for i in range(5):
-						binmod[ea+i] ^= 0xFF
-					for i in range(7):
-						binmod[ka+i] = ord(metainfo["rid"][i])
-					ret, status, self.byts = do_validation(binmod, len(binmod), int(metainfo["checksum"],16))
-					if status != "bad":
-						self.gobutton.Enable()
-						return
 		self.gobutton.Disable()
 
 class HondaECU_TunePanelHelper(HondaECU_AppPanel):
