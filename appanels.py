@@ -404,7 +404,7 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
-	wildcard = "HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
+	wildcard = "ECU dump (*.bin)|*.bin|HondaECU tune file (*.htf)|*.htf"
 
 	def Build(self):
 		self.byts = None
@@ -473,6 +473,8 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		else:
 			self.optsp.Show()
 			self.doHTF = False
+		self.OnValidateMode(event)
+
 	def OnValidateMode(self, event):
 		if self.doHTF:
 			self.OnValidateModeHTF(event)

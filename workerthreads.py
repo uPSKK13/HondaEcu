@@ -227,7 +227,7 @@ class KlineWorker(Thread):
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.result", value=self.readinfo[2])
 						else:
 							self.do_unknown()
-					elif self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW]:
+					elif self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1]:
 						if not self.writeinfo is None and self.writeinfo[2] == None:
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
 							for i in range(14):

@@ -24,7 +24,8 @@ class ECUSTATE(Enum):
 	ERASE = 7
 	WRITE = 8
 	WRITE_GOOD = 9
-	ERROR = 10
+	WRITE_UNKNOWN1 = 10
+	ERROR = 11
 
 ECM_IDs = {
 	b"\x01\x00\x2b\x01\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-D21","checksum":"0x3fff8"},
@@ -289,6 +290,8 @@ class HondaECU(object):
 					return ECUSTATE.ERASE
 				elif writestatus[2][1] == 0x40:
 					return ECUSTATE.WRITE
+				elif writestatus[2][1] == 0x0:
+					return ECUSTATE.WRITE_UNKNOWN1
 				else:
 					return ECUSTATE.ERROR
 			else:
@@ -305,11 +308,11 @@ class HondaECU(object):
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13])
 
 	def do_init_write(self):
-		self.send_command([0x7d], [0x01, 0x01, 0x01])
-		self.send_command([0x7d], [0x01, 0x01, 0x02])
-		self.send_command([0x7d], [0x01, 0x01, 0x03])
-		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d])
-		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49])
+		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x01, 0x01])[2]])
+		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x01, 0x02])[2]])
+		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x01, 0x03])[2]])
+		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d])[2]])
+		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49])[2]])
 
 	def do_erase(self):
 		self.send_command([0x7e], [0x01, 0x02])
