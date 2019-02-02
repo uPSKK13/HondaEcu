@@ -404,7 +404,7 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
-	wildcard = "ECU dump (*.bin)|*.bin|HondaECU tune file (*.htf)|*.htf"
+	wildcard = "HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 
 	def Build(self):
 		self.byts = None
