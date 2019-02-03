@@ -120,36 +120,36 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.apps = {
 			"read": {
 				"label":"Read ECU",
-				"icon":"pngs/download.png",
+				"icon":"images/download.png",
 				"conflicts":["write"],
 				"panel":HondaECU_ReadPanel,
 			},
 			"tunehelper": {
 				"label":"Tune",
-				"icon":"pngs/spanner.png",
+				"icon":"images/spanner.png",
 				"panel":HondaECU_TunePanelHelper,
 			},
 			"write": {
 				"label":"Write ECU",
-				"icon":"pngs/upload.png",
+				"icon":"images/upload.png",
 				"conflicts":["read"],
 				"panel":HondaECU_WritePanel,
 			},
 			"data": {
 				"label":"Data Logging",
-				"icon":"pngs/chart.png",
+				"icon":"images/chart.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_DatalogPanel,
 			},
 			"dtc": {
 				"label":"Trouble Codes",
-				"icon":"pngs/warning.png",
+				"icon":"images/warning.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_ErrorPanel,
 			},
 			"info": {
 				"label":"ECU Info",
-				"icon":"pngs/info.png",
+				"icon":"images/info.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_InfoPanel,
 			},
@@ -159,7 +159,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		wx.Frame.__init__(self, None, title="HondaECU %s :: Control Panel" % (__VERSION__), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500,300))
 
 		ib = wx.IconBundle()
-		ib.AddIcon(os.path.join(self.basepath,"honda.ico"))
+		ib.AddIcon(os.path.join(self.basepath,"images","honda.ico"))
 		self.SetIcons(ib)
 
 		self.menubar = wx.MenuBar()
