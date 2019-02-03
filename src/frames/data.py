@@ -41,12 +41,13 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					self.sensors[s][2].Hide()
 					self.sensors[s][5] = False
 			for t in [0x10,0x11,0x17]:
-				if t == 0x11:
-					u += "BH"
-				elif t == 0x17:
-					u += "BB"
 				if t in self.parent.ecuinfo["data"]:
-					data = list(struct.unpack(u, self.parent.ecuinfo["data"][t][1][2:]))
+					dd = self.parent.ecuinfo["data"][t][1][2:]
+					if t == 0x11:
+						u += "BH"
+					elif t == 0x17:
+						u += "BB"
+					data = list(struct.unpack(u, dd))
 					data[1] = data[1]/0xff*5.0
 					data[3] = data[3]/0xff*5.0
 					data[4] = -40 + data[4]
@@ -104,11 +105,12 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					mt = "0x%x" % self.maintable
 					self.d1pboxsizer.GetStaticBox().SetLabel("Table " + mt)
 				u = ">H12BHB"
+				dd = self.parent.ecuinfo["data"][t][1][2:]
 				if t == 0x11:
 					u += "BH"
 				elif t == 0x17:
 					u += "BB"
-				data = list(struct.unpack(u, d))
+				data = list(struct.unpack(u, dd))
 				data[1] = data[1]/0xff*5.0
 				data[3] = data[3]/0xff*5.0
 				data[4] = -40 + data[4]

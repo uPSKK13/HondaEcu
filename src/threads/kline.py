@@ -2,6 +2,7 @@ import time
 import wx
 from threading import Thread
 from pydispatch import dispatcher
+from pylibftdi import Driver, FtdiError, LibraryMissingError
 
 from ecu import *
 
