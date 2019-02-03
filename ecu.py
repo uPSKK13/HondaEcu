@@ -38,6 +38,9 @@ ECM_IDs = {
 	b"\x01\x01\x25\x0b\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-C02","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x01\x25\x01\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-D02","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x02\xf2\x05\x11": {"model":"CBR500R","year":"2017-2018","pn":"38770-MJW-AQ1","checksum":"0x3fff8","ecmidaddr":"0x18BB7","keihinaddr":"0x3FA70"},
+	b"\x01\x01\x35\x05\x01": {"model":"MSX125","year":"2014-2016","pn":"38770-K26-911","checksum":"0x9fff","offset":"0x4000","ecmidaddr":"0x97cd","keihinaddr":"0x7601"},
+	b"\x01\x02\x13\x05\x01": {"model":"MSX125","year":"2017-2019","pn":"38770-K26-B13","checksum":"0x5fff","offset":"0x8000","ecmidaddr":"0x23B8","keihinaddr":"0x1"},
+	b"\x01\x02\x57\x05\x01": {"model":"MSX125","year":"2017-2019","pn":"38770-K26-C31","checksum":"0x5fff","offset":"0x8000","ecmidaddr":"0x260C","keihinaddr":"0x1"},
 	# b"\x01\x01\xf2\x01\x01": {"model":"CB500F","year":"2016","pn":"38770-MJW-D51","checksum":"0x3fff8"}
 	# b"\x01\x01\x28\x01\x01": {"model":"CB500X","?2013?","?"},
 	# b"\x01\x01\xde\x01\x01": {"model":"CB500X","?2016?","?"}
@@ -308,11 +311,11 @@ class HondaECU(object):
 		self.send_command([0x7b], [0x00, 0x03, 0x75, 0x05, 0x13])
 
 	def do_init_write(self):
-		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x01, 0x01])[2]])
-		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x01, 0x02])[2]])
-		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x01, 0x03])[2]])
-		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d])[2]])
-		print([hex(b) for b in self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49])[2]])
+		self.send_command([0x7d], [0x01, 0x01, 0x01])
+		self.send_command([0x7d], [0x01, 0x01, 0x02])
+		self.send_command([0x7d], [0x01, 0x01, 0x03])
+		self.send_command([0x7d], [0x01, 0x02, 0x50, 0x47, 0x4d])
+		self.send_command([0x7d], [0x01, 0x03, 0x2d, 0x46, 0x49])
 
 	def do_erase(self):
 		self.send_command([0x7e], [0x01, 0x02])

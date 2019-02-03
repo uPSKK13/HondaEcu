@@ -193,11 +193,17 @@ def get_table_info(t):
 	e = zzz.xpath("EMBEDDEDDATA")[0]
 	a = int(e.get("mmedaddress"),16)
 	s = int(e.get("mmedelementsizebits"))
+	ff = e.get("mmedtypeflags")
+	if ff != None:
+		ff = int(ff,16)
+	else:
+		ff = 0
+	ff = "<" if (ff & 0x02) else ">"
 	######
 	axisinfo = {
 		'x': {'indexcount': xindexcount, 'type': xtype, 'linkobjid': xlinkobjid, 'xot': xot, 'xdp': xdp},# 'xmin': xmin, 'xmax': xmax},
 		'y': {'indexcount': yindexcount, 'type': ytype, 'linkobjid': ylinkobjid, 'yot': yot, 'ydp': ydp},# 'ymin': ymin, 'ymax': ymax},
-		'z': {'eq':eq, 'zot': zot, 'zdp': zdp, 'zmin': zmin, 'zmax': zmax}
+		'z': {'eq':eq, 'zot': zot, 'zdp': zdp, 'zmin': zmin, 'zmax': zmax, 'lsb':ff}
 	}
 	return n,a,s,axisinfo
 
@@ -388,11 +394,12 @@ class XDFGridTable(wx.grid.GridTableBase):
 			self.restriction = self.metainfo["restrictions"][list(self.metainfo["restrictions"].keys())[0]]
 		rows = self.axisinfo['y']['indexcount']
 		cols = self.axisinfo['x']['indexcount']
+		zzt = self.axisinfo['z']['lsb']
 		s = "B"
 		if self.stride == 16:
 			s = "H"
-		self.origdata = np.array(struct.unpack_from(">%d%s" % (rows*cols, s), bin, offset=self.address))
-		self.data = np.array(struct.unpack_from(">%d%s" % (rows*cols, s), byts, offset=self.address))
+		self.origdata = np.array(struct.unpack_from("%s%d%s" % (zzt, rows*cols, s), bin, offset=self.address))
+		self.data = np.array(struct.unpack_from("%s%d%s" % (zzt, rows*cols, s), byts, offset=self.address))
 		if not self.axisinfo['z']['eq'] is None:
 			def formatCell(x):
 				x = nsp.eval(self.axisinfo['z']['eq'].replace("X",str(x)))
@@ -423,7 +430,8 @@ class XDFGridTable(wx.grid.GridTableBase):
 					sx = "H"
 				xxrows = xx.axisinfo['y']['indexcount']
 				xxcols = xx.axisinfo['x']['indexcount']
-				self.cols = np.array(struct.unpack_from(">%d%s" % (xxrows*xxcols, sx), byts, offset=xx.address)).reshape(xxrows, xxcols)
+				xxt = xx.axisinfo['z']['lsb']
+				self.cols = np.array(struct.unpack_from("%s%d%s" % (xxt, xxrows*xxcols, sx), byts, offset=xx.address)).reshape(xxrows, xxcols)
 				if not xx.axisinfo['z']['eq'] is None:
 					def formatCell(x):
 						x = nsp.eval(xx.axisinfo['z']['eq'].replace("X",str(x)))
@@ -446,7 +454,8 @@ class XDFGridTable(wx.grid.GridTableBase):
 					sy = "H"
 				yyrows = yy.axisinfo['y']['indexcount']
 				yycols = yy.axisinfo['x']['indexcount']
-				self.rows = np.array(struct.unpack_from(">%d%s" % (yyrows*yycols, sy), byts, offset=yy.address)).reshape(yyrows, yycols)
+				yyt = yy.axisinfo['z']['lsb']
+				self.rows = np.array(struct.unpack_from("%s%d%s" % (yyt, yyrows*yycols, sy), byts, offset=yy.address)).reshape(yyrows, yycols)
 				if not yy.axisinfo['z']['eq'] is None:
 					def formatCell(y):
 						y = nsp.eval(yy.axisinfo['z']['eq'].replace("X",str(y)))
@@ -472,7 +481,7 @@ class XDFGridTable(wx.grid.GridTableBase):
 		s = "B"
 		if self.stride == 16:
 			s = "H"
-		struct.pack_into(">%d%s" % (self.axisinfo['y']['indexcount']*self.axisinfo['x']['indexcount'], s), byts, self.address, *d)
+		struct.pack_into("%s%d%s" % (self.lsb, self.axisinfo['y']['indexcount']*self.axisinfo['x']['indexcount'], s), byts, self.address, *d)
 
 	def GetNumberRows(self):
 		return self.data.shape[0]
