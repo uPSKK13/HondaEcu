@@ -80,3 +80,5 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 			self.flashcount.SetLabel(flashcount)
 			self.Layout()
 			self.mainsizer.Fit(self)
+		elif info == "state":
+			self.state.SetLabel(str(value))
