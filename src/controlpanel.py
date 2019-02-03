@@ -7,9 +7,16 @@ from pydispatch import dispatcher
 import wx
 import wx.lib.buttons as buttons
 
-from appanels import *
-from tune import *
-from workerthreads import *
+from frames.info import HondaECU_InfoPanel
+from frames.data import HondaECU_DatalogPanel
+from frames.error import HondaECU_ErrorPanel
+from frames.read import HondaECU_ReadPanel
+from frames.write import HondaECU_WritePanel
+from frames.tune import TunePanel
+from frames.tunehelper import HondaECU_TunePanelHelper
+
+from threads.kline import KlineWorker
+from threads.usb import USBMonitor
 
 __VERSION__ = "3.0.MAspec"
 
@@ -345,14 +352,3 @@ class HondaECU_ControlPanel(wx.Frame):
 			if appid in self.appanels:
 				del self.appanels[appid]
 				self.appbuttons[appid].Enable()
-
-if __name__ == '__main__':
-
-	import argparse
-	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument('--noredirect', action='store_true', help="don't redirect stdout/stderr to gui")
-	args = parser.parse_args()
-
-	app = wx.App(redirect=not args.noredirect)
-	gui = HondaECU_ControlPanel()
-	app.MainLoop()
