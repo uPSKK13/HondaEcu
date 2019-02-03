@@ -348,7 +348,11 @@ class HondaECU_ControlPanel(wx.Frame):
 
 if __name__ == '__main__':
 
+	import argparse
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser.add_argument('--noredirect', action='store_true', help="don't redirect stdout/stderr to gui")
+	args = parser.parse_args()
 
-	app = wx.App(redirect=True)
+	app = wx.App(redirect=not args.noredirect)
 	gui = HondaECU_ControlPanel()
 	app.MainLoop()
