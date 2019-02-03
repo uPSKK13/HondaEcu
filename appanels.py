@@ -423,6 +423,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.offsetl = wx.StaticText(self.optsp,label="Start Offset")
 		self.offset = wx.TextCtrl(self.optsp)
 		self.offset.SetValue("0x0")
+		self.htfoffset = None
 
 		self.gobutton = wx.Button(self.writep, label="Start")
 		self.gobutton.Disable()
@@ -467,6 +468,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.optsp.Hide()
 
 	def OnFileSelected(self, event):
+		self.htfoffset = None
 		if len(self.writefpicker.GetPath()) > 0 and os.path.splitext(self.writefpicker.GetPath())[-1] == ".htf":
 			self.optsp.Hide()
 			self.doHTF = True
@@ -497,7 +499,10 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 			self.statusbar.SetStatusText("Write complete (result=%s)" % value, 0)
 
 	def OnGo(self, event):
-		offset = int(self.offset.GetValue(), 16)
+		if self.htfoffset != None:
+			offset = int(self.htfoffset, 16)
+		else:
+			offset = int(self.offset.GetValue(), 16)
 		self.gobutton.Disable()
 		dispatcher.send(signal="WritePanel", sender=self, data=self.byts, offset=offset)
 
@@ -519,10 +524,13 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 				if binmod != None and metainfo != None:
 					ea = int(metainfo["ecmidaddr"],16)
 					ka = int(metainfo["keihinaddr"],16)
-					for i in range(5):
-						binmod[ea+i] ^= 0xFF
-					for i in range(7):
-						binmod[ka+i] = ord(metainfo["rid"][i])
+					if "offset" in metainfo:
+						self.htfoffset = metainfo["offset"]
+					if "rid" in metainfo and metainfo["rid"] != None:
+						for i in range(5):
+							binmod[ea+i] ^= 0xFF
+						for i in range(7):
+							binmod[ka+i] = ord(metainfo["rid"][i])
 					ret, status, self.byts = do_validation(binmod, len(binmod), int(metainfo["checksum"],16))
 					if status != "bad":
 						self.gobutton.Enable()
@@ -578,10 +586,11 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 					xdf = os.path.join(xdfdir,"38770-%s.xdf" % (blcode))
 					bin = os.path.join(bindir,"%s.bin" % (info["pn"]))
 					checksum = info["checksum"] if "checksum" in info else None
+					offset = info["offset"] if "offset" in info else None
 					ecmidaddr = info["ecmidaddr"] if "ecmidaddr" in info else None
 					keihinaddr = info["keihinaddr"] if "keihinaddr" in info else None
 					if os.path.isfile(xdf) and os.path.isfile(bin):
-						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,xdf,bin,checksum,ecmidaddr,keihinaddr)
+						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,xdf,bin,checksum,offset,ecmidaddr,keihinaddr)
 		models = list(modeltree.keys())
 		for m in models:
 			years = list(modeltree[m].keys())
@@ -678,7 +687,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 					rid = self.rid[r]
 			else:
 				r = None
-			_, xdf, bin, checksum, ecmidaddr, keihinaddr = self.modeltree[model][year][ecupn]
+			_, xdf, bin, checksum, offset, ecmidaddr, keihinaddr = self.modeltree[model][year][ecupn]
 			metainfo = {
 				"model": model,
 				"year": year,
@@ -687,6 +696,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 				"rid": rid,
 				"restrictions":	restrictions,
 				"checksum": checksum,
+				"offset": offset,
 				"ecmidaddr": ecmidaddr,
 				"keihinaddr": keihinaddr,
 			}
