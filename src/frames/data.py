@@ -111,15 +111,15 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				elif t == 0x17:
 					u += "BB"
 				data = list(struct.unpack(u, dd))
-				data[1] = data[1]/0xff*5.0
-				data[3] = data[3]/0xff*5.0
+				data[1] = round(data[1]/0xff*5.0,2)
+				data[3] = round(data[3]/0xff*5.0,2)
 				data[4] = -40 + data[4]
-				data[5] = data[5]/0xff*5.0
+				data[5] = round(data[5]/0xff*5.0,2)
 				data[6] = -40 + data[6]
-				data[7] = data[7]/0xff*5.0
-				data[11] = data[11]/10
-				data[13] = data[13]/0xffff*265.5
-				data[14] = -64 + data[14]/0xff*127.5
+				data[7] = round(data[7]/0xff*5.0,2)
+				data[11] = round(data[11]/10,2)
+				data[13] = round(data[13]/0xffff*265.5,2)
+				data[14] = round(-64 + data[14]/0xff*127.5,2)
 				if t == 0x11:
 					data[16] = data[16]/0xffff*8.0
 				for s in self.sensors:
