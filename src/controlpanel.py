@@ -194,7 +194,8 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
 		self.SetStatusBar(self.statusbar)
 
-		self.wrappanel = wx.Panel(self)
+		self.outerp = wx.Panel(self)
+		self.wrappanel = wx.Panel(self.outerp)
 		wrapsizer = wx.WrapSizer(wx.HORIZONTAL)
 		self.appbuttons = {}
 		for a,d in self.apps.items():
@@ -205,9 +206,15 @@ class HondaECU_ControlPanel(wx.Frame):
 			wrapsizer.Add(self.appbuttons[a], 0)
 			self.Bind(wx.EVT_BUTTON, self.OnAppButtonClicked, self.appbuttons[a])
 		self.wrappanel.SetSizer(wrapsizer)
-		mainsizer = wx.BoxSizer(wx.VERTICAL)
-		mainsizer.Add(self.wrappanel,0,wx.ALIGN_CENTER)
-		self.SetSizer(mainsizer)
+
+		self.outersizer = wx.BoxSizer(wx.VERTICAL)
+		self.outersizer.Add(self.wrappanel, 1, wx.EXPAND)
+		self.outerp.SetSizer(self.outersizer)
+
+		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
+		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
+		self.SetSizer(self.mainsizer)
+
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
 		self.debuglog = HondaECU_LogPanel(self)
@@ -221,7 +228,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.klineworker = KlineWorker(self)
 
 		self.Layout()
-		mainsizer.Fit(self)
+		self.mainsizer.Fit(self)
 		self.Center()
 		self.Show()
 

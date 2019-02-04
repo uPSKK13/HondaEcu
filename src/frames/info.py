@@ -5,7 +5,8 @@ from ecu import ECM_IDs, ECUSTATE
 class HondaECU_InfoPanel(HondaECU_AppPanel):
 
 	def Build(self):
-		self.infop = wx.Panel(self)
+		self.outerp = wx.Panel(self)
+		self.infop = wx.Panel(self.outerp)
 		infopsizer = wx.GridBagSizer(4,2)
 		ecmidl = wx.StaticText(self.infop, label="ECMID:")
 		flashcountl = wx.StaticText(self.infop, label="Flash count:")
@@ -51,9 +52,15 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		infopsizer.Add(self.flashcount, pos=(3,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		infopsizer.Add(self.state, pos=(4,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
 		self.infop.SetSizer(infopsizer)
+
+		self.outersizer = wx.BoxSizer(wx.VERTICAL)
+		self.outersizer.Add(self.infop, 1, wx.EXPAND|wx.ALL, border=10)
+		self.outerp.SetSizer(self.outersizer)
+
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
-		self.mainsizer.Add(self.infop, 1, wx.EXPAND|wx.ALL, border=20)
+		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
+
 		self.Layout()
 		self.mainsizer.Fit(self)
 

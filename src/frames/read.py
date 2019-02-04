@@ -13,7 +13,8 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
 		self.SetStatusBar(self.statusbar)
 
-		self.readp = wx.Panel(self)
+		self.outerp = wx.Panel(self)
+		self.readp = wx.Panel(self.outerp)
 		self.wfilel = wx.StaticText(self.readp, label="File")
 		self.readfpicker = wx.FilePickerCtrl(self.readp, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.offsetl = wx.StaticText(self.readp,label="Start Offset")
@@ -43,9 +44,14 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 		self.flashpsizer.AddGrowableCol(5,1)
 		self.readp.SetSizer(self.flashpsizer)
 
+		self.outersizer = wx.BoxSizer(wx.VERTICAL)
+		self.outersizer.Add(self.readp, 1, wx.EXPAND|wx.ALL, border=10)
+		self.outerp.SetSizer(self.outersizer)
+
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
-		self.mainsizer.Add(self.readp, 1, wx.EXPAND|wx.ALL, border=10)
+		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
+
 		self.Layout()
 		self.mainsizer.Fit(self)
 

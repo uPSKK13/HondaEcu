@@ -17,7 +17,8 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
 		self.SetStatusBar(self.statusbar)
 
-		self.writep = wx.Panel(self)
+		self.outerp = wx.Panel(self)
+		self.writep = wx.Panel(self.outerp)
 		self.wfilel = wx.StaticText(self.writep, label="File")
 		self.writefpicker = wx.FilePickerCtrl(self.writep,wildcard=self.wildcard, style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.optsp = wx.Panel(self.writep)
@@ -58,9 +59,14 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.flashpsizer.AddGrowableCol(5,1)
 		self.writep.SetSizer(self.flashpsizer)
 
+		self.outersizer = wx.BoxSizer(wx.VERTICAL)
+		self.outersizer.Add(self.writep, 1, wx.EXPAND|wx.ALL, border=10)
+		self.outerp.SetSizer(self.outersizer)
+
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
-		self.mainsizer.Add(self.writep, 1, wx.EXPAND|wx.ALL, border=10)
+		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
+
 		self.Layout()
 		self.mainsizer.Fit(self)
 
