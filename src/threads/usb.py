@@ -1,3 +1,4 @@
+import sys
 import time
 import wx
 from threading import Thread
