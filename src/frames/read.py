@@ -4,6 +4,8 @@ import time
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
 
+from ecu import *
+
 class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 	def Build(self):
