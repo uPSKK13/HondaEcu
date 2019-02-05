@@ -66,14 +66,14 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "ecmid":
+			ecmid = "unknown"
+			model = "unknown"
+			ecu = "unknown"
 			if len(value) > 0:
 				ecmid = " ".join(["%02x" % i for i in value])
-				model = "%s (%s)" % (ECM_IDs[value]["model"], ECM_IDs[self.parent.ecuinfo["ecmid"]]["year"])
-				ecu = ECM_IDs[value]["pn"]
-			else:
-				ecmid = "unknown"
-				model = "unknown"
-				ecu = "unknown"
+				if self.parent.ecuinfo["ecmid"] in ECM_IDs:
+					model = "%s (%s)" % (ECM_IDs[value]["model"], ECM_IDs[ee]["year"])
+					ecu = ECM_IDs[value]["pn"]
 			self.ecmid.SetLabel(ecmid)
 			self.model.SetLabel(model)
 			self.ecu.SetLabel(ecu)
