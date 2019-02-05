@@ -6,6 +6,8 @@ import json
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
 
+from ecu import *
+
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
 	wildcard = "HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
