@@ -38,7 +38,7 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		if "flashcount" in self.parent.ecuinfo:
 			flashcounts = str(self.parent.ecuinfo["flashcount"])
 		self.flashcount = wx.StaticText(self.infop, label=flashcounts)
-		self.model = wx.StaticText(self.infop, label=models)
+		self.model = wx.StaticText(self.infop, label=models,size=(150,-1))
 		self.ecu = wx.StaticText(self.infop, label=ecus)
 		self.state = wx.StaticText(self.infop, label=str(state))
 		infopsizer.Add(ecmidl, pos=(0,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.LEFT|wx.RIGHT|wx.BOTTOM,border=5)
@@ -78,7 +78,6 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 			self.model.SetLabel(model)
 			self.ecu.SetLabel(ecu)
 			self.Layout()
-			self.mainsizer.Fit(self)
 		elif info == "flashcount":
 			if value >= 0:
 				flashcount = str(value)
@@ -86,8 +85,6 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 				flashcount = "unknown"
 			self.flashcount.SetLabel(flashcount)
 			self.Layout()
-			self.mainsizer.Fit(self)
 		elif info == "state":
 			self.state.SetLabel(str(value))
 			self.Layout()
-			self.mainsizer.Fit(self)

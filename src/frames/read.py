@@ -38,8 +38,8 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 		self.flashpsizer = wx.GridBagSizer()
 		self.flashpsizer.Add(self.wfilel, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
-		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT, border=10)
-		self.flashpsizer.Add(self.optsbox, pos=(1,0), span=(1,6), flag=wx.TOP, border=5)
+		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT|wx.BOTTOM, border=10)
+		self.flashpsizer.Add(self.optsbox, pos=(1,0), span=(1,6), flag=wx.BOTTOM, border=20)
 		self.flashpsizer.Add(self.progress, pos=(2,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, border=20)
 		self.flashpsizer.Add(self.gobutton, pos=(3,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.RIGHT, border=10)
 		self.flashpsizer.AddGrowableRow(3,1)
