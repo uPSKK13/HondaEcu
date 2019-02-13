@@ -93,7 +93,7 @@ class HondaECU_LogPanel(wx.Frame):
 		self.Layout()
 		sizer.Fit(self)
 		self.Center()
-
+		self.starttime = time.time()
 		wx.CallAfter(dispatcher.connect, self.ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
 
 	def OnSave(self, event):
@@ -111,10 +111,11 @@ class HondaECU_LogPanel(wx.Frame):
 		self.Hide()
 
 	def ECUDebugHandler(self, msg):
+		msg = "[%.4f] %s\n" % (time.time()-self.starttime, msg)
 		if self.autoscrollItem.IsChecked():
-			wx.CallAfter(self.logText.AppendText, msg+"\n")
+			wx.CallAfter(self.logText.AppendText, msg)
 		else:
-			wx.CallAfter(self.logText.WriteText, msg+"\n")
+			wx.CallAfter(self.logText.WriteText, msg)
 
 class HondaECU_ControlPanel(wx.Frame):
 
