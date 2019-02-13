@@ -509,7 +509,6 @@ class XDFGridTable(wx.grid.GridTableBase):
 			self.data[row][col] = nd
 			self.dirty = True
 
-
 	def GetValue(self, row, col):
 		return self.data[row][col]
 
@@ -692,6 +691,7 @@ class TablePanel(wx.Panel):
 
 	def OnSave(self, event):
 		self.gt.PackData(self.parent.byts)
+		self.parent.dirty = True
 		self.tb.EnableTool(wx.ID_SAVE, False)
 
 	def OnCellChanged(self, event):
@@ -712,6 +712,7 @@ class TunePanel(wx.Frame):
 		self.bin = binorig
 		self.byts = binmod
 		self.currenthtf = None
+		self.dirty = False
 		if self.byts == None:
 			self.byts = bytearray()
 			self.byts[:] = self.bin
@@ -732,6 +733,7 @@ class TunePanel(wx.Frame):
 		fileMenu.AppendSeparator()
 		quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
 		self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
+		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		fileMenu.Append(quitItem)
 		self.menubar.Enable(wx.ID_SAVE, 0)
 
@@ -779,7 +781,6 @@ class TunePanel(wx.Frame):
 		wx.CallAfter(self.Show)
 
 	def OnClose(self, event):
-		print("OnClose", event)
 		self.Destroy()
 
 	def doSaveData(self):

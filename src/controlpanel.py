@@ -18,6 +18,8 @@ from frames.tunehelper import HondaECU_TunePanelHelper
 from threads.kline import KlineWorker
 from threads.usb import USBMonitor
 
+import tarfile
+
 from ecu import *
 
 __VERSION__ = "3.0.MAspec"
