@@ -44,7 +44,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.restrictions = {
 			"CBR500R": {
 				"MotoAmerica 2019: Junior Cup": {
-					"Ignition": [-10,4]
+					"Ignition": [-4,10]
 				}
 			}
 		}
