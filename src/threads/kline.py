@@ -54,8 +54,10 @@ class KlineWorker(Thread):
 			self.sendwriteinit = True
 		elif self.state == ECUSTATE.RECOVER_NEW:
 			self.sendrecoverinint = True
+		elif self.state == ECUSTATE.ERASE:
+			pass
 		else:
-			raise Exception("Unhandled condition in WritePanelHandler()")
+			raise Exception("Unhandled ECU state in WritePanelHandler()")
 
 	def ReadPanelHandler(self, data, offset):
 		if self.state != ECUSTATE.READ:
