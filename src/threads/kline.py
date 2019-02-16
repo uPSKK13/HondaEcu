@@ -3,6 +3,7 @@ import wx
 from threading import Thread
 from pydispatch import dispatcher
 from pylibftdi import Driver, FtdiError, LibraryMissingError
+import numpy as np
 
 from ecu import *
 
@@ -54,8 +55,8 @@ class KlineWorker(Thread):
 			self.sendwriteinit = True
 		elif self.state == ECUSTATE.RECOVER_NEW:
 			self.sendrecoverinint = True
-		elif self.state == ECUSTATE.ERASE:
-			pass
+		elif self.state in [ECUSTATE.ERASE, ECUSTATE.WRITE_UNKNOWN1]:
+			self.senderase = True
 		else:
 			raise Exception("Unhandled ECU state in WritePanelHandler()")
 
@@ -200,19 +201,36 @@ class KlineWorker(Thread):
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.result", value=self.readinfo[2])
 						else:
 							self.do_unknown()
-					elif self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1]:
+					elif self.senderase and self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1, ECUSTATE.ERASE]:
 						if not self.writeinfo is None and self.writeinfo[2] == None:
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
-							for i in range(14):
-								w = 14-i
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100, "waiting for %d seconds" % (w)))
-								time.sleep(1)
+							if self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW]:
+								for i in range(14):
+									w = 14-i
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100, "Write: waiting for %d seconds" % (w)))
+									time.sleep(1)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(0, "Write: waiting for %d seconds" % (w)))
+							cont = 1
+							e = 0
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/160*100,0,100), "erasing ecu"))
 							self.ecu.do_erase()
-							self.ecu.do_erase_wait()
+							while cont:
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/160*100,0,100), "erasing ecu"))
+								e += 1
+								info = self.ecu.send_command([0x7e], [0x01, 0x05])
+								if info:
+									if info[2][1] == 0x00:
+										cont = 0
+								else:
+									cont = -1
+									raise Exception("Unhandled ECU state in WritePanelHandler()")
+							if cont == 0:
+								into = self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
+								self.senderase = False
 							self.update_state()
 						else:
 							self.do_unknown()
-					elif self.state == ECUSTATE.ERASE:
+					elif not self.senderase and self.state == ECUSTATE.ERASE:
 						if not self.writeinfo is None and self.writeinfo[2] == None:
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
 							if self.do_write_flash(self.writeinfo[0], offset=self.writeinfo[1]):
@@ -228,6 +246,7 @@ class KlineWorker(Thread):
 									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="init.write", value=None)
 									self.ecu.do_init_write()
 									self.sendwriteinit = False
+									self.senderase = True
 								elif self.sendrecoverinint:
 									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="init.recover", value=None)
 									self.ecu.do_init_recover()
@@ -235,6 +254,7 @@ class KlineWorker(Thread):
 									time.sleep(1)
 									self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
 									self.sendrecoverinint = False
+									self.senderase = True
 							else:
 								if not self.ecmid:
 									info = self.ecu.send_command([0x72], [0x71, 0x00])
