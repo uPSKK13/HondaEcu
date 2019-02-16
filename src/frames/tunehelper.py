@@ -65,7 +65,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		yearl = wx.StaticText(modelp, wx.ID_ANY, label="Year")
 		ecul = wx.StaticText(modelp, wx.ID_ANY, label="ECU")
 		racel = wx.StaticText(modelp, wx.ID_ANY, label="Restrictions")
-		self.model = wx.ListBox(modelp, wx.ID_ANY, size=(350,-1), choices=list(self.modeltree.keys()), style=wx.CB_READONLY|wx.TE_PROCESS_ENTER)
+		self.model = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1), choices=list(self.modeltree.keys()), style=wx.CB_READONLY|wx.TE_PROCESS_ENTER)
 		self.Bind(wx.EVT_COMBOBOX, self.ModelHandler, self.model)
 		self.year = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1), style=wx.CB_READONLY|wx.TE_PROCESS_ENTER)
 		self.Bind(wx.EVT_COMBOBOX, self.YearHandler, self.year)
