@@ -10,7 +10,7 @@ from ecu import *
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
-	wildcard = "HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
+	wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 
 	def Build(self):
 		self.byts = None
