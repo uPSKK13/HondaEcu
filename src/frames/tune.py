@@ -742,8 +742,8 @@ class TunePanel(wx.Frame):
 		self.ptree = wx.dataview.DataViewCtrl(self.ptreep, style=dv.DV_NO_HEADER)
 		self.ptreemodel = XDFModel(self, xdftree)
 		self.ptree.AssociateModel(self.ptreemodel)
-		c0 = self.ptree.AppendIconTextColumn("Parameter Tree",0, width=100)
-		c0.SetSortOrder(True)
+		self.c0 = self.ptree.AppendIconTextColumn("Parameter Tree",0)
+		self.c0.SetSortOrder(True)
 		self.ptreemodel.Resort()
 		ptreesizer.Add(self.ptree, 1, wx.EXPAND)
 		self.ptreep.SetSizer(ptreesizer)
@@ -771,9 +771,14 @@ class TunePanel(wx.Frame):
 		self.currentSelection = wx.CallAfter(self.nb.GetSelection)
 		self.nb.Bind(wx.lib.agw.aui.auibook.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnTableClose)
 		self.nb.Bind(wx.lib.agw.aui.auibook.EVT_AUINOTEBOOK_PAGE_CHANGED, self.OnTableChanged)
+		self.nb.Bind(wx.EVT_SIZE, self.OnSize)
 		self.Bind(dv.EVT_DATAVIEW_ITEM_ACTIVATED, self.TableSelectedHandler)
 
 		wx.CallAfter(self.Show)
+
+	def OnSize(self, event):
+		w,h = self.ptree.GetSize()
+		self.c0.SetWidth(w)
 
 	def OnClose(self, event):
 		self.Destroy()
