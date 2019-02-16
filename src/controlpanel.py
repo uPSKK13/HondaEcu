@@ -22,7 +22,7 @@ import tarfile
 
 from ecu import *
 
-import git
+from version import __VERSION__
 
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
@@ -127,12 +127,10 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		if getattr(sys, 'frozen', False):
 			self.basepath = sys._MEIPASS
-			from version import __VERSION__
-			self.version_full = __VERSION__
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
-			r = git.repo.Repo(path=self.basepath,search_parent_directories=True)
-			self.version_full = r.git.describe("--tags")
+
+		self.version_full = __VERSION__
 		self.version_short = self.version_full.split("-")[0]
 
 		self.apps = {
