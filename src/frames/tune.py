@@ -718,8 +718,6 @@ class TunePanel(wx.Frame):
 			self.byts[:] = self.bin
 		xdftree = etree.fromstring(self.xdf)
 
-		self.mainpanel = wx.Panel(self)
-
 		self.menubar = wx.MenuBar()
 		self.SetMenuBar(self.menubar)
 		fileMenu = wx.Menu()
@@ -737,9 +735,9 @@ class TunePanel(wx.Frame):
 		fileMenu.Append(quitItem)
 		self.menubar.Enable(wx.ID_SAVE, 0)
 
-		self.mgr = wx.aui.AuiManager(self.mainpanel)
+		self.mgr = wx.aui.AuiManager(self)
 
-		self.ptreep = wx.Panel(self.mainpanel)
+		self.ptreep = wx.Panel(self)
 		ptreesizer = wx.BoxSizer(wx.VERTICAL)
 		self.ptree = wx.dataview.DataViewCtrl(self.ptreep, style=dv.DV_NO_HEADER)
 		self.ptreemodel = XDFModel(self, xdftree)
@@ -754,8 +752,8 @@ class TunePanel(wx.Frame):
 		info1.Caption("Parameter Tree")
 		self.mgr.AddPane(self.ptreep, info1)
 
-		self.nbp = wx.Panel(self.mainpanel)
-		self.nb = wx.lib.agw.aui.auibook.AuiNotebook(self.nbp)#, style=wx.aui.AUI_NB_DEFAULT_STYLE|wx.aui.AUI_NB_WINDOWLIST_BUTTON|wx.aui.AUI_NB_TAB_FIXED_WIDTH)
+		self.nbp = wx.Panel(self)
+		self.nb = wx.lib.agw.aui.auibook.AuiNotebook(self.nbp)
 		self.nb.AddTabAreaButton(wx.aui.AUI_BUTTON_WINDOWLIST, wx.RIGHT)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		sizer.Add(self.nb, 1, wx.EXPAND)
@@ -763,21 +761,18 @@ class TunePanel(wx.Frame):
 		info2 = wx.aui.AuiPaneInfo().CenterPane()
 		self.mgr.AddPane(self.nbp, info2)
 
-		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
-		self.mainsizer.Add(self.mainpanel, 1, wx.EXPAND)
-		self.SetSizer(self.mainsizer)
+		self.nb.AddPage(wx.Panel(self),"")
+		self.Layout()
+		self.mgr.Update()
+		self.Center()
+		self.nb.DeletePage(0)
 
 		self.open_tables = {}
 		self.currentSelection = wx.CallAfter(self.nb.GetSelection)
 		self.nb.Bind(wx.lib.agw.aui.auibook.EVT_AUINOTEBOOK_PAGE_CLOSE, self.OnTableClose)
 		self.nb.Bind(wx.lib.agw.aui.auibook.EVT_AUINOTEBOOK_PAGE_CHANGED, self.OnTableChanged)
-
 		self.Bind(dv.EVT_DATAVIEW_ITEM_ACTIVATED, self.TableSelectedHandler)
 
-		self.Layout()
-		self.mainsizer.Fit(self)
-		self.mgr.Update()
-		self.Center()
 		wx.CallAfter(self.Show)
 
 	def OnClose(self, event):
