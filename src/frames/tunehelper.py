@@ -16,8 +16,9 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 			if not info["pn"] in modeltree[info["model"]][info["year"]]:
 				blcode = info["pn"].split("-")[1]
 				modelstring = "%s_%s_%s" % (info["model"],blcode,info["year"])
-				xdfdir = os.path.join(self.parent.basepath,"../xdfs",modelstring)
-				bindir = os.path.join(self.parent.basepath,"../bins",modelstring)
+				xdfdir = os.path.join(self.parent.basepath,os.pardir,"xdfs",modelstring)
+				bindir = os.path.join(self.parent.basepath,os.pardir,"bins",modelstring)
+				print(xdfdir,bindir)
 				if os.path.exists(xdfdir) and os.path.exists(bindir):
 					xdf = os.path.join(xdfdir,"38770-%s.xdf" % (blcode))
 					bin = os.path.join(bindir,"%s.bin" % (info["pn"]))
