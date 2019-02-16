@@ -22,7 +22,7 @@ import tarfile
 
 from ecu import *
 
-__VERSION__ = "3.0.MAspec"
+import git
 
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
@@ -99,7 +99,7 @@ class HondaECU_LogPanel(wx.Frame):
 	def OnSave(self, event):
 		with wx.FileDialog(self, "Save debug log", wildcard="Debug log files (*.txt)|*.txt", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 			if fileDialog.ShowModal() == wx.ID_CANCEL:
-				return
+				return__VERSION__
 			pathname = fileDialog.GetPath()
 			try:
 				with open(pathname, 'w') as file:
@@ -127,8 +127,14 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		if getattr(sys, 'frozen', False):
 			self.basepath = sys._MEIPASS
+			from version import __VERSION__
+			self.version_full = __VERSION__
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
+			r = git.repo.Repo(path=self.basepath,search_parent_directories=True)
+			self.version_full = r.git.describe("--tags")
+		self.version_short = self.version_full.split("-")[0]
+
 		self.apps = {
 			"read": {
 				"label":"Read ECU",
@@ -168,7 +174,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		}
 		self.appanels = {}
 
-		wx.Frame.__init__(self, None, title="HondaECU %s :: Control Panel" % (__VERSION__), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500,300))
+		wx.Frame.__init__(self, None, title="HondaECU %s :: Control Panel" % (self.version_short), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500,300))
 
 		ib = wx.IconBundle()
 		ib.AddIcon(os.path.join(self.basepath,"images","honda.ico"))
