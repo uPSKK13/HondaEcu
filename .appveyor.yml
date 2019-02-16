@@ -26,9 +26,9 @@ install:
   - cmd: '%PYTHON_HOME%\Scripts\pip install -r requirements.txt'
 
 build_script:
-  - cmd: 'FOR /F "tokens=*" %%i in ("git describe --tags") do SET HONDAECU_VERSION=%%i'
-  - cmd: '@echo __VERSION__ = %HONDAECU_VERSION% > src/version.py'
-  - cmd: '%PYTHON_HOME%\python -m PyInstaller --noconsole --onefile --clean --add-binary src/images/honda.ico;. --add-binary bins;bins --add-binary xdfs;xdfs --add-binary src/images/*;images --add-binary %LIBFTDI%;. src/__main__.py --name HondaECU_%HONDAECU_VERSION% --icon=src/images/honda.ico'
+  - cmd: '%PYTHON_HOME%\python misc\prebuild.py'
+  - cmd: '%PYTHON_HOME%\python -m PyInstaller --noconsole --onefile --clean --add-binary src/images/honda.ico;. --add-binary bins;bins --add-binary xdfs;xdfs --add-binary src/images/*;images --add-binary %LIBFTDI%;. src/__main__.py --name HondaECU --icon=src/images/honda.ico'
+  - cmd: '%PYTHON_HOME%\python misc\postbuild.py'
 
 artifacts:
   - path: dist\*
