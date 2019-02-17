@@ -143,10 +143,10 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 				"keihinaddr": keihinaddr,
 			}
 			dispatcher.send(signal="TunePanelHelper", sender=self, xdf=xdf, bin=bin, metainfo=metainfo, htf=None)
-			wx.CallAfter(self.Destroy)
+			wx.CallAfter(self.OnClose, None)
 		elif self.openrp.GetValue():
 			dispatcher.send(signal="TunePanelHelper", sender=self, xdf=None, bin=None, metainfo=None, htf=self.openpicker.GetPath())
-			wx.CallAfter(self.Destroy)
+			wx.CallAfter(self.OnClose, None)
 
 	def ValidateContinueButton(self, event):
 		if self.newrp.GetValue():
