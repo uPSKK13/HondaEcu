@@ -50,7 +50,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.fpickerbox.Add(self.writefpicker, 1)
 
 		self.lastpulse = time.time()
-		self.progress = wx.Gauge(self.writep, size=(400,-1))
+		self.progress = wx.Gauge(self.writep, size=(400,-1), style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
 		self.progress.SetRange(100)
 
 		self.flashpsizer = wx.GridBagSizer()
@@ -111,6 +111,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 				self.progress.SetValue(value[0])
 				self.statusbar.SetStatusText("Write: " + value[1], 0)
 		elif info == "write.result":
+			self.progress.SetValue(0)
 			self.statusbar.SetStatusText("Write complete (result=%s)" % value, 0)
 
 	def OnGo(self, event):

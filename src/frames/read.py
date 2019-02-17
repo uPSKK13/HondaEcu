@@ -33,7 +33,7 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 		self.fpickerbox.Add(self.readfpicker, 1)
 
 		self.lastpulse = time.time()
-		self.progress = wx.Gauge(self.readp, size=(400,-1))
+		self.progress = wx.Gauge(self.readp, size=(400,-1), style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
 		self.progress.SetRange(100)
 
 		self.flashpsizer = wx.GridBagSizer()
@@ -69,6 +69,7 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 				self.lastpulse = pulse
 			self.statusbar.SetStatusText("Read " + value[1], 0)
 		elif info == "read.result":
+			self.progress.SetValue(0)
 			self.statusbar.SetStatusText("Read complete (result=%s)" % value, 0)
 		elif info == "state":
 			if value == ECUSTATE.OFF:

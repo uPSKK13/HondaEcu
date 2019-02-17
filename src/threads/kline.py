@@ -201,15 +201,15 @@ class KlineWorker(Thread):
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.result", value=self.readinfo[2])
 						else:
 							self.do_unknown()
-					elif self.senderase and self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1, ECUSTATE.ERASE]:
-						if not self.writeinfo is None and self.writeinfo[2] == None:
+					elif self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1] or (self.senderase and self.state == ECUSTATE.ERASE):
+						if self.senderase and not self.writeinfo is None and self.writeinfo[2] == None:
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
-							if self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW]:
+							if self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1]:
 								for i in range(14):
 									w = 14-i
-									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100, "Write: waiting for %d seconds" % (w)))
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100, "waiting for %d seconds" % (w)))
 									time.sleep(1)
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(0, "Write: waiting for %d seconds" % (w)))
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(0, "waiting for %d seconds" % (w)))
 							cont = 1
 							e = 0
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/160*100,0,100), "erasing ecu"))
@@ -230,8 +230,8 @@ class KlineWorker(Thread):
 							self.update_state()
 						else:
 							self.do_unknown()
-					elif not self.senderase and self.state == ECUSTATE.ERASE:
-						if not self.writeinfo is None and self.writeinfo[2] == None:
+					elif self.state == ECUSTATE.ERASE:
+						if not self.senderase and not self.writeinfo is None and self.writeinfo[2] == None:
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
 							if self.do_write_flash(self.writeinfo[0], offset=self.writeinfo[1]):
 								 self.writeinfo[2] = "good" if self.ecu.do_post_write() else "bad"
