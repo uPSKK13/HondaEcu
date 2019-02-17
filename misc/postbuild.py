@@ -1,5 +1,11 @@
 import os
 import git
+import glob
 
 r = git.repo.Repo()
-os.rename(os.path.join('dist','HondaECU.exe'),os.path.join('dist','HondaECU_%s.exe' % (r.git.describe("--tags"))))
+v = r.git.describe("--tags")
+for f in glob.glob("dist/*.exe"):
+    fn = os.path.splitext(f)
+    fn[0] += v
+    fn = "".join(fn)
+    os.rename(f,fn)

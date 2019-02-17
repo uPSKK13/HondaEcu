@@ -10,9 +10,11 @@ from ecu import *
 
 class HondaECU_WritePanel(HondaECU_AppPanel):
 
-	wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
-
 	def Build(self):
+		if self.parent.nobins:
+			self.wildcard = "HondaECU tune file (*.htf)|*.htf"
+		else:
+			self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 		self.byts = None
 		self.statusbar = self.CreateStatusBar(1)
 		self.statusbar.SetSize((-1, 28))

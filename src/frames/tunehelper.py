@@ -10,6 +10,8 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 	def gen_model_tree(self):
 		modeltree = {}
 		for ecmid, info in ECM_IDs.items():
+			if self.parent.force_restrictions and not info["model"] in self.parent.restrictions[1]:
+				continue
 			if not info["model"] in modeltree:
 				modeltree[info["model"]] = {}
 			if not info["year"] in modeltree[info["model"]]:
@@ -42,16 +44,6 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		return modeltree
 
 	def Build(self):
-		self.rid = {
-			"MotoAmerica 2019: Junior Cup": "MAJC190"
-		}
-		self.restrictions = {
-			"CBR500R": {
-				"MotoAmerica 2019: Junior Cup": {
-					"Ignition": [-4,10]
-				}
-			}
-		}
 		self.modeltree = self.gen_model_tree()
 		self.outerp = wx.Panel(self)
 		self.tunepickerp = wx.Panel(self.outerp)
@@ -68,7 +60,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		modell = wx.StaticText(modelp, wx.ID_ANY, label="Model")
 		yearl = wx.StaticText(modelp, wx.ID_ANY, label="Year")
 		ecul = wx.StaticText(modelp, wx.ID_ANY, label="ECU")
-		racel = wx.StaticText(modelp, wx.ID_ANY, label="Restrictions")
+		self.racel = wx.StaticText(modelp, wx.ID_ANY, label="Restrictions")
 		self.model = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1), choices=list(self.modeltree.keys()), style=wx.CB_READONLY|wx.TE_PROCESS_ENTER)
 		self.Bind(wx.EVT_COMBOBOX, self.ModelHandler, self.model)
 		self.year = wx.ComboBox(modelp, wx.ID_ANY, size=(350,-1), style=wx.CB_READONLY|wx.TE_PROCESS_ENTER)
@@ -83,7 +75,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		modelpsizer.Add(modell, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(yearl, pos=(1,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(ecul, pos=(2,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
-		modelpsizer.Add(racel, pos=(3,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
+		modelpsizer.Add(self.racel, pos=(3,0), flag=wx.ALIGN_RIGHT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(self.model, pos=(0,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(self.year, pos=(1,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
 		modelpsizer.Add(self.ecu, pos=(2,1), flag=wx.ALIGN_LEFT|wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=5)
@@ -111,6 +103,10 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
 
+		if self.parent.restrictions == None:
+			self.race.Hide()
+			self.racel.Hide()
+
 		self.Layout()
 		self.mainsizer.Fit(self)
 		self.continueb.Disable()
@@ -128,9 +124,9 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 			restrictions = None
 			rid = None
 			if r != "":
-				if r in self.restrictions[model] and self.rid[r]:
-					restrictions = self.restrictions[model][r]
-					rid = self.rid[r]
+				if r in self.parent.restrictions[1][model] and self.parent.restrictions[0][r]:
+					restrictions = self.parent.restrictions[1][model][r]
+					rid = self.parent.restrictions[0][r]
 			else:
 				r = None
 			_, xdf, bin, checksum, offset, ecmidaddr, keihinaddr = self.modeltree[model][year][ecupn]
@@ -154,7 +150,10 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 
 	def ValidateContinueButton(self, event):
 		if self.newrp.GetValue():
-			if self.ecu.GetValue() != "":# and self.race.GetValue() != "":
+			if self.ecu.GetValue() != "":
+				if self.parent.force_restrictions and self.race.GetValue() == "":
+					self.continueb.Disable()
+					return
 				self.continueb.Enable()
 			else:
 				self.continueb.Disable()
@@ -183,9 +182,10 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 		self.race.Clear()
 		self.race.SetValue("")
 		model = event.GetEventObject().GetValue()
-		if model in self.restrictions:
-			for r in self.restrictions[model]:
-				self.race.Append(r)
+		if self.parent.restrictions != None:
+			if model in self.parent.restrictions[1]:
+				for r in self.parent.restrictions[1][model]:
+					self.race.Append(r)
 		years = self.modeltree[model].keys()
 		if len(years) > 0:
 			for y in years:

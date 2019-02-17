@@ -22,8 +22,6 @@ import tarfile
 
 from ecu import *
 
-from version import __VERSION__
-
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
 	def __init__(self, appid, *args, **kwargs):
@@ -99,7 +97,7 @@ class HondaECU_LogPanel(wx.Frame):
 	def OnSave(self, event):
 		with wx.FileDialog(self, "Save debug log", wildcard="Debug log files (*.txt)|*.txt", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 			if fileDialog.ShowModal() == wx.ID_CANCEL:
-				return__VERSION__
+				return
 			pathname = fileDialog.GetPath()
 			try:
 				with open(pathname, 'w') as file:
@@ -119,7 +117,10 @@ class HondaECU_LogPanel(wx.Frame):
 
 class HondaECU_ControlPanel(wx.Frame):
 
-	def __init__(self):
+	def __init__(self, version_full, nobins=False, restrictions=None, force_restrictions=False):
+		self.nobins = nobins
+		self.restrictions = restrictions
+		self.force_restrictions = force_restrictions
 		self.run = True
 		self.active_ftdi_device = None
 		self.ftdi_devices = {}
@@ -130,7 +131,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		else:
 			self.basepath = os.path.dirname(os.path.realpath(__file__))
 
-		self.version_full = __VERSION__
+		self.version_full = version_full
 		self.version_short = self.version_full.split("-")[0]
 
 		self.apps = {
