@@ -39,7 +39,7 @@ deploy:
   description: 'A diagnostic and flashing tool for Honda ECUs'
   auth_token:
     secure: VDADKxNk9UEQ11Ycj0bjwqi5yzJKuKOZ+qAWu5vfPqSQTeJDiCoqWSuCLYK1o2pC
-  artifact: /.*\.exe/
+  artifact: /HondaECU-.*\.exe/
   draft: false
   prerelease: false
   on:
