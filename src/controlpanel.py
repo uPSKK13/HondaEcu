@@ -136,7 +136,7 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		self.apps = {
 			"read": {
-				"label":"Read ECU",
+				"label":"Read Flash",
 				"icon":"images/download.png",
 				"conflicts":["write"],
 				"panel":HondaECU_ReadPanel,
@@ -147,7 +147,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				"panel":HondaECU_TunePanelHelper,
 			},
 			"write": {
-				"label":"Write ECU",
+				"label":"Write Flash",
 				"icon":"images/upload.png",
 				"conflicts":["read"],
 				"panel":HondaECU_WritePanel,
