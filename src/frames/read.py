@@ -27,9 +27,10 @@ class HondaECU_ReadPanel(HondaECU_AppPanel):
 
 		self.optsbox = wx.BoxSizer(wx.HORIZONTAL)
 		self.optsbox.Add(self.offsetl, 0, flag=wx.ALIGN_LEFT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
-		self.optsbox.Add(self.offset, 0)
+		self.optsbox.Add(self.offset, 0, flag=wx.LEFT, border=5)
 
 		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
+		self.fpickerbox.AddSpacer(5)
 		self.fpickerbox.Add(self.readfpicker, 1)
 
 		self.lastpulse = time.time()
