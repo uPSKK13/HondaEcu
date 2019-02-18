@@ -212,10 +212,11 @@ class KlineWorker(Thread):
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(0, "waiting for %d seconds" % (w)))
 							cont = 1
 							e = 0
-							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/160*100,0,100), "erasing ecu"))
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
 							self.ecu.do_erase()
 							while cont:
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/160*100,0,100), "erasing ecu"))
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
+								time.sleep(.1)
 								e += 1
 								info = self.ecu.send_command([0x7e], [0x01, 0x05])
 								if info:
@@ -223,7 +224,7 @@ class KlineWorker(Thread):
 										cont = 0
 								else:
 									cont = -1
-									raise Exception("Unhandled ECU state in WritePanelHandler()")
+									raise Exception("Unhandled ECU state [%s] in WritePanelHandler()" % (self.state))
 							if cont == 0:
 								into = self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
 								self.senderase = False
