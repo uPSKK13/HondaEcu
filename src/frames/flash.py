@@ -80,14 +80,10 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.SetSizer(self.mainsizer)
 
 		self.readfpicker.Hide()
-		self.modebox.SetSelection(1)
-		self.writefpicker.SetPath("fake.htf")
 		self.mainsizer.Fit(self)
 		self.Layout()
-		self.modebox.SetSelection(0)
-		self.writefpicker.SetPath("")
+
 		self.OnModeChange(None)
-		self.mainp.SetFocus()
 
 		self.offset.Bind(wx.EVT_TEXT, self.OnValidateMode)
 		self.readfpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)

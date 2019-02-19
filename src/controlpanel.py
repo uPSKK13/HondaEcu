@@ -136,24 +136,24 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.apps = {
 			"flash": {
 				"label":"Flash",
-				"icon":"images/cpu.png",
+				"icon":"images/chip2.png",
 				"conflicts":["data"],
 				"panel":HondaECU_FlashPanel,
 			},
 			"tunehelper": {
 				"label":"Tune",
-				"icon":"images/spanner.png",
+				"icon":"images/bike.png",
 				"panel":HondaECU_TunePanelHelper,
 			},
 			"info": {
 				"label":"ECU Info",
-				"icon":"images/info.png",
+				"icon":"images/info2.png",
 				"conflicts":["read","write"],
 				"panel":HondaECU_InfoPanel,
 			},
 			"data": {
 				"label":"Data Logging",
-				"icon":"images/chart.png",
+				"icon":"images/monitor.png",
 				"conflicts":["flash"],
 				"panel":HondaECU_DatalogPanel,
 			},
