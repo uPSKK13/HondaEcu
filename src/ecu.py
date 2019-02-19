@@ -248,6 +248,7 @@ class HondaECU(object):
 			buf.extend(tmp)
 			if time.time() - to > timeout: return None
 		r = buf[-1]-ml-1
+		to = time.time()
 		while r > 0:
 			tmp = self.dev._read(r)
 			r -= len(tmp)
@@ -268,6 +269,8 @@ class HondaECU(object):
 					valid = False
 					if ml == 3:
 						valid = (rmtype[:2] == bytearray(map(lambda x: x | 0x10, mtype[:2])))
+					elif ml == 2:
+						valid = ([b for b in rmtype]==mtype)
 					elif ml == 1:
 						valid = (rmtype == bytearray(map(lambda x: x & 0xf, mtype)))
 					if valid:
