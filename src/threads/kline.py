@@ -120,12 +120,12 @@ class KlineWorker(Thread):
 					fbin.flush()
 					location += readsize
 					n = time.time()
-					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 					if n-t > 1:
 						rate = (location-size)/(n-t)
 						t = n
 						size = location
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 		with open(binfile, "rb") as fbin:
 			nbyts = os.path.getsize(binfile)
 			if nbyts > 0:
@@ -162,7 +162,7 @@ class KlineWorker(Thread):
 			if info[2][1] == 0:
 				done = True
 			n = time.time()
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB of %.02fKB @ %s" % (w/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(i/maxi*100,"%.02fKB of %.02fKB @ %s" % (w/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 			if n-t > 1:
 				rate = (w-size)/(n-t)
 				t = n
@@ -207,15 +207,15 @@ class KlineWorker(Thread):
 							if self.state in [ECUSTATE.WRITE_INIT_OLD, ECUSTATE.WRITE_INIT_NEW, ECUSTATE.WRITE_UNKNOWN1]:
 								for i in range(14):
 									w = 14-i
-									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(w/14*100, "waiting for %d seconds" % (w)))
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(w/14*100, "waiting for %d seconds" % (w)))
 									time.sleep(1)
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(0, "waiting for %d seconds" % (w)))
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "waiting for %d seconds" % (w)))
 							cont = 1
 							e = 0
-							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
 							self.ecu.do_erase()
 							while cont:
-								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
 								time.sleep(.1)
 								e += 1
 								info = self.ecu.send_command([0x7e], [0x01, 0x05],retries=10)

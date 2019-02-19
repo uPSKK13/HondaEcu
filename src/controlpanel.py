@@ -10,8 +10,7 @@ import wx.lib.buttons as buttons
 from frames.info import HondaECU_InfoPanel
 from frames.data import HondaECU_DatalogPanel
 from frames.error import HondaECU_ErrorPanel
-from frames.read import HondaECU_ReadPanel
-from frames.write import HondaECU_WritePanel
+from frames.flash import HondaECU_FlashPanel
 from frames.tune import TunePanel
 from frames.tunehelper import HondaECU_TunePanelHelper
 
@@ -135,27 +134,27 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.version_short = self.version_full.split("-")[0]
 
 		self.apps = {
-			"read": {
-				"label":"Read Flash",
-				"icon":"images/download.png",
-				"conflicts":["write"],
-				"panel":HondaECU_ReadPanel,
+			"flash": {
+				"label":"Flash",
+				"icon":"images/cpu.png",
+				"conflicts":["data"],
+				"panel":HondaECU_FlashPanel,
 			},
 			"tunehelper": {
 				"label":"Tune",
 				"icon":"images/spanner.png",
 				"panel":HondaECU_TunePanelHelper,
 			},
-			"write": {
-				"label":"Write Flash",
-				"icon":"images/upload.png",
-				"conflicts":["read"],
-				"panel":HondaECU_WritePanel,
+			"info": {
+				"label":"ECU Info",
+				"icon":"images/info.png",
+				"conflicts":["read","write"],
+				"panel":HondaECU_InfoPanel,
 			},
 			"data": {
 				"label":"Data Logging",
 				"icon":"images/chart.png",
-				"conflicts":["read","write"],
+				"conflicts":["flash"],
 				"panel":HondaECU_DatalogPanel,
 			},
 			"dtc": {
@@ -164,12 +163,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				"conflicts":["read","write"],
 				"panel":HondaECU_ErrorPanel,
 			},
-			"info": {
-				"label":"ECU Info",
-				"icon":"images/info.png",
-				"conflicts":["read","write"],
-				"panel":HondaECU_InfoPanel,
-			},
+
 		}
 		self.appanels = {}
 

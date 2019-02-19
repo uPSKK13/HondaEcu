@@ -8,7 +8,7 @@ from pydispatch import dispatcher
 
 from ecu import *
 
-class HondaECU_WritePanel(HondaECU_AppPanel):
+class HondaECU_FlashPanel(HondaECU_AppPanel):
 
 	def Build(self):
 		if self.parent.nobins:
@@ -16,16 +16,19 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		else:
 			self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 		self.byts = None
+		self.bootwait = False
 		self.statusbar = self.CreateStatusBar(1)
 		self.statusbar.SetSize((-1, 28))
 		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
 		self.SetStatusBar(self.statusbar)
 
 		self.outerp = wx.Panel(self)
-		self.writep = wx.Panel(self.outerp)
-		self.wfilel = wx.StaticText(self.writep, label="File")
-		self.writefpicker = wx.FilePickerCtrl(self.writep,wildcard=self.wildcard, style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
-		self.optsp = wx.Panel(self.writep)
+		self.mainp = wx.Panel(self.outerp)
+		self.wfilel = wx.StaticText(self.mainp, label="File")
+		self.readfpicker = wx.FilePickerCtrl(self.mainp, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+		self.writefpicker = wx.FilePickerCtrl(self.mainp,wildcard=self.wildcard, style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
+		self.optsp = wx.Panel(self.mainp)
+		self.optsp.SetSizeHints((500,32))
 		self.wchecksuml = wx.StaticText(self.optsp,label="Checksum Location")
 		self.fixchecksum = wx.CheckBox(self.optsp, label="Fix")
 		self.checksum = wx.TextCtrl(self.optsp)
@@ -34,7 +37,7 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 		self.offset.SetValue("0x0")
 		self.htfoffset = None
 
-		self.gobutton = wx.Button(self.writep, label="Start")
+		self.gobutton = wx.Button(self.mainp, label="Read")
 		self.gobutton.Disable()
 		self.checksum.Disable()
 
@@ -48,56 +51,133 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 
 		self.fpickerbox = wx.BoxSizer(wx.HORIZONTAL)
 		self.fpickerbox.AddSpacer(5)
+		self.fpickerbox.Add(self.readfpicker, 1)
 		self.fpickerbox.Add(self.writefpicker, 1)
 
 		self.lastpulse = time.time()
-		self.progress = wx.Gauge(self.writep, size=(400,-1), style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
+		self.progress = wx.Gauge(self.mainp, size=(400,-1), style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
 		self.progress.SetRange(100)
+
+		self.modebox = wx.RadioBox(self.mainp, label="Mode", choices=["Read","Write"])
 
 		self.flashpsizer = wx.GridBagSizer()
 		self.flashpsizer.Add(self.wfilel, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT|wx.BOTTOM, border=10)
-		self.flashpsizer.Add(self.optsp, pos=(1,0), span=(1,6), flag=wx.BOTTOM, border=20)
-		self.flashpsizer.Add(self.progress, pos=(2,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, border=20)
+		self.flashpsizer.Add(self.optsp, pos=(1,0), span=(1,6))
+		self.flashpsizer.Add(self.progress, pos=(2,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.TOP, border=20)
+		self.flashpsizer.Add(self.modebox, pos=(3,0), span=(1,2), flag=wx.ALIGN_LEFT|wx.ALIGN_BOTTOM|wx.LEFT, border=10)
 		self.flashpsizer.Add(self.gobutton, pos=(3,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.RIGHT, border=10)
 		self.flashpsizer.AddGrowableRow(3,1)
 		self.flashpsizer.AddGrowableCol(5,1)
-		self.writep.SetSizer(self.flashpsizer)
+		self.mainp.SetSizer(self.flashpsizer)
 
 		self.outersizer = wx.BoxSizer(wx.VERTICAL)
-		self.outersizer.Add(self.writep, 1, wx.EXPAND|wx.ALL, border=10)
+		self.outersizer.Add(self.mainp, 1, wx.EXPAND|wx.ALL, border=10)
 		self.outerp.SetSizer(self.outersizer)
 
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
 		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
 
-		self.Layout()
+		self.readfpicker.Hide()
+		self.modebox.SetSelection(1)
+		self.writefpicker.SetPath("fake.htf")
 		self.mainsizer.Fit(self)
+		self.Layout()
+		self.modebox.SetSelection(0)
+		self.writefpicker.SetPath("")
+		self.OnModeChange(None)
+		self.mainp.SetFocus()
 
 		self.offset.Bind(wx.EVT_TEXT, self.OnValidateMode)
-		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnFileSelected)
+		self.readfpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
+		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnWriteFileSelected)
 		self.fixchecksum.Bind(wx.EVT_CHECKBOX, self.OnFix)
 		self.checksum.Bind(wx.EVT_TEXT, self.OnValidateMode)
 		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
-		self.optsp.Hide()
+		self.modebox.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 
-	def OnFileSelected(self, event):
-		self.htfoffset = None
-		if len(self.writefpicker.GetPath()) > 0 and os.path.splitext(self.writefpicker.GetPath())[-1] == ".htf":
-			self.optsp.Hide()
-			self.doHTF = True
-		else:
-			self.optsp.Show()
-			self.doHTF = False
-		self.OnValidateMode(event)
+	def KlineWorkerHandler(self, info, value):
+		if info == "read.progress":
+			pulse = time.time()
+			if pulse - self.lastpulse > .2:
+				self.progress.Pulse()
+				self.lastpulse = pulse
+			self.statusbar.SetStatusText("Read " + value[1], 0)
+		elif info == "read.result":
+			self.progress.SetValue(0)
+			self.statusbar.SetStatusText("Read complete (result=%s)" % value, 0)
+		if info == "write.progress":
+			if value[0]!= None and value[0] >= 0:
+				self.progress.SetValue(value[0])
+				self.statusbar.SetStatusText("Write: " + value[1], 0)
+		elif info == "write.result":
+			self.progress.SetValue(0)
+			self.statusbar.SetStatusText("Write complete (result=%s)" % value, 0)
+		elif info == "state":
+			if value == ECUSTATE.OFF:
+				if self.bootwait:
+					self.statusbar.SetStatusText("Turn on ECU!", 0)
+		elif info == "password":
+			if value:
+				self.bootwait = False
+			else:
+				self.statusbar.SetStatusText("Password failed!", 0)
 
-	def OnValidateMode(self, event):
-		if self.doHTF:
-			self.OnValidateModeHTF(event)
+	def OnGo(self, event):
+		self.gobutton.Disable()
+		if self.modebox.GetSelection() == 0:
+			offset = int(self.offset.GetValue(), 16)
+			data = self.readfpicker.GetPath()
+			if self.parent.ecuinfo["state"] != ECUSTATE.READ:
+				self.bootwait = True
+				self.statusbar.SetStatusText("Turn off ECU!", 0)
+			dispatcher.send(signal="ReadPanel", sender=self, data=data, offset=offset)
 		else:
-			self.OnValidateModeBin(event)
+			if self.htfoffset != None:
+				offset = int(self.htfoffset, 16)
+			else:
+				offset = int(self.offset.GetValue(), 16)
+			self.gobutton.Disable()
+			dispatcher.send(signal="WritePanel", sender=self, data=self.byts, offset=offset)
+
+	def OnModeChange(self, event):
+		if self.modebox.GetSelection() == 0:
+			self.gobutton.SetLabel("Read")
+			self.writefpicker.Hide()
+			self.readfpicker.Show()
+			self.checksum.Hide()
+			self.wchecksuml.Hide()
+			self.fixchecksum.Hide()
+			self.offsetl.Show()
+			self.offset.Show()
+		else:
+			self.gobutton.SetLabel("Write")
+			self.writefpicker.Show()
+			self.readfpicker.Hide()
+			self.OnWriteFileSelected(None)
 		self.Layout()
+
+	def OnWriteFileSelected(self, event):
+		self.htfoffset = None
+		self.doHTF = False
+		if len(self.writefpicker.GetPath()) > 0:
+			if os.path.splitext(self.writefpicker.GetPath())[-1] == ".htf":
+				self.doHTF = True
+		if self.doHTF or len(self.writefpicker.GetPath())==0:
+			self.checksum.Hide()
+			self.wchecksuml.Hide()
+			self.fixchecksum.Hide()
+			self.offsetl.Hide()
+			self.offset.Hide()
+		else:
+			self.checksum.Show()
+			self.wchecksuml.Show()
+			self.fixchecksum.Show()
+			self.offsetl.Show()
+			self.offset.Show()
+		self.Layout()
+		self.OnValidateMode(event)
 
 	def OnFix(self, event):
 		if self.fixchecksum.IsChecked():
@@ -106,22 +186,23 @@ class HondaECU_WritePanel(HondaECU_AppPanel):
 			self.checksum.Disable()
 		self.OnValidateMode(None)
 
-	def KlineWorkerHandler(self, info, value):
-		if info == "progress":
-			if value[0]!= None and value[0] >= 0:
-				self.progress.SetValue(value[0])
-				self.statusbar.SetStatusText("Write: " + value[1], 0)
-		elif info == "write.result":
-			self.progress.SetValue(0)
-			self.statusbar.SetStatusText("Write complete (result=%s)" % value, 0)
-
-	def OnGo(self, event):
-		if self.htfoffset != None:
-			offset = int(self.htfoffset, 16)
+	def OnValidateMode(self, event):
+		if self.modebox.GetSelection() == 0:
+			offset = None
+			try:
+				offset = int(self.offset.GetValue(), 16)
+			except:
+				pass
+			if len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0:
+				self.gobutton.Enable()
+			else:
+				self.gobutton.Disable()
 		else:
-			offset = int(self.offset.GetValue(), 16)
-		self.gobutton.Disable()
-		dispatcher.send(signal="WritePanel", sender=self, data=self.byts, offset=offset)
+			if self.doHTF:
+				self.OnValidateModeHTF(event)
+			else:
+				self.OnValidateModeBin(event)
+		self.Layout()
 
 	def OnValidateModeHTF(self, event):
 		if len(self.writefpicker.GetPath()) > 0:
