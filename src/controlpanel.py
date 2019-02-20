@@ -11,6 +11,7 @@ from frames.info import HondaECU_InfoPanel
 from frames.data import HondaECU_DatalogPanel
 from frames.error import HondaECU_ErrorPanel
 from frames.flash import HondaECU_FlashPanel
+from frames.hrcsettings import HondaECU_HRCDataSettingsPanel
 from frames.tune import TunePanel
 from frames.tunehelper import HondaECU_TunePanelHelper
 
@@ -137,7 +138,7 @@ class HondaECU_ControlPanel(wx.Frame):
 			"flash": {
 				"label":"Flash",
 				"icon":"images/chip2.png",
-				"conflicts":["data"],
+				"conflicts":["data","hrc"],
 				"panel":HondaECU_FlashPanel,
 			},
 			"tunehelper": {
@@ -148,20 +149,26 @@ class HondaECU_ControlPanel(wx.Frame):
 			"info": {
 				"label":"ECU Info",
 				"icon":"images/info2.png",
-				"conflicts":["read","write"],
+				"conflicts":["flash","hrc"],
 				"panel":HondaECU_InfoPanel,
 			},
 			"data": {
 				"label":"Data Logging",
 				"icon":"images/monitor.png",
-				"conflicts":["flash"],
+				"conflicts":["flash","hrc"],
 				"panel":HondaECU_DatalogPanel,
 			},
 			"dtc": {
 				"label":"Trouble Codes",
 				"icon":"images/warning.png",
-				"conflicts":["read","write"],
+				"conflicts":["flash","hrc"],
 				"panel":HondaECU_ErrorPanel,
+			},
+			"hrcsettings": {
+				"label":"HRC Settings",
+				"icon":"images/cog.png",
+				"conflicts":["flash","data","dtc","info"],
+				"panel":HondaECU_HRCDataSettingsPanel,
 			},
 
 		}

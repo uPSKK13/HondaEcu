@@ -17,6 +17,7 @@ class KlineWorker(Thread):
 		dispatcher.connect(self.DatalogPanelHandler, signal="DatalogPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.ReadPanelHandler, signal="ReadPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.WritePanelHandler, signal="WritePanel", sender=dispatcher.Any)
+		dispatcher.connect(self.HRCSettingsPanelHandler, signal="HRCSettingsPanel", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -31,6 +32,7 @@ class KlineWorker(Thread):
 		self.sendpassword = False
 		self.sendwriteinit = False
 		self.sendrecoverinint = False
+		self.hrcmode = None
 		self.senderase = False
 		self.readinfo = None
 		self.writeinfo = None
@@ -48,6 +50,9 @@ class KlineWorker(Thread):
 		self.tables = None
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+
+	def HRCSettingsPanelHandler(self, mode, data):
+		self.hrcmode = (mode, data)
 
 	def WritePanelHandler(self, data, offset):
 		self.writeinfo = [data,offset,None]
@@ -187,7 +192,66 @@ class KlineWorker(Thread):
 				time.sleep(.001)
 			else:
 				try:
-					if self.state == ECUSTATE.UNKNOWN:
+					if self.hrcmode != None:
+						if self.ecu.dev.baudrate == 10400:
+							while self.ecu.kline():
+								time.sleep(.1)
+							self.state = ECUSTATE.OFF
+							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
+							self.ecu.dev.baudrate = 19200
+						elif self.ecu.dev.baudrate == 19200:
+							if self.ecu.kline():
+								for i in range(4):
+									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=((4-i)/4*100, "waiting"))
+									time.sleep(1)
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(0, "waiting"))
+								self.ecu.send_command([0x4d,0x4b],[0x0f, 0x00], retries=0)
+								hrcid = self.ecu.send_command([0x4d,0x4b],[0x00, 0x00], retries=0)[2][2:]
+								self.ecu.send_command([0x4d,0x4b],[0x0e, 0x00], retries=0)
+								rpm = self.ecu.send_command([0x4d,0x4b],[0x04, 0x01], retries=0)[2][2:] # RPM Breakpoints
+								throttle = self.ecu.send_command([0x4d,0x4b],[0x05, 0x01], retries=0)[2][2:] # Throttle Breakpoints
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(1/5*100, ""))
+								fimap2 = self.ecu.send_command([0x4d,0x4b],[0x13, 0x01], retries=0)[2][2:] # FIMAP Mode2
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(2/5*100, ""))
+								fimap3 = self.ecu.send_command([0x4d,0x4b],[0x14, 0x01], retries=0)[2][2:] # FIMAP Mode3
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(3/5*100, ""))
+								igmap2 = self.ecu.send_command([0x4d,0x4b],[0x24, 0x01], retries=0)[2][2:] # IGMAP Mode2
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(4/5*100, ""))
+								igmap3 = self.ecu.send_command([0x4d,0x4b],[0x25, 0x01], retries=0)[2][2:] # IGMAP Mode3
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(5/5*100, ""))
+								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.result", value=True)
+								with open(self.hrcmode[1][0], "wb") as f:
+									comment = b"HondaECU"
+									name = self.hrcmode[1][1].encode("ascii")
+									d = b"\x16" + \
+										b"FiSettingTool_UserData" + \
+										bytes(hrcid) + \
+										b"CRF450R" + \
+										b"\x09" + \
+										b"PGM-FI/IG" + \
+										bytes([len(rpm)]) + \
+										bytes(rpm) + \
+										bytes([len(throttle)]) + \
+										bytes(throttle) + \
+										bytes([len(fimap2)]) + \
+										bytes(fimap2) + \
+										bytes(fimap3) + \
+										bytes([len(igmap2)]) + \
+										bytes(igmap2) + \
+										bytes(igmap3) + \
+										b"\x00" * 192 + \
+										b"\x0c" + \
+										b"\x00" * 22 + \
+										bytes([len(name)]) + \
+										bytes(name) + \
+										bytes([len(comment)]) + \
+										comment
+									f.write(d)
+								self.hrcmode = None
+								self.do_unknown()
+						continue
+					elif self.state == ECUSTATE.UNKNOWN:
+						self.ecu.dev.baudrate = 10400
 						self.do_unknown()
 						if self.state == ECUSTATE.OK and self.sendpassword:
 							p1 = self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
