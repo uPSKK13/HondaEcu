@@ -5,7 +5,8 @@ from pydispatch import dispatcher
 from pylibftdi import Driver, FtdiError, LibraryMissingError
 import numpy as np
 
-from ecu import *
+from eculib import KlineAdapter
+from eculib.honda import *
 
 class KlineWorker(Thread):
 
@@ -85,7 +86,7 @@ class KlineWorker(Thread):
 			self.update_errors = False
 
 	def update_state(self):
-		state = self.ecu.detect_ecu_state_new()
+		state = self.ecu.detect_ecu_state()
 		if state != self.state:
 			self.state = state
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
@@ -99,8 +100,7 @@ class KlineWorker(Thread):
 		elif action == "activate":
 			self.__clear_data()
 			try:
-				self.ecu = HondaECU(device_id=serial)
-				self.ecu.setup()
+				self.ecu = HondaECU(KlineAdapter(device_id=serial))
 				self.ready = True
 			except FtdiError:
 				pass
@@ -194,13 +194,13 @@ class KlineWorker(Thread):
 				try:
 					if self.hrcmode != None:
 						if self.ecu.dev.baudrate == 10400:
-							while self.ecu.kline():
+							while self.ecu.dev.kline():
 								time.sleep(.1)
 							self.state = ECUSTATE.OFF
 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 							self.ecu.dev.baudrate = 19200
 						elif self.ecu.dev.baudrate == 19200:
-							if self.ecu.kline():
+							if self.ecu.dev.kline():
 								for i in range(4):
 									wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=((4-i)/4*100, "waiting"))
 									time.sleep(1)

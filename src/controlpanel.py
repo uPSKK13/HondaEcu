@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import time
 
 from pydispatch import dispatcher
 
@@ -20,7 +21,7 @@ from threads.usb import USBMonitor
 
 import tarfile
 
-from ecu import *
+from ecmids import ECM_IDs
 
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 

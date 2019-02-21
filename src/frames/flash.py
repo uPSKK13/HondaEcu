@@ -6,7 +6,7 @@ import json
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
 
-from ecu import *
+from eculib.honda import *
 
 class HondaECU_FlashPanel(HondaECU_AppPanel):
 

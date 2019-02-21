@@ -3,7 +3,7 @@ import os
 import wx
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
-from ecu import ECM_IDs
+from ecmids import ECM_IDs
 
 class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 

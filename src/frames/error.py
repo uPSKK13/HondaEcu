@@ -2,7 +2,7 @@ import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
-from ecu import DTC
+from eculib.honda import DTC
 
 class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
 	def __init__(self, parent, ID, pos=wx.DefaultPosition,

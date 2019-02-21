@@ -1,6 +1,7 @@
 import wx
 from .base import HondaECU_AppPanel
-from ecu import ECM_IDs, ECUSTATE
+from eculib.honda import ECUSTATE
+from ecmids import ECM_IDs
 
 class HondaECU_InfoPanel(HondaECU_AppPanel):
 
