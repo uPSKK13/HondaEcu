@@ -25,14 +25,20 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 				xdfdir = os.path.join(base,"xdfs",modelstring)
 				bindir = os.path.join(base,"bins",modelstring)
 				if os.path.exists(xdfdir) and os.path.exists(bindir):
-					xdf = os.path.join(xdfdir,"38770-%s.xdf" % (blcode))
+					xdf1 = os.path.join(xdfdir,"38770-%s.xdf" % (blcode))
+					xdf2 = os.path.join(xdfdir,"%s.xdf" % (info["pn"]))
 					bin = os.path.join(bindir,"%s.bin" % (info["pn"]))
 					checksum = info["checksum"] if "checksum" in info else None
 					offset = info["offset"] if "offset" in info else None
 					ecmidaddr = info["ecmidaddr"] if "ecmidaddr" in info else None
 					keihinaddr = info["keihinaddr"] if "keihinaddr" in info else None
-					if os.path.isfile(xdf) and os.path.isfile(bin):
-						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,xdf,bin,checksum,offset,ecmidaddr,keihinaddr)
+					if os.path.isfile(bin):
+						_xdf = None
+						if os.path.isfile(xdf2):
+							_xdf = xdf2
+						elif os.path.isfile(xdf1):
+							_xdf = xdf1
+						modeltree[info["model"]][info["year"]][info["pn"]] = (ecmid,_xdf,bin,checksum,offset,ecmidaddr,keihinaddr)
 		models = list(modeltree.keys())
 		for m in models:
 			years = list(modeltree[m].keys())

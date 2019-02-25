@@ -1,4 +1,4 @@
-<!-- Written 02/05/2019 16:08:12 -->
+<!-- Written 02/25/2019 18:27:33 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -67,7 +67,7 @@
       <min>0.000000</min>
       <max>100.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="X/7.43">
+      <MATH equation="X*0.0976">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -131,7 +131,7 @@
       <min>0.000000</min>
       <max>12000.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="X/3.641">
+      <MATH equation="X/3.64086">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -164,11 +164,11 @@
     </XDFAXIS>
     <XDFAXIS id="z">
       <EMBEDDEDDATA mmedtypeflags="0x02" mmedaddress="0x7C" mmedelementsizebits="16" mmedrowcount="29" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
-      <decimalpl>0</decimalpl>
-      <min>500.000000</min>
-      <max>15000.000000</max>
+      <decimalpl>3</decimalpl>
+      <min>0.000000</min>
+      <max>15.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="X">
+      <MATH equation="X/1000">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -202,17 +202,17 @@
     </XDFAXIS>
     <XDFAXIS id="z">
       <EMBEDDEDDATA mmedtypeflags="0x02" mmedaddress="0x626" mmedelementsizebits="16" mmedrowcount="29" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
-      <decimalpl>1</decimalpl>
-      <min>500.000000</min>
-      <max>15000.000000</max>
-      <outputtype>2</outputtype>
-      <MATH equation="X">
+      <decimalpl>3</decimalpl>
+      <min>0.000000</min>
+      <max>15.000000</max>
+      <outputtype>1</outputtype>
+      <MATH equation="X/1000">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x7662" flags="0x30">
-    <title>Ignition N</title>
+    <title>Ignition 1-6</title>
     <CATEGORYMEM index="0" category="3" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedelementsizebits="8" mmedmajorstridebits="-32" mmedminorstridebits="0" />
@@ -238,17 +238,17 @@
     </XDFAXIS>
     <XDFAXIS id="z">
       <EMBEDDEDDATA mmedaddress="0xBD0" mmedelementsizebits="8" mmedrowcount="29" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
-      <decimalpl>1</decimalpl>
+      <decimalpl>2</decimalpl>
       <min>0.000000</min>
-      <max>33.000000</max>
+      <max>66.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="X/255*33">
+      <MATH equation="X * 0.3572 - 15.72">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
   </XDFTABLE>
   <XDFTABLE uniqueid="0x5B95" flags="0x30">
-    <title>Ignition 1-6</title>
+    <title>Ignition N</title>
     <CATEGORYMEM index="0" category="3" />
     <XDFAXIS id="x" uniqueid="0x0">
       <EMBEDDEDDATA mmedelementsizebits="8" mmedmajorstridebits="-32" mmedminorstridebits="0" />
@@ -275,11 +275,11 @@
     </XDFAXIS>
     <XDFAXIS id="z">
       <EMBEDDEDDATA mmedaddress="0xEA5" mmedelementsizebits="8" mmedrowcount="29" mmedcolcount="25" mmedmajorstridebits="0" mmedminorstridebits="0" />
-      <decimalpl>1</decimalpl>
+      <decimalpl>2</decimalpl>
       <min>0.000000</min>
-      <max>33.000000</max>
+      <max>66.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="X/255*33">
+      <MATH equation="X * 0.3572 - 15.72">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
@@ -294,8 +294,8 @@
       <datatype>0</datatype>
       <unittype>0</unittype>
       <DALINK index="0" />
-      <LABEL index="0" value="Min" />
-      <LABEL index="1" value="Max" />
+      <LABEL index="0" value="On" />
+      <LABEL index="1" value="Off" />
       <MATH equation="X">
         <VAR id="X" />
       </MATH>
@@ -314,12 +314,12 @@
       </MATH>
     </XDFAXIS>
     <XDFAXIS id="z">
-      <EMBEDDEDDATA mmedtypeflags="0x02" mmedaddress="0x11C4" mmedelementsizebits="16" mmedrowcount="1" mmedcolcount="2" mmedmajorstridebits="0" mmedminorstridebits="0" />
-      <decimalpl>0</decimalpl>
+      <EMBEDDEDDATA mmedtypeflags="0x02" mmedaddress="0xAD2A" mmedelementsizebits="16" mmedrowcount="1" mmedcolcount="2" mmedmajorstridebits="80" mmedminorstridebits="0" />
+      <decimalpl>1</decimalpl>
       <min>0.000000</min>
       <max>255.000000</max>
-      <outputtype>1</outputtype>
-      <MATH equation="X/3.641">
+      <outputtype>2</outputtype>
+      <MATH equation="X/3.64086">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
