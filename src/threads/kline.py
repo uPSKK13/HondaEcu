@@ -1,4 +1,5 @@
 import time
+import os
 import wx
 from threading import Thread
 from pydispatch import dispatcher
