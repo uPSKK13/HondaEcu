@@ -1,5 +1,7 @@
 import sys
 import os
+sys.path.insert(0, os.path.abspath('/mnt/data/workspace/eculib'))
+
 import json
 import time
 
@@ -23,10 +25,13 @@ import tarfile
 
 from ecmids import ECM_IDs
 
+from eculib.honda import ECUSTATE, checksum8bitHonda
+
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
-	def __init__(self, appid, *args, **kwargs):
+	def __init__(self, appid, enablestates, *args, **kwargs):
 		self.appid = appid
+		self.enablestates = enablestates
 		buttons.ThemedGenBitmapTextButton.__init__(self, *args,**kwargs)
 		self.SetInitialSize((128,64))
 
@@ -141,6 +146,8 @@ class HondaECU_ControlPanel(wx.Frame):
 				"icon":"images/chip2.png",
 				"conflicts":["data","hrc"],
 				"panel":HondaECU_FlashPanel,
+				"disabled":True,
+				"enable": [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITE, ECUSTATE.READ],
 			},
 			"tunehelper": {
 				"label":"Tune",
@@ -158,19 +165,25 @@ class HondaECU_ControlPanel(wx.Frame):
 				"icon":"images/monitor.png",
 				"conflicts":["flash","hrc"],
 				"panel":HondaECU_DatalogPanel,
+				"disabled":True,
+				"enable": [ECUSTATE.OK],
 			},
 			"dtc": {
 				"label":"Trouble Codes",
 				"icon":"images/warning.png",
 				"conflicts":["flash","hrc"],
 				"panel":HondaECU_ErrorPanel,
+				"disabled":True,
+				"enable": [ECUSTATE.OK],
 			},
-			"hrcsettings": {
-				"label":"HRC Settings",
-				"icon":"images/cog.png",
-				"conflicts":["flash","data","dtc","info"],
-				"panel":HondaECU_HRCDataSettingsPanel,
-			},
+			# "hrcsettings": {
+			# 	"label":"HRC Settings",
+			# 	"icon":"images/cog.png",
+			# 	"conflicts":["flash","data","dtc","info"],
+			# 	"panel":HondaECU_HRCDataSettingsPanel,
+			# 	"disabled":True,
+			# 	"enable": [ECUSTATE.OK],
+			# },
 
 		}
 		self.appanels = {}
@@ -200,6 +213,9 @@ class HondaECU_ControlPanel(wx.Frame):
 		detectmapItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Detect map id')
 		self.Bind(wx.EVT_MENU, self.OnDetectMap, detectmapItem)
 		helpMenu.Append(detectmapItem)
+		checksumItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Validate bin checksum')
+		self.Bind(wx.EVT_MENU, self.OnBinChecksum, checksumItem)
+		helpMenu.Append(checksumItem)
 
 		self.statusbar = self.CreateStatusBar(1)
 		self.statusbar.SetSize((-1, 28))
@@ -212,7 +228,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.appbuttons = {}
 		for a,d in self.apps.items():
 			icon = wx.Image(os.path.join(self.basepath, d["icon"]), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-			self.appbuttons[a] = HondaECU_AppButton(a, self.wrappanel, wx.ID_ANY, icon, label=d["label"])
+			enablestates = None
+			if "enable" in d:
+				enablestates = d["enable"]
+			self.appbuttons[a] = HondaECU_AppButton(a, enablestates, self.wrappanel, wx.ID_ANY, icon, label=d["label"])
 			if "disabled" in d and d["disabled"]:
 				self.appbuttons[a].Disable()
 			wrapsizer.Add(self.appbuttons[a], 0)
@@ -284,6 +303,13 @@ class HondaECU_ControlPanel(wx.Frame):
 	def KlineWorkerHandler(self, info, value):
 		if info in ["ecmid","flashcount","dtc","dtccount","state"]:
 			self.ecuinfo[info] = value
+			if info == "state":
+				 for a,d in self.apps.items():
+					 if "enable" in d:
+						 if value in d["enable"]:
+							 self.appbuttons[a].Enable()
+						 else:
+							 self.appbuttons[a].Disable()
 		elif info == "data":
 			if not info in self.ecuinfo:
 				self.ecuinfo[info] = {}
@@ -313,13 +339,28 @@ class HondaECU_ControlPanel(wx.Frame):
 					return
 			self.statusbar.SetStatusText("Map ID: unknown", 0)
 
+	def OnBinChecksum(self, event):
+		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+			if fileDialog.ShowModal() == wx.ID_CANCEL:
+				return
+			pathname = fileDialog.GetPath()
+			fbin = open(pathname, "rb")
+			nbyts = os.path.getsize(pathname)
+			byts = bytearray(fbin.read(nbyts))
+			fbin.close()
+			self.statusbar.SetStatusText("Checksum: %s" % ("good" if checksum8bitHonda(byts)==0 else "bad"), 0)
+			return
+
 	def OnDebug(self, event):
 		self.debuglog.Show()
 
 	def OnAppButtonClicked(self, event):
 		b = event.GetEventObject()
 		if not b.appid in self.appanels:
-			self.appanels[b.appid] = self.apps[b.appid]["panel"](self, b.appid, self.apps[b.appid])
+			enablestates = None
+			if "enable" in self.apps[b.appid]:
+				enablestates = self.apps[b.appid]["enable"]
+			self.appanels[b.appid] = self.apps[b.appid]["panel"](self, b.appid, self.apps[b.appid], enablestates)
 			self.appbuttons[b.appid].Disable()
 		self.appanels[b.appid].Raise()
 

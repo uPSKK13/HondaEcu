@@ -21,7 +21,7 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		state = ECUSTATE.UNKNOWN
 		if "state" in self.parent.ecuinfo:
 			state = self.parent.ecuinfo["state"]
-		if "ecmid" in self.parent.ecuinfo:
+		if "ecmid" in self.parent.ecuinfo and len(self.parent.ecuinfo["ecmid"])==5:
 			ecmids = " ".join(["%02x" % i for i in self.parent.ecuinfo["ecmid"]])
 			if self.parent.ecuinfo["ecmid"] in ECM_IDs:
 				models = "%s (%s)" % (ECM_IDs[self.parent.ecuinfo["ecmid"]]["model"], ECM_IDs[self.parent.ecuinfo["ecmid"]]["year"])
@@ -36,7 +36,7 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 						models = "%s (%s) Restricted" % (ECM_IDs[et]["model"], ECM_IDs[et]["year"])
 						ecus = ECM_IDs[et]["pn"]
 		self.ecmid = wx.StaticText(self.infop, label=ecmids)
-		if "flashcount" in self.parent.ecuinfo:
+		if "flashcount" in self.parent.ecuinfo and self.parent.ecuinfo["flashcount"] >= 0:
 			flashcounts = str(self.parent.ecuinfo["flashcount"])
 		self.flashcount = wx.StaticText(self.infop, label=flashcounts)
 		self.model = wx.StaticText(self.infop, label=models,size=(200,-1))

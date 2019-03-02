@@ -4,11 +4,12 @@ from pydispatch import dispatcher
 
 class HondaECU_AppPanel(wx.Frame):
 
-	def __init__(self, parent, appid, appinfo, *args, **kwargs):
+	def __init__(self, parent, appid, appinfo, enablestates, *args, **kwargs):
 		wx.Frame.__init__(self, parent, title="HondaECU :: %s" % (appinfo["label"]), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, *args, **kwargs)
 		self.parent = parent
 		self.appid = appid
 		self.appinfo = appinfo
+		self.enablestates = enablestates
 		self.Build()
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
 		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)

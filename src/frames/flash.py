@@ -95,30 +95,39 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "read.progress":
-			pulse = time.time()
-			if pulse - self.lastpulse > .2:
-				self.progress.Pulse()
-				self.lastpulse = pulse
-			self.statusbar.SetStatusText("Read " + value[1], 0)
+			if value[0]!= None and value[0] >= 0:
+				self.progress.SetValue(value[0])
+			else:
+				pulse = time.time()
+				if pulse - self.lastpulse > .2:
+					self.progress.Pulse()
+					self.lastpulse = pulse
+			self.statusbar.SetStatusText("Read: " + value[1], 0)
 		elif info == "read.result":
 			self.progress.SetValue(0)
-			self.statusbar.SetStatusText("Read complete (result=%s)" % value, 0)
+			self.statusbar.SetStatusText("Read: complete (result=%s)" % value, 0)
 		if info == "write.progress":
 			if value[0]!= None and value[0] >= 0:
 				self.progress.SetValue(value[0])
-				self.statusbar.SetStatusText("Write: " + value[1], 0)
+			else:
+				pulse = time.time()
+				if pulse - self.lastpulse > .2:
+					self.progress.Pulse()
+					self.lastpulse = pulse
+			self.statusbar.SetStatusText("Write: " + value[1], 0)
 		elif info == "write.result":
 			self.progress.SetValue(0)
-			self.statusbar.SetStatusText("Write complete (result=%s)" % value, 0)
+			self.statusbar.SetStatusText("Write: complete (result=%s)" % value, 0)
 		elif info == "state":
 			if value == ECUSTATE.OFF:
 				if self.bootwait:
 					self.statusbar.SetStatusText("Turn on ECU!", 0)
+			self.OnValidateMode(None)
 		elif info == "password":
-			if value:
-				self.bootwait = False
-			else:
+			if not value:
 				self.statusbar.SetStatusText("Password failed!", 0)
+			else:
+				self.bootwait = False
 
 	def OnGo(self, event):
 		self.gobutton.Disable()
@@ -183,21 +192,25 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.OnValidateMode(None)
 
 	def OnValidateMode(self, event):
+		enable = False
 		if self.modebox.GetSelection() == 0:
-			offset = None
-			try:
-				offset = int(self.offset.GetValue(), 16)
-			except:
-				pass
-			if len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0:
-				self.gobutton.Enable()
-			else:
-				self.gobutton.Disable()
+			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.READ]:
+				offset = None
+				try:
+					offset = int(self.offset.GetValue(), 16)
+				except:
+					pass
+				enable = (len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0)
 		else:
-			if self.doHTF:
-				self.OnValidateModeHTF(event)
-			else:
-				self.OnValidateModeBin(event)
+			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITE]:
+				if self.doHTF:
+					enable = self.OnValidateModeHTF(event)
+				else:
+					enable = self.OnValidateModeBin(event)
+		if enable:
+			self.gobutton.Enable()
+		else:
+			self.gobutton.Disable()
 		self.Layout()
 
 	def OnValidateModeHTF(self, event):
@@ -227,17 +240,15 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 							binmod[ka+i] = ord(metainfo["rid"][i])
 					ret, status, self.byts = do_validation(binmod, len(binmod), int(metainfo["checksum"],16))
 					if status != "bad":
-						self.gobutton.Enable()
-						return
-		self.gobutton.Disable()
+						return True
+		return False
 
 	def OnValidateModeBin(self, event):
 		offset = None
 		try:
 			offset = int(self.offset.GetValue(), 16)
 		except:
-			self.gobutton.Disable()
-			return
+			return False
 		checksum = None
 		try:
 			if self.fixchecksum.IsChecked():
@@ -245,8 +256,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			else:
 				checksum = 0
 		except:
-			self.gobutton.Disable()
-			return
+			return False
 		if len(self.writefpicker.GetPath()) > 0:
 			if os.path.isfile(self.writefpicker.GetPath()):
 				fbin = open(self.writefpicker.GetPath(), "rb")
@@ -254,10 +264,8 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				byts = bytearray(fbin.read(nbyts))
 				fbin.close()
 				if checksum >= nbyts:
-					self.gobutton.Disable()
-					return
+					return Fakse
 				ret, status, self.byts = do_validation(byts, nbyts, checksum)
 				if status != "bad":
-					self.gobutton.Enable()
-					return
-		self.gobutton.Disable()
+					return True
+		return False
