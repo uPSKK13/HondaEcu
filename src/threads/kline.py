@@ -317,6 +317,13 @@ class KlineWorker(Thread):
 		passok = (p1 != None) and (p2 != None)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 
+	def write_helper(self, init=False, recover=False):
+		if init:
+			self.do_init_write(recover=recover)
+		self.do_erase()
+		self.do_write()
+		self.writeinfo = None
+
 	def run(self):
 		while self.parent.run:
 			if not self.ready:
@@ -340,23 +347,34 @@ class KlineWorker(Thread):
 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 							continue
 						if self.state == ECUSTATE.OK:
-							if self.ecu.send_command([0x72],[0x00, 0xf0]) != None:
+							if self.ecu.diag():
 								if self.writeinfo is not None:
-									self.do_init_write()
-									self.do_erase()
-									self.do_write()
-									self.writeinfo = None
+									self.write_helper(init=True)
 									continue
 								self.do_idle_tasks()
 								continue
 							else:
 								self.do_update_state()
 								continue
+						if self.state == ECUSTATE.RECOVER_OLD:
+							if self.ecu.diag():
+								if self.writeinfo is not None:
+									self.write_helper(init=True)
+									continue
+							else:
+								self.do_update_state()
+								continue
+						if self.state == ECUSTATE.RECOVER_NEW:
+							if self.ecu.diag():
+								if self.writeinfo is not None:
+									self.write_helper(init=True, recover=True)
+									continue
+							else:
+								self.do_update_state()
+								continue
 						if self.state == ECUSTATE.WRITE:
 							if self.writeinfo is not None:
-								self.do_erase()
-								self.do_write()
-								self.writeinfo = None
+								self.write_helper(init=False)
 								continue
 						if self.state == ECUSTATE.READ:
 							if self.readinfo is not None:
