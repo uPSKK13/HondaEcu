@@ -14,8 +14,11 @@ ECM_IDs = {
 	b"\x01\x00\xb7\x03\x01": {"model":"CBR1000RR","year":"2008-2011","pn":"38770-MFL-F21","checksum":"0x3fff8"},
 	b"\x01\x00\xb7\x04\x01": {"model":"CBR1000RR","year":"2008-2011","pn":"38770-MFL-A21","checksum":"0x3fff8"},
 
+	b"\x01\x00\xf3\x01\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-D01","checksum":"0x3fff8"},
+	b"\x01\x00\xf3\x03\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-F01","checksum":"0x3fff8"},
 	b"\x01\x00\xf3\x04\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-A01","checksum":"0x3fff8"},
 	b"\x01\x01\x83\x01\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-D62","checksum":"0x3fff8"},
+	b"\x01\x01\x83\x03\x02": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-F63","checksum":"0x3fff8"},
 	b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-A92","checksum":"0x3fff8"},
 
 	b"\x01\x01\x25\x05\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-A03","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
