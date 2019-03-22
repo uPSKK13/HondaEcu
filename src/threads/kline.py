@@ -386,7 +386,7 @@ class KlineWorker(Thread):
 						if self.state == ECUSTATE.OK:
 							self.do_on_power()
 					else:
-						if self.ecu.ping():
+						if self.ecu.diag():
 							if self.do_connected() > 0:
 								self.do_update_state()
 						else:

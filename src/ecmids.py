@@ -23,6 +23,7 @@ ECM_IDs = {
 
 	b"\x01\x01\x25\x05\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-A03","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x01\x25\x0b\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-C02","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
+	b"\x01\x01\x25\x0b\x02": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-C03","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x01\x25\x01\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-D02","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x02\xf2\x05\x11": {"model":"CBR500R","year":"2017-2018","pn":"38770-MJW-AQ1","checksum":"0x3fff8","ecmidaddr":"0x18BB7","keihinaddr":"0x3FA70"},
 
