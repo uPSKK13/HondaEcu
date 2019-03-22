@@ -194,20 +194,27 @@ class KlineWorker(Thread):
 		ret = 1
 		self.state = ECUSTATE.ERASING
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
-		self.ecu.do_erase()
-		e = 0
-		while True:
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
-			time.sleep(.1)
-			e += 1
-			info = self.ecu.send_command([0x7e], [0x01, 0x05],retries=10)
-			if info:
-				if info[2][1] == 0x00:
-					self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
-					ret = 0
+		e = self.ecu.do_erase()
+		if e == 0:
+			e = 0
+			while True:
+				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
+				time.sleep(.1)
+				e += 1
+				info = self.ecu.send_command([0x7e], [0x01, 0x05],retries=10)
+				if info:
+					if info[2][1] == 0x00:
+						self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
+						ret = 0
+						break
+					elif info[2][1] == 0xfa:
+						wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "erase block error"))
+						ret = 2
+						break
+				else:
 					break
-			else:
-				break
+		elif e == 1:
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "erase disabled"))
 		return ret
 
 	def do_write(self):
@@ -350,10 +357,10 @@ class KlineWorker(Thread):
 		if self.ecu.diag():
 			if init:
 				self.do_init_write(recover=recover)
-			self.do_erase()
-			self.do_write()
+			if self.do_erase() == 0:
+				self.do_write()
+				ret = 0
 			self.writeinfo = None
-			ret = 0
 		return ret
 
 	def read_helper(self):
