@@ -201,7 +201,7 @@ class KlineWorker(Thread):
 				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
 				time.sleep(.1)
 				e += 1
-				info = self.ecu.send_command([0x7e], [0x01, 0x05],retries=10)
+				info = self.ecu.send_command([0x7e], [0x01, 0x05])
 				if info:
 					if info[2][1] == 0x00:
 						self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
