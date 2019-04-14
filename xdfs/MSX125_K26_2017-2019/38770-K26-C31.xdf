@@ -1,4 +1,4 @@
-<!-- Written 02/25/2019 18:27:05 -->
+<!-- Written 04/14/2019 14:37:10 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -294,8 +294,8 @@
       <datatype>0</datatype>
       <unittype>0</unittype>
       <DALINK index="0" />
-      <LABEL index="0" value="On" />
-      <LABEL index="1" value="Off" />
+      <LABEL index="0" value="Low" />
+      <LABEL index="1" value="High" />
       <MATH equation="X">
         <VAR id="X" />
       </MATH>
