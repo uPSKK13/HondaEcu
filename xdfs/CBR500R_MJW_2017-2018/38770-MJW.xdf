@@ -1,4 +1,4 @@
-<!-- Written 03/05/2019 09:30:50 -->
+<!-- Written 04/20/2019 14:12:55 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -18,6 +18,14 @@
     <CATEGORY index="0x9" name="Group 3" />
     <CATEGORY index="0xA" name="Idle" />
     <CATEGORY index="0xB" name="Switches" />
+    <CATEGORY index="0xC" name="B0" />
+    <CATEGORY index="0xD" name="B1" />
+    <CATEGORY index="0xE" name="B2" />
+    <CATEGORY index="0xF" name="B3" />
+    <CATEGORY index="0x10" name="B4" />
+    <CATEGORY index="0x11" name="B5" />
+    <CATEGORY index="0x12" name="B6" />
+    <CATEGORY index="0x13" name="B7" />
   </XDFHEADER>
   <XDFTABLE uniqueid="0x1" flags="0x30">
     <title>TPS Breakpoints</title>
@@ -1522,23 +1530,438 @@
     </XDFAXIS>
   </XDFTABLE>
   <XDFFLAG uniqueid="0x13E1">
-    <title>Fuel Cut</title>
+    <title>B5-0 (?? 6th Gear Limiter ??)</title>
     <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
     <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
     <mask>0x01</mask>
   </XDFFLAG>
-  <XDFFLAG uniqueid="0x48FD">
-    <title>Immobilizer Disable</title>
+  <XDFFLAG uniqueid="0x24E7">
+    <title>B5-1</title>
     <CATEGORYMEM index="0" category="12" />
-    <CATEGORYMEM index="1" category="7" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x204C">
+    <title>B5-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x79B4">
+    <title>B5-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4437">
+    <title>B5-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3732">
+    <title>B5-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4E91">
+    <title>B5-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3B24">
+    <title>B5-7</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="18" />
+    <EMBEDDEDDATA mmedaddress="0x18BB5" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x7B85">
+    <title>B6-0</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x6664">
+    <title>B6-1</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x316E">
+    <title>B6-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x1579">
+    <title>B6-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3CA8">
+    <title>B6-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4824">
+    <title>B6-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x1310">
+    <title>B6-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x247">
+    <title>B6-7</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="19" />
+    <EMBEDDEDDATA mmedaddress="0x18BB6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
+  </XDFFLAG>
+  <XDFTABLE uniqueid="0x49C3" flags="0x0">
+    <title>ECMID</title>
+    <XDFAXIS id="x" uniqueid="0x0">
+      <EMBEDDEDDATA mmedelementsizebits="16" mmedmajorstridebits="-32" mmedminorstridebits="0" />
+      <indexcount>5</indexcount>
+      <decimalpl>1</decimalpl>
+      <outputtype>2</outputtype>
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <LABEL index="0" value="0" />
+      <LABEL index="1" value="0" />
+      <LABEL index="2" value="0" />
+      <LABEL index="3" value="0" />
+      <LABEL index="4" value="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="y" uniqueid="0x0">
+      <EMBEDDEDDATA mmedelementsizebits="16" mmedmajorstridebits="-32" mmedminorstridebits="0" />
+      <indexcount>1</indexcount>
+      <decimalpl>1</decimalpl>
+      <outputtype>2</outputtype>
+      <datatype>0</datatype>
+      <unittype>0</unittype>
+      <DALINK index="0" />
+      <LABEL index="0" value="0" />
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+    <XDFAXIS id="z">
+      <EMBEDDEDDATA mmedaddress="0x18BB7" mmedelementsizebits="8" mmedrowcount="1" mmedcolcount="5" mmedmajorstridebits="0" mmedminorstridebits="0" />
+      <decimalpl>1</decimalpl>
+      <min>0.000000</min>
+      <max>255.000000</max>
+      <outputtype>3</outputtype>
+      <MATH equation="X">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+  </XDFTABLE>
+  <XDFFLAG uniqueid="0x74B9">
+    <title>B0-0</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x152E">
+    <title>B0-1</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x6C4A">
+    <title>B0-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x25E3">
+    <title>B0-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x24F8">
+    <title>B0-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x2D56">
+    <title>B0-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x71F3">
+    <title>B0-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x1B37">
+    <title>B0-7</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="13" />
+    <EMBEDDEDDATA mmedaddress="0x18BB0" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x76E7">
+    <title>B1-0</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
+    <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x389">
+    <title>B1-1</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
+    <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x394C">
+    <title>B1-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
+    <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x40BA">
+    <title>B1-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
+    <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0xF33">
+    <title>B1-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
+    <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x1D53">
+    <title>B1-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
+    <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x2BB9">
+    <title>B1-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="14" />
     <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
     <mask>0x40</mask>
   </XDFFLAG>
-  <XDFFLAG uniqueid="0x475A">
-    <title>EVAP</title>
+  <XDFFLAG uniqueid="0x34A1">
+    <title>B1-7</title>
     <CATEGORYMEM index="0" category="12" />
-    <CATEGORYMEM index="1" category="7" />
+    <CATEGORYMEM index="1" category="14" />
     <EMBEDDEDDATA mmedaddress="0x18BB1" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3121">
+    <title>B2-0</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x23E4">
+    <title>B2-1</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x2F08">
+    <title>B2-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
     <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x59DB">
+    <title>B2-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4352">
+    <title>B2-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x7336">
+    <title>B2-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x5FD3">
+    <title>B2-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x45B7">
+    <title>B2-7</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="15" />
+    <EMBEDDEDDATA mmedaddress="0x18BB2" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x5BE6">
+    <title>B3-0</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3B33">
+    <title>B3-1</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x11AB">
+    <title>B3-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x374D">
+    <title>B3-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x5360">
+    <title>B3-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x1AA9">
+    <title>B3-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x506E">
+    <title>B3-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4484">
+    <title>B3-7</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="16" />
+    <EMBEDDEDDATA mmedaddress="0x18BB3" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x922">
+    <title>B4-0</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4A42">
+    <title>B4-1</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x4F63">
+    <title>B4-2</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x04</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x2602">
+    <title>B4-3</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3F1A">
+    <title>B4-4</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0xB75">
+    <title>B4-5</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x696A">
+    <title>B4-6</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x2035">
+    <title>B4-7</title>
+    <CATEGORYMEM index="0" category="12" />
+    <CATEGORYMEM index="1" category="17" />
+    <EMBEDDEDDATA mmedaddress="0x18BB4" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x80</mask>
   </XDFFLAG>
 </XDFFORMAT>
