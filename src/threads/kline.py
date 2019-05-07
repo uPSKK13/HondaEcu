@@ -128,36 +128,46 @@ class KlineWorker(Thread):
 				_, status, _ = do_validation(byts, nbyts)
 			return status
 
-	def write_flash(self, byts, offset=0):
-		ret = 1
-		writesize = 128
+	def write_flash(self, byts, offset=0, writesize=128):
 		ossize = len(byts)
-		maxi = int(ossize/writesize)
 		offseti = int(offset/16)
+		z = int(writesize/16)
+		maxi = int(ossize/writesize)
 		i = 0
 		w = 0
 		t = time.time()
 		rate = 0
 		size = 0
-		done = False
-		while not self.writeinfo is None and i < maxi and not done:
+		while not self.writeinfo is None and i < maxi:
 			w = (i*writesize)
-			bytstart = [s for s in struct.pack(">H",offseti+(8*i))]
+			bytstart = [s for s in struct.pack(">H",offseti+(z*i))]
 			if i+1 == maxi:
 				bytend = [s for s in struct.pack(">H",0)]
 			else:
-				bytend = [s for s in struct.pack(">H",offseti+(8*(i+1)))]
+				bytend = [s for s in struct.pack(">H",offseti+(z*(i+1)))]
 			d = list(byts[((i+0)*writesize):((i+1)*writesize)])
 			x = bytstart + d + bytend
 			c1 = checksum8bit(x)
 			c2 = checksum8bitHonda(x)
 			x = [0x01, 0x06] + x + [c1, c2]
 			info = self.ecu.send_command([0x7e], x)
-			if not info or ord(info[1]) != 5:
-				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "interrupted"))
-				return False
-			if info[2][1] == 0:
-				done = True
+			if info is not None:
+				if ord(info[1]) != 5:
+					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "interrupted"))
+					return 1
+			else:
+				if i == 0:
+					if writesize == 128:
+						writesize = 64
+						z = int(writesize/16)
+						maxi = int(ossize/writesize)
+						continue
+					else:
+						wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "failed"))
+						return 2
+				else:
+					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "interrupted"))
+					return 3
 			n = time.time()
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(i/maxi*100,"%.02fKB of %.02fKB @ %s" % (w/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 			if n-t > 1:
@@ -165,11 +175,12 @@ class KlineWorker(Thread):
 				t = n
 				size = w
 			i += 1
-		info = self.ecu.send_command([0x7e], [0x01, 0x08])
-		if not info is None and info[2][1] == 0x0:
-			ret = 0
+			if i % 2 == 0:
+				if writesize == 64:
+					self.ecu.send_command([0x7e], [0x01, 0x07])
+					time.sleep(.200)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i/maxi*100,"%.02fKB of %.02fKB @ %s" % ((w-offset)/1024.0, ossize/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
-		return ret
+		return 0
 
 	def do_init_write(self, recover=False):
 		if recover:
@@ -183,19 +194,21 @@ class KlineWorker(Thread):
 			self.state = ECUSTATE.INIT_WRITE
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 			self.ecu.do_init_write()
-		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
-		for i in range(14):
-			w = 14-i
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(w/14*100, "waiting for %d seconds" % (w)))
-			time.sleep(1)
-		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "waiting for %d seconds" % (w)))
+		time.sleep(.100)
 
-	def do_erase(self):
+	def do_erase(self, wait=11):
 		ret = 1
 		self.state = ECUSTATE.ERASING
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
-		e = self.ecu.do_erase()
-		if e == 0:
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
+		self.ecu.get_write_status()
+		for i in range(wait):
+			w = wait-i
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(w/wait*100, "waiting for %d seconds" % (w)))
+			time.sleep(1)
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "waiting for %d seconds" % (w)))
+		if self.ecu.do_erase():
+			time.sleep(2)
 			e = 0
 			while True:
 				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(np.clip(e/35*100,0,100), "erasing ecu"))
@@ -204,7 +217,7 @@ class KlineWorker(Thread):
 				info = self.ecu.send_command([0x7e], [0x01, 0x05])
 				if info:
 					if info[2][1] == 0x00:
-						self.ecu.send_command([0x7e], [0x01, 0x01, 0x00])
+						self.ecu.get_write_status()
 						ret = 0
 						break
 					elif info[2][1] == 0xfa:
@@ -213,19 +226,19 @@ class KlineWorker(Thread):
 						break
 				else:
 					break
-		elif e == 1:
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "erase disabled"))
+		else:
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "erase failed"))
 		return ret
 
-	def do_write(self):
+	def do_write(self, writesize=128):
 		ret = 1
 		self.state = ECUSTATE.WRITING
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
-		if self.write_flash(self.writeinfo[0], offset=self.writeinfo[1]) == 0:
-			 self.writeinfo[2] = "good" if self.ecu.do_post_write() else "bad"
-			 wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.result", value=self.writeinfo[2])
-			 ret = 0
+		if self.write_flash(self.writeinfo[0], offset=self.writeinfo[1], writesize=writesize) == 0:
+			self.writeinfo[2] = "good" if self.ecu.do_post_write() else "bad"
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.result", value=self.writeinfo[2])
+			ret = 0
 		return ret
 
 	def do_read(self):
@@ -352,13 +365,14 @@ class KlineWorker(Thread):
 		passok = (p1 != None) and (p2 != None)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 
-	def write_helper(self, init=False, recover=False):
+	def write_helper(self, init=False, recover=False, nodiag=False, writesize=128):
 		ret = 1
-		if self.ecu.diag():
+		if nodiag or self.ecu.diag():
 			if init:
 				self.do_init_write(recover=recover)
+				time.sleep(.100)
 			if self.do_erase() == 0:
-				self.do_write()
+				self.do_write(writesize=writesize)
 				ret = 0
 			self.writeinfo = None
 		return ret
@@ -371,15 +385,32 @@ class KlineWorker(Thread):
 	def do_on_power(self):
 		if self.sendpassword:
 			self.do_password()
-			# self.state = ECUSTATE.READ
-			# wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 			self.sendpassword = False
+
+	def do_connected(self):
+		if self.state == ECUSTATE.OK:
+			if self.writeinfo is not None:
+				return self.write_helper(init=True)
+			else:
+				return self.do_idle_tasks()
+		elif self.state == ECUSTATE.RECOVER_OLD:
+			if self.writeinfo is not None:
+				return self.write_helper(init=True)
+		elif self.state == ECUSTATE.RECOVER_NEW:
+			if self.writeinfo is not None:
+				return self.write_helper(init=True, recover=True)
+		return False
 
 	def do_exceptions(self):
 		ret = 1
 		if self.state == ECUSTATE.READ:
 			if self.readinfo is not None:
 				ret = self.read_helper()
+		elif self.state == ECUSTATE.WRITEx00:
+			if self.writeinfo is not None:
+				return self.write_helper(nodiag=True)
+		else:
+			pass
 		return ret
 
 	def run(self):
@@ -394,7 +425,7 @@ class KlineWorker(Thread):
 							self.do_on_power()
 						else:
 							self.ecu.init()
-							self.ecu.ping(mode=0xff)
+							self.ecu.ping()
 					else:
 						if self.ecu.diag():
 							if self.do_connected() > 0:
@@ -408,153 +439,3 @@ class KlineWorker(Thread):
 					pass
 				except OSError:
 					pass
-
-	def do_connected(self):
-		if self.state == ECUSTATE.OK:
-			if self.writeinfo is not None:
-				return self.write_helper(init=True)
-			else:
-				return self.do_idle_tasks()
-		elif self.state == ECUSTATE.WRITE:
-			if self.writeinfo is not None:
-				self.write_helper(init=False)
-		elif self.state == ECUSTATE.RECOVER_OLD:
-			if self.writeinfo is not None:
-				return self.write_helper(init=True)
-		elif self.state == ECUSTATE.RECOVER_NEW:
-			if self.writeinfo is not None:
-				return self.write_helper(init=True, recover=True)
-		return False
-
-	# def run(self):
-	# 	while self.parent.run:
-	# 		if not self.ready:
-	# 			time.sleep(.001)
-	# 		else:
-	# 			try:
-	# 				if self.ecu.dev.kline():
-	# 					if self.state in [ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
-	# 						if self.hrcmode is not None:
-	# 							time.sleep(.1)
-	# 							self.ecu.dev.baudrate = 19200
-	# 							self.do_hrc_settings()
-	# 							self.hrcmode = None
-	# 							continue
-	# 						time.sleep(.5)
-	# 						self.ecu.dev.baudrate = 10400
-	# 						self.do_update_state()
-	# 						if self.readinfo is not None:
-	# 							self.do_password()
-	# 							self.state = ECUSTATE.READ
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
-	# 						continue
-	# 					if self.state == ECUSTATE.OK:
-	# 						print(self.ecu.diag())
-	# 						if self.ecu.diag():
-	# 							if self.writeinfo is not None:
-	# 								self.write_helper(init=True)
-	# 								continue
-	# 							self.do_idle_tasks()
-	# 							continue
-	# 						else:
-	# 							self.do_update_state()
-	# 							continue
-	# 					if self.state == ECUSTATE.RECOVER_OLD:
-	# 						if self.ecu.diag():
-	# 							if self.writeinfo is not None:
-	# 								self.write_helper(init=True)
-	# 								continue
-	# 						else:
-	# 							self.do_update_state()
-	# 							continue
-	# 					if self.state == ECUSTATE.RECOVER_NEW:
-	# 						if self.ecu.diag():
-	# 							if self.writeinfo is not None:
-	# 								self.write_helper(init=True, recover=True)
-	# 								continue
-	# 						else:
-	# 							self.do_update_state()
-	# 							continue
-	# 					if self.state == ECUSTATE.WRITE:
-	# 						if self.writeinfo is not None:
-	# 							self.write_helper(init=False)
-	# 							continue
-	# 					if self.state == ECUSTATE.READ:
-	# 						if self.readinfo is not None:
-	# 							self.do_read()
-	# 							self.readinfo = None
-	# 							continue
-	# 				else:
-	# 					self.do_update_state()
-	# 				time.sleep(.1)
-	# 			except FtdiError:
-	# 				pass
-	# 			except AttributeError:
-	# 				pass
-	# 			except OSError:
-	# 				pass
-
-	# def run(self):
-	# 	while self.parent.run:
-	# 		if not self.ready:
-	# 			time.sleep(.001)
-	# 		else:
-	# 			try:
-	# 				if self.hrcmode != None:
-	# 					if self.ecu.dev.baudrate == 10400:
-	# 						while self.ecu.dev.kline():
-	# 							time.sleep(.1)
-	# 						self.state = ECUSTATE.OFF
-	# 						wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
-	# 						self.ecu.dev.baudrate = 19200
-	# 					elif self.ecu.dev.baudrate == 19200:
-	# 						if self.ecu.dev.kline():
-	# 							for i in range(4):
-	# 								wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=((4-i)/4*100, "waiting"))
-	# 								time.sleep(1)
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(0, "waiting"))
-	# 							self.ecu.send_command([0x4d,0x4b],[0x0f, 0x00], retries=0)
-	# 							hrcid = self.ecu.send_command([0x4d,0x4b],[0x00, 0x00], retries=0)[2][2:]
-	# 							self.ecu.send_command([0x4d,0x4b],[0x0e, 0x00], retries=0)
-	# 							rpm = self.ecu.send_command([0x4d,0x4b],[0x04, 0x01], retries=0)[2][2:] # RPM Breakpoints
-	# 							throttle = self.ecu.send_command([0x4d,0x4b],[0x05, 0x01], retries=0)[2][2:] # Throttle Breakpoints
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(1/5*100, ""))
-	# 							fimap2 = self.ecu.send_command([0x4d,0x4b],[0x13, 0x01], retries=0)[2][2:] # FIMAP Mode2
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(2/5*100, ""))
-	# 							fimap3 = self.ecu.send_command([0x4d,0x4b],[0x14, 0x01], retries=0)[2][2:] # FIMAP Mode3
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(3/5*100, ""))
-	# 							igmap2 = self.ecu.send_command([0x4d,0x4b],[0x24, 0x01], retries=0)[2][2:] # IGMAP Mode2
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(4/5*100, ""))
-	# 							igmap3 = self.ecu.send_command([0x4d,0x4b],[0x25, 0x01], retries=0)[2][2:] # IGMAP Mode3
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.progress", value=(5/5*100, ""))
-	# 							wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="hrc.read.result", value=True)
-	# 							with open(self.hrcmode[1][0], "wb") as f:
-	# 								comment = b"HondaECU"
-	# 								name = self.hrcmode[1][1].encode("ascii")
-	# 								d = b"\x16" + \
-	# 									b"FiSettingTool_UserData" + \
-	# 									bytes(hrcid) + \
-	# 									b"CRF450R" + \
-	# 									b"\x09" + \
-	# 									b"PGM-FI/IG" + \
-	# 									bytes([len(rpm)]) + \
-	# 									bytes(rpm) + \
-	# 									bytes([len(throttle)]) + \
-	# 									bytes(throttle) + \
-	# 									bytes([len(fimap2)]) + \
-	# 									bytes(fimap2) + \
-	# 									bytes(fimap3) + \
-	# 									bytes([len(igmap2)]) + \
-	# 									bytes(igmap2) + \
-	# 									bytes(igmap3) + \
-	# 									b"\x00" * 192 + \
-	# 									b"\x0c" + \
-	# 									b"\x00" * 22 + \
-	# 									bytes([len(name)]) + \
-	# 									bytes(name) + \
-	# 									bytes([len(comment)]) + \
-	# 									comment
-	# 								f.write(d)
-	# 							self.hrcmode = None
-	# 							self.do_unknown()
-	# 					continue

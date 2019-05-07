@@ -121,7 +121,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				data[13] = round(data[13]/0xffff*265.5,2)
 				data[14] = round(-64 + data[14]/0xff*127.5,2)
 				if t == 0x11:
-					data[16] = data[16]/0xffff*8.0
+					data[16] = round(data[16]/0xffff*8.0,4)
 				for s in self.sensors:
 					if self.sensors[s][5]:
 						self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))

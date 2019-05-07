@@ -147,7 +147,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				"conflicts":["data","hrc"],
 				"panel":HondaECU_FlashPanel,
 				"disabled":True,
-				"enable": [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITE, ECUSTATE.READ],
+				"enable": [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30, ECUSTATE.READ],
 			},
 			"tunehelper": {
 				"label":"Tune",

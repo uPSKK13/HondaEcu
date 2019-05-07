@@ -202,7 +202,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 					pass
 				enable = (len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0)
 		else:
-			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITE]:
+			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30]:
 				if self.doHTF:
 					enable = self.OnValidateModeHTF(event)
 				else:
@@ -264,7 +264,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				byts = bytearray(fbin.read(nbyts))
 				fbin.close()
 				if checksum >= nbyts:
-					return Fakse
+					return False
 				ret, status, self.byts = do_validation(byts, nbyts, checksum)
 				if status != "bad":
 					return True
