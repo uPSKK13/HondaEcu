@@ -128,9 +128,10 @@ class KlineWorker(Thread):
 				_, status, _ = do_validation(byts, nbyts)
 			return status
 
-	def write_flash(self, byts, offset=0, writesize=128):
+	def write_flash(self, byts, offset=0):
 		ossize = len(byts)
 		offseti = int(offset/16)
+		writesize=128
 		z = int(writesize/16)
 		maxi = int(ossize/writesize)
 		i = 0
@@ -230,12 +231,12 @@ class KlineWorker(Thread):
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "erase failed"))
 		return ret
 
-	def do_write(self, writesize=128):
+	def do_write(self):
 		ret = 1
 		self.state = ECUSTATE.WRITING
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
-		if self.write_flash(self.writeinfo[0], offset=self.writeinfo[1], writesize=writesize) == 0:
+		if self.write_flash(self.writeinfo[0], offset=self.writeinfo[1]) == 0:
 			self.writeinfo[2] = "good" if self.ecu.do_post_write() else "bad"
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.result", value=self.writeinfo[2])
 			ret = 0
@@ -365,14 +366,14 @@ class KlineWorker(Thread):
 		passok = (p1 != None) and (p2 != None)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 
-	def write_helper(self, init=False, recover=False, nodiag=False, writesize=128):
+	def write_helper(self, init=False, recover=False, nodiag=False):
 		ret = 1
 		if nodiag or self.ecu.diag():
 			if init:
 				self.do_init_write(recover=recover)
 				time.sleep(.100)
 			if self.do_erase() == 0:
-				self.do_write(writesize=writesize)
+				self.do_write()
 				ret = 0
 			self.writeinfo = None
 		return ret
