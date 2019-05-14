@@ -422,7 +422,7 @@ class KlineWorker(Thread):
 				try:
 					if self.state in [ECUSTATE.UNDEFINED, ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
 						self.do_update_state()
-						if self.state == ECUSTATE.OK:
+						if self.state not in [ECUSTATE.UNDEFINED, ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
 							self.do_on_power()
 						else:
 							self.ecu.init()
