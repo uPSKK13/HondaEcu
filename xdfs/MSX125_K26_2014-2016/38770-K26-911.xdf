@@ -1,4 +1,4 @@
-<!-- Written 04/14/2019 14:37:14 -->
+<!-- Written 05/13/2019 17:59:12 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -323,4 +323,24 @@
       </MATH>
     </XDFAXIS>
   </XDFTABLE>
+  <XDFFLAG uniqueid="0xDAD">
+    <title>Tip-over Sensor Enabled</title>
+    <EMBEDDEDDATA mmedaddress="0x760E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x08</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x64B8">
+    <title>Fast-idle Valve Enabled</title>
+    <EMBEDDEDDATA mmedaddress="0x760E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3966">
+    <title>LTFT Disabled</title>
+    <EMBEDDEDDATA mmedaddress="0x760D" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x3A5">
+    <title>Feedback Enabled</title>
+    <EMBEDDEDDATA mmedaddress="0x760B" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x20</mask>
+  </XDFFLAG>
 </XDFFORMAT>

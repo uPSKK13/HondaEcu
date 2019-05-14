@@ -327,6 +327,11 @@
     <EMBEDDEDDATA mmedaddress="0x0E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
     <mask>0x08</mask>
   </XDFFLAG>
+  <XDFFLAG uniqueid="0x64B8">
+    <title>Fast-idle Valve Enabled</title>
+    <EMBEDDEDDATA mmedaddress="0x0E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
   <XDFFLAG uniqueid="0x3966">
     <title>LTFT Disabled</title>
     <EMBEDDEDDATA mmedaddress="0x0D" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
