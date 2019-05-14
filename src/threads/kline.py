@@ -102,7 +102,7 @@ class KlineWorker(Thread):
 			size = location
 			rate = 0
 			while not self.readinfo is None:
-				info = self.ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
+				info = self.ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize], retries=10)
 				if not info:
 					readsize -= 1
 					if readsize < 1:
@@ -151,7 +151,7 @@ class KlineWorker(Thread):
 			c1 = checksum8bit(x)
 			c2 = checksum8bitHonda(x)
 			x = [0x01, 0x06] + x + [c1, c2]
-			info = self.ecu.send_command([0x7e], x)
+			info = self.ecu.send_command([0x7e], x, retries=10)
 			if info is not None:
 				if ord(info[1]) != 5:
 					wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "interrupted"))
