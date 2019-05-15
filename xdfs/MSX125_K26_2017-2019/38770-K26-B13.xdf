@@ -1,4 +1,4 @@
-<!-- Written 04/14/2019 14:35:08 -->
+<!-- Written 05/15/2019 01:18:55 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -131,7 +131,7 @@
       <min>0.000000</min>
       <max>12000.000000</max>
       <outputtype>1</outputtype>
-      <MATH equation="X/3.64086">
+      <MATH equation="X/3.64081">
         <VAR id="X" />
       </MATH>
     </XDFAXIS>
