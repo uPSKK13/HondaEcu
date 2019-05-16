@@ -170,25 +170,32 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
 		wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.on")
 
-		self.font = self.GetFont()
-		self.fontBig = self.GetFont().Bold()
-		self.fontBig.SetPointSize(self.fontBig.GetPointSize()*2)
+		self.font1 = self.GetFont()
+		self.font2 = self.GetFont().Bold()
+		self.font2.SetPointSize(self.font1.GetPointSize()*1.5)
+		self.font3 = self.GetFont().Bold()
+		self.font3.SetPointSize(self.font1.GetPointSize()*2)
+		self.font4 = self.GetFont().Bold()
+		self.font4.SetPointSize(self.font1.GetPointSize()*2.5)
+		self.font5 = self.GetFont().Bold()
+		self.font5.SetPointSize(self.font1.GetPointSize()*3)
+		self.fonts = {
+			wx.NewId(): self.font1,
+			wx.NewId(): self.font2,
+			wx.NewId(): self.font3,
+			wx.NewId(): self.font4,
+			wx.NewId(): self.font5,
+		}
 
-		self.Bind(wx.EVT_SIZE, self.OnResize)
-
-		randomId = wx.NewId()
-		self.Bind(wx.EVT_MENU, self.OnFullScreen, id=randomId)
-		accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL,  ord('F'), randomId)])
+		at = []
+		for i, id in enumerate(self.fonts):
+			self.Bind(wx.EVT_MENU, self.OnBig, id=id)
+			at.append((wx.ACCEL_CTRL,  ord('%s' % (i+1)), id))
+		accel_tbl = wx.AcceleratorTable(at)
 		self.SetAcceleratorTable(accel_tbl)
 
-	def OnResize(self, event):
-		if self.IsMaximized():
-			changeFontInChildren(self, self.fontBig)
-		else:
-			changeFontInChildren(self, self.font)
-
-	def OnFullScreen(self, event):
-		self.Maximize(not self.IsMaximized())
+	def OnBig(self, event):
+		changeFontInChildren(self, self.fonts[event.GetId()])
 		self.Layout()
 		self.mainsizer.Fit(self)
 
