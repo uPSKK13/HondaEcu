@@ -5,6 +5,21 @@ from pydispatch import dispatcher
 
 class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
+	def prepare_data1(self, data, t):
+		data[1] = round(data[1]/0xff*5.0,2)
+		data[2] = round(data[2]/1.6,2)
+		data[3] = round(data[3]/0xff*5.0,2)
+		data[4] = -40 + data[4]
+		data[5] = round(data[5]/0xff*5.0,2)
+		data[6] = -40 + data[6]
+		data[7] = round(data[7]/0xff*5.0,2)
+		data[11] = round(data[11]/10,2)
+		data[13] = round(data[13]/0xffff*265.5,2)
+		data[14] = round(-64 + data[14]/0xff*127.5,2)
+		if t == 0x11:
+			data[16] = round(data[16]/0xffff*8.0,4)
+		return data
+
 	def Build(self):
 		self.datap = wx.Panel(self)
 
@@ -47,19 +62,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 						u += "BH"
 					elif t == 0x17:
 						u += "BB"
-					data = list(struct.unpack(u, dd))
-					data[1] = data[1]/0xff*5.0
-					data[2] = data[2]/1.6
-					data[3] = data[3]/0xff*5.0
-					data[4] = -40 + data[4]
-					data[5] = data[5]/0xff*5.0
-					data[6] = -40 + data[6]
-					data[7] = data[7]/0xff*5.0
-					data[11] = data[11]/10
-					data[13] = data[13]/0xffff*265.5
-					data[14] = -64 + data[14]/0xff*127.5
-					if t == 0x11:
-						data[16] = data[16]/0xffff*8.0
+					data = self.prepare_data1(list(struct.unpack(u, dd)), t)
 					for s in self.sensors:
 						if self.sensors[s][5]:
 							self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
@@ -111,18 +114,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					u += "BH"
 				elif t == 0x17:
 					u += "BB"
-				data = list(struct.unpack(u, dd))
-				data[1] = round(data[1]/0xff*5.0,2)
-				data[3] = round(data[3]/0xff*5.0,2)
-				data[4] = -40 + data[4]
-				data[5] = round(data[5]/0xff*5.0,2)
-				data[6] = -40 + data[6]
-				data[7] = round(data[7]/0xff*5.0,2)
-				data[11] = round(data[11]/10,2)
-				data[13] = round(data[13]/0xffff*265.5,2)
-				data[14] = round(-64 + data[14]/0xff*127.5,2)
-				if t == 0x11:
-					data[16] = round(data[16]/0xffff*8.0,4)
+				data = self.prepare_data1(list(struct.unpack(u, dd)), t)
 				for s in self.sensors:
 					if self.sensors[s][5]:
 						self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
