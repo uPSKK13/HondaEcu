@@ -172,7 +172,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
 		self.font = self.GetFont()
 		self.fontBig = self.GetFont().Bold()
-		self.fontBig.SetPointSize(self.fontBig.GetPointSize()+14)
+		self.fontBig.SetPointSize(self.fontBig.GetPointSize()*2)
 
 		self.Bind(wx.EVT_SIZE, self.OnResize)
 
