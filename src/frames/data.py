@@ -3,7 +3,28 @@ import struct
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
 
+def changeFontInChildren(win, font):
+    try:
+        win.SetFont(font)
+    except:
+        pass
+    for child in win.GetChildren():
+        changeFontInChildren(child, font)
+
 class HondaECU_DatalogPanel(HondaECU_AppPanel):
+
+	def __init__(self, parent, appid, appinfo, enablestates, *args, **kwargs):
+		wx.Frame.__init__(self, parent, title="HondaECU :: %s" % (appinfo["label"]), style=wx.DEFAULT_FRAME_STYLE, *args, **kwargs)
+		self.parent = parent
+		self.appid = appid
+		self.appinfo = appinfo
+		self.enablestates = enablestates
+		self.Build()
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
+		self.Bind(wx.EVT_CLOSE, self.OnClose)
+		self.Center()
+		wx.CallAfter(self.Show)
 
 	def prepare_data1(self, data, t):
 		data[1] = round(data[1]/0xff*5.0,2)
@@ -149,6 +170,28 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
 		wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.on")
 
+		self.font = self.GetFont()
+		self.fontBig = self.GetFont().Bold()
+		self.fontBig.SetPointSize(self.fontBig.GetPointSize()+14)
+
+		self.Bind(wx.EVT_SIZE, self.OnResize)
+
+		randomId = wx.NewId()
+		self.Bind(wx.EVT_MENU, self.OnFullScreen, id=randomId)
+		accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL,  ord('F'), randomId)])
+		self.SetAcceleratorTable(accel_tbl)
+
+	def OnResize(self, event):
+		if self.IsMaximized():
+			changeFontInChildren(self, self.fontBig)
+		else:
+			changeFontInChildren(self, self.font)
+
+	def OnFullScreen(self, event):
+		self.Maximize(not self.IsMaximized())
+		self.Layout()
+		self.mainsizer.Fit(self)
+
 	def OnClose(self, event):
 		wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.off")
 		HondaECU_AppPanel.OnClose(self, event)
@@ -194,7 +237,6 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.on")
 			else:
 				wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.off")
-
 			self.Layout()
 			self.mainsizer.Fit(self)
 
