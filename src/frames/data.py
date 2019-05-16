@@ -14,7 +14,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 		self.maintable = None
 		self.sensors = {
 			"Engine speed": [None,None,None,"rpm",0,True],
-			"TPS sensor": [None,None,None,"°",2,True],
+			"TPS sensor": [None,None,None,"%",2,True],
 			"ECT sensor": [None,None,None,"°C",4,True],
 			"IAT sensor": [None,None,None,"°C",6,True],
 			"MAP sensor": [None,None,None,"kPa",8,True],
@@ -49,6 +49,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 						u += "BB"
 					data = list(struct.unpack(u, dd))
 					data[1] = data[1]/0xff*5.0
+					data[2] = data[2]/1.6
 					data[3] = data[3]/0xff*5.0
 					data[4] = -40 + data[4]
 					data[5] = data[5]/0xff*5.0

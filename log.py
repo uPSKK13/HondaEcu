@@ -55,6 +55,7 @@ def Main():
 				if info and len(info[2][2:]) > 0:
 					data = list(struct.unpack(u, info[2][2:]))
 					data[1] = data[1]/0xff*5.0
+					data[2] = data[2]/1.6
 					data[3] = data[3]/0xff*5.0
 					data[4] = -40 + data[4]
 					data[5] = data[5]/0xff*5.0
