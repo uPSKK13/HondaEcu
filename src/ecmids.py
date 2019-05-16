@@ -15,7 +15,7 @@ ECM_IDs = {
 	b"\x01\x00\x5e\x04\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-671","checksum":"0x3fff8"},
 	b"\x01\x00\x5e\x05\x03": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-773","checksum":"0x3fff8"},
 	b"\x01\x00\xb0\x01\x02": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-761","checksum":"0x3fff8"},
-	b"\x01\x00\xb0\x03\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-741","checksum":"0x3fff8"},
+	b"\x01\x00\xb0\x03\x01": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-741","checksum":"0x3fff8"},
 	b"\x01\x00\xb7\x01\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-D21","checksum":"0x3fff8"},
 	b"\x01\x00\xb7\x03\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-F21","checksum":"0x3fff8"},
 	b"\x01\x00\xb7\x04\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-A21","checksum":"0x3fff8"},
