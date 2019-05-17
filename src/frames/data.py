@@ -56,6 +56,10 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 		self.d3p = wx.Panel(self.d3pbox)
 		self.d3psizer = wx.GridBagSizer()
 
+		self.d4pbox = wx.Panel(self)
+		self.d4p = wx.Panel(self.d4pbox)
+		self.d4psizer = wx.GridBagSizer()
+
 		self.maintable = None
 		self.sensors = {
 			"Engine speed": [None,None,None,"rpm",0,True,self.d1psizer,self.d1p],
@@ -82,6 +86,14 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				"STFT #2": [None,None,None,"",1,True,self.d3psizer,self.d3p,self.d3pbox],
 			},
 		}
+		self.sensors2 = {
+			"EGCV current": [None,None,None,"V",5,True,self.d4psizer,self.d4p,self.d4pbox],
+			"EGCV target": [None,None,None,"V",6,True,self.d4psizer,self.d4p,self.d4pbox],
+			"EGCV load": [None,None,None,"%",7,True,self.d4psizer,self.d4p,self.d4pbox],
+			"HESD current": [None,None,None,"A",8,True,self.d4psizer,self.d4p,self.d4pbox],
+			"HESD target": [None,None,None,"A",9,True,self.d4psizer,self.d4p,self.d4pbox],
+			"HESD load": [None,None,None,"%",10,True,self.d4psizer,self.d4p,self.d4pbox],
+		}
 		for i,l in enumerate(self.sensors.keys()):
 			self.sensors[l][0] = wx.StaticText(self.sensors[l][7], label="%s:" % l)
 			self.sensors[l][1] = wx.StaticText(self.sensors[l][7], label="---")
@@ -89,6 +101,13 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 			self.sensors[l][6].Add(self.sensors[l][0], pos=(i,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
 			self.sensors[l][6].Add(self.sensors[l][1], pos=(i,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
 			self.sensors[l][6].Add(self.sensors[l][2], pos=(i,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL, border=5)
+		for i,l in enumerate(self.sensors2.keys()):
+			self.sensors2[l][0] = wx.StaticText(self.sensors2[l][7], label="%s:" % l)
+			self.sensors2[l][1] = wx.StaticText(self.sensors2[l][7], label="---")
+			self.sensors2[l][2] = wx.StaticText(self.sensors2[l][7], label=self.sensors2[l][3])
+			self.sensors2[l][6].Add(self.sensors2[l][0], pos=(i,0), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
+			self.sensors2[l][6].Add(self.sensors2[l][1], pos=(i,1), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
+			self.sensors2[l][6].Add(self.sensors2[l][2], pos=(i,2), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL, border=5)
 		for j in self.o2sensor:
 			for i,l in enumerate(self.o2sensor[j].keys()):
 				self.o2sensor[j][l][0] = wx.StaticText(self.o2sensor[j][l][7], label="%s:" % l)
@@ -109,6 +128,8 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				self.d2pbox.Hide()
 			if not 0x21 in self.parent.ecuinfo["data"]:
 				self.d3pbox.Hide()
+			if not 0xd0 in self.parent.ecuinfo["data"]:
+				self.d4pbox.Hide()
 			for t in [0x10,0x11,0x17]:
 				if t in self.parent.ecuinfo["data"]:
 					dd = self.parent.ecuinfo["data"][t][1][2:]
@@ -132,10 +153,24 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 						if self.o2sensor[t][s][5]:
 							self.o2sensor[t][s][1].SetLabel(str(data[self.o2sensor[t][s][4]]))
 							self.o2sensor[t][s][8].Show()
+			if t == 0xd0:
+				if t in self.parent.ecuinfo["data"]:
+					data = list(struct.unpack(">7Bb%dB" % (self.parent.ecuinfo["data"][t][0]-10), self.parent.ecuinfo["data"][t][1][2:]))
+					data[5] = round(data[5]/0xff*5, 3)
+					data[6] = round(data[6]/0xff*5, 3)
+					data[7] = round(data[7]/0xff*100, 2)
+					data[8] = round(data[8]/0xff*5, 3)
+					data[9] = round(data[9]/0xff*5, 3)
+					data[10] = round(data[10]/0xff*5, 2)
+					for s in self.sensors2:
+						if self.sensors2[s][5]:
+							self.sensors2[s][1].SetLabel(str(data[self.sensors2[s][4]]))
+							self.sensors2[s][8].Show()
 
 		self.d1p.SetSizer(self.d1psizer)
 		self.d2p.SetSizer(self.d2psizer)
 		self.d3p.SetSizer(self.d3psizer)
+		self.d4p.SetSizer(self.d4psizer)
 
 		mt = "0x??"
 		if not self.maintable is None:
@@ -152,10 +187,15 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 		self.d3pboxsizer.Add(self.d3p, 0, wx.ALL, border=10)
 		self.d3pbox.SetSizer(self.d3pboxsizer)
 
+		self.d4pboxsizer = wx.StaticBoxSizer(wx.VERTICAL, self.d4pbox, "Table 0xd0")
+		self.d4pboxsizer.Add(self.d4p, 0, wx.ALL, border=10)
+		self.d4pbox.SetSizer(self.d4pboxsizer)
+
 		self.datapsizer = wx.GridBagSizer()
 		self.datapsizer.Add(self.d1pbox, pos=(0,0), span=(2,1), flag=wx.ALL, border=10)
 		self.datapsizer.Add(self.d2pbox, pos=(0,1), span=(1,1), flag=wx.ALL, border=10)
 		self.datapsizer.Add(self.d3pbox, pos=(1,1), span=(1,1), flag=wx.ALL, border=10)
+		self.datapsizer.Add(self.d4pbox, pos=(0,2), span=(2,1), flag=wx.ALL, border=10)
 		self.datap.SetSizer(self.datapsizer)
 
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
@@ -163,6 +203,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 
 		self.d2pbox.Hide()
 		self.d3pbox.Hide()
+		self.d4pbox.Hide()
 
 		self.SetSizer(self.mainsizer)
 		self.Layout()
@@ -239,6 +280,22 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 						self.o2sensor[t][s][8].Show()
 						self.Layout()
 						self.mainsizer.Fit(self)
+			if t == 0xd0:
+				if t in self.parent.ecuinfo["data"]:
+					data = list(struct.unpack(">7Bb%dB" % (self.parent.ecuinfo["data"][t][0]-10), self.parent.ecuinfo["data"][t][1][2:]))
+					data[5] = round(data[5]/0xff*5, 3)
+					data[6] = round(data[6]/0xff*5, 3)
+					# data[7] = round(data[7]/0xff*5, 2)
+					data[8] = round(data[8]/0xff*5, 3)
+					data[9] = round(data[9]/0xff*5, 3)
+					# data[10] = round(data[10]/0xff*5, 2)
+					for s in self.sensors2:
+						if self.sensors2[s][5]:
+							self.sensors2[s][1].SetLabel(str(data[self.sensors2[s][4]]))
+							self.sensors2[s][8].Show()
+							self.Layout()
+							self.mainsizer.Fit(self)
+
 		elif info == "state":
 			if value == ECUSTATE.OK:
 				wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.on")
