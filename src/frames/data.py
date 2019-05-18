@@ -30,7 +30,6 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 	def prepare_data1(self, data, t):
 		if t in [0x13, 0x17]:
 			data = data[:9] + [0xff, 0xff] + data[9:]
-		print(len(data))
 		data[1] = round(data[1]/0xff*5.0,2)
 		data[2] = round(data[2]/1.6,2)
 		data[3] = round(data[3]/0xff*5.0,2)
@@ -286,8 +285,6 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					elif t == 0x17:
 						u += "BB"
 				data = self.prepare_data1(list(struct.unpack(u, self.parent.ecuinfo["data"][t][1][2:])), t)
-				print(hex(t), [int(i) for i in d])
-				print(hex(t), data)
 				for s in self.sensors:
 					if self.sensors[s][5]:
 						self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))

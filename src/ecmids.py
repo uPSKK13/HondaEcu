@@ -1,31 +1,40 @@
 ECM_IDs = {
 
 	b"\x01\x01\x9c\x01\x01": {"model":"CB650F","year":"2014-2016","pn":"38770-MJE-D41","checksum":"0x3fff8","ecmidaddr":"0x15F72","keihinaddr":"0x37B98"},
-	
+
 	b"\x01\x00\x6a\x03\x01": {"model":"CB1000R","year":"2008-2016","pn":"38770-MNF-F01","checksum":"0x3fff8","ecmidaddr":"0x21C92","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x6a\x01\x01": {"model":"CB1000R","year":"2008-2016","pn":"38770-MNF-D01","checksum":"0x3fff8","ecmidaddr":"0x21C92","keihinaddr":"0x3FFDE"},
 
 	b"\x01\x00\xe0\x01\x01": {"model":"CBR600F","year":"2011-2012","pn":"38770-MGM-D11","checksum":"0x3fff8","ecmidaddr":"0x2290F","keihinaddr":"0x3FFDE"},
-	
+
 	b"\x01\x00\x33\x03\x02": {"model":"CBR600RR","year":"2007-2008","pn":"38770-MFJ-F03","checksum":"0x3fff8","ecmidaddr":"0x280B5","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x7C\x01\x02": {"model":"CBR600RR","year":"2009-2012","pn":"38770-MFJ-D42","checksum":"0x3fff8","ecmidaddr":"0x25439","keihinaddr":"0x3FFDE"},
 
 	b"\x01\x01\x4e\x12\x01": {"model":"CBR650F 35KW","year":"2014","pn":"38770-MJE-G12","checksum":"0x3fff8","ecmidaddr":"0x15F72","keihinaddr":"0x37B98"},
-	
+
 	b"\x01\x00\x2b\x01\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-D21","checksum":"0x3fff8","ecmidaddr":"0x23381","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x2b\x03\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-F21","checksum":"0x3fff8","ecmidaddr":"0x23381","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x2b\x04\x01": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-A21","checksum":"0x3fff8","ecmidaddr":"0x23381","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x2b\x04\x02": {"model":"CBR1000RR","year":"2006-2007","pn":"38770-MEL-A22","checksum":"0x3fff8","ecmidaddr":"0x23381","keihinaddr":"0x3FFDE"},
 
-	b"\x01\x00\x5e\x01\x03": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-644","checksum":"0x3fff8"},
 	b"\x01\x00\x5e\x03\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-622","checksum":"0x3fff8"},
-	b"\x01\x00\x5e\x04\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-671","checksum":"0x3fff8"},
-	b"\x01\x00\x5e\x05\x03": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-773","checksum":"0x3fff8"},
-	b"\x01\x00\xb0\x01\x02": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-761","checksum":"0x3fff8"},
+	# b"\x01\x00\x5e\x03\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-631","checksum":"0x3fff8","region":"BRASIL"},
+	b"\x01\x00\x5e\x01\x03": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-644","checksum":"0x3fff8"},
+	b"\x01\x00\x5e\x04\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-671","checksum":"0x3fff8","region":"USA"},
+	# b"\x01\x00\x5e\x04\x01": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-691","checksum":"0x3fff8","region":"CANADA USA"},
+	# b"\x01\x00\x5e\x04\x01": {"model":"CBR1000RR","year":"2008","pn":"38770-MFL-702","checksum":"0x3fff8","region":"NIPON"},
 	b"\x01\x00\xb0\x03\x01": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-741","checksum":"0x3fff8"},
-	b"\x01\x00\xb7\x01\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-D21","checksum":"0x3fff8"},
-	b"\x01\x00\xb7\x03\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-F21","checksum":"0x3fff8"},
-	b"\x01\x00\xb7\x04\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-A21","checksum":"0x3fff8"},
+	b"\x01\x00\xb0\x01\x02": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-761","checksum":"0x3fff8","QS":True},
+	b"\x01\x00\x5e\x05\x03": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-773","checksum":"0x3fff8","region":"USA"},
+	# b"\x01\x00\x5e\x05\x03": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-861","checksum":"0x3fff8","region":"CALIFORNIA"},
+	# b"\x01\x00\x5e\x05\x03": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-871","checksum":"0x3fff8","region":"BRASIL"},
+	b"\x01\x00\xb7\x04\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-A21","checksum":"0x3fff8","region":"CANADA USA"},
+	b"\x01\x00\xb7\x01\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-D21","checksum":"0x3fff8","region":"EUROPE"},
+	# b"\x01\x00\xb7\x01\x01": {"model":"CBR1000RR","year":"2010-2011","pn":"38770-MFL-F21","checksum":"0x3fff8","region":"FRANCE"},
+	# b"\x01\x00\xb7\x03\x01": {"model":"CBR1000RR","year":"2010","pn":"38770-MFL-J21","checksum":"0x3fff8","region":"NIPON"},
+	# b"\x01\x00\xb7\x03\x01": {"model":"CBR1000RR","year":"2009","pn":"38770-MFL-J41","checksum":"0x3fff8","region":"NIPON"},
+	# b"\x01\x00\xb7\x03\x01": {"model":"CBR1000RR","year":"2010","pn":"38770-MFL-L21","checksum":"0x3fff8","region":"CALIFORNIA USA"},
+
 
 	b"\x01\x00\xf3\x01\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-D01","checksum":"0x3fff8"},
 	b"\x01\x00\xf3\x03\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-F01","checksum":"0x3fff8"},
