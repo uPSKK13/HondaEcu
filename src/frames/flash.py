@@ -193,20 +193,21 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 
 	def OnValidateMode(self, event):
 		enable = False
-		if self.modebox.GetSelection() == 0:
-			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.READ]:
-				offset = None
-				try:
-					offset = int(self.offset.GetValue(), 16)
-				except:
-					pass
-				enable = (len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0)
-		else:
-			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30]:
-				if self.doHTF:
-					enable = self.OnValidateModeHTF(event)
-				else:
-					enable = self.OnValidateModeBin(event)
+		if not "state" in self.parent.ecuinfo:
+			if self.modebox.GetSelection() == 0:
+				if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.READ]:
+					offset = None
+					try:
+						offset = int(self.offset.GetValue(), 16)
+					except:
+						pass
+					enable = (len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0)
+			else:
+				if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30]:
+					if self.doHTF:
+						enable = self.OnValidateModeHTF(event)
+					else:
+						enable = self.OnValidateModeBin(event)
 		if enable:
 			self.gobutton.Enable()
 		else:
