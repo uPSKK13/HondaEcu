@@ -193,7 +193,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 
 	def OnValidateMode(self, event):
 		enable = False
-		if not "state" in self.parent.ecuinfo:
+		if "state" in self.parent.ecuinfo:
 			if self.modebox.GetSelection() == 0:
 				if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.READ]:
 					offset = None
