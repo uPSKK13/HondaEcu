@@ -85,13 +85,71 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 
 		self.OnModeChange(None)
 
-		self.offset.Bind(wx.EVT_TEXT, self.OnValidateMode)
-		self.readfpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnValidateMode)
-		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnWriteFileSelected)
+		self.offset.Bind(wx.EVT_TEXT, self.OnOffset)
+		self.checksum.Bind(wx.EVT_TEXT, self.OnChecksum)
+		self.readfpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnReadPicker)
+		self.writefpicker.Bind(wx.EVT_FILEPICKER_CHANGED, self.OnWritePicker)
 		self.fixchecksum.Bind(wx.EVT_CHECKBOX, self.OnFix)
-		self.checksum.Bind(wx.EVT_TEXT, self.OnValidateMode)
 		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
 		self.modebox.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
+
+	def OnWriteFileSelected(self, event):
+		self.htfoffset = None
+		self.doHTF = False
+		if len(self.writefpicker.GetPath()) > 0:
+			if os.path.splitext(self.writefpicker.GetPath())[-1] == ".htf":
+				self.doHTF = True
+		if self.doHTF or len(self.writefpicker.GetPath())==0:
+			self.checksum.Hide()
+			self.wchecksuml.Hide()
+			self.fixchecksum.Hide()
+			self.offsetl.Hide()
+			self.offset.Hide()
+		else:
+			self.checksum.Show()
+			self.wchecksuml.Show()
+			self.fixchecksum.Show()
+			self.offsetl.Show()
+			self.offset.Show()
+		self.Layout()
+
+	def OnOffset(self, event):
+		self.OnValidateMode(None)
+
+	def OnChecksum(self, event):
+		self.OnValidateMode(None)
+
+	def OnReadPicker(self, event):
+		self.OnValidateMode(None)
+
+	def OnWritePicker(self, event):
+		self.OnWriteFileSelected(None)
+		self.OnValidateMode(None)
+
+	def OnFix(self, event):
+		if self.fixchecksum.IsChecked():
+			self.checksum.Enable()
+		else:
+			self.checksum.Disable()
+		self.OnValidateMode(None)
+
+	def OnModeChange(self, event):
+		if self.modebox.GetSelection() == 0:
+			self.gobutton.SetLabel("Read")
+			self.writefpicker.Hide()
+			self.readfpicker.Show()
+			self.checksum.Hide()
+			self.wchecksuml.Hide()
+			self.fixchecksum.Hide()
+			self.offsetl.Show()
+			self.offset.Show()
+		else:
+			self.gobutton.SetLabel("Write")
+			self.writefpicker.Show()
+			self.readfpicker.Hide()
+			self.OnWriteFileSelected(None)
+		self.OnValidateMode(None)
+		self.Layout()
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "read.progress":
@@ -146,64 +204,18 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			self.gobutton.Disable()
 			dispatcher.send(signal="WritePanel", sender=self, data=self.byts, offset=offset)
 
-	def OnModeChange(self, event):
-		if self.modebox.GetSelection() == 0:
-			self.gobutton.SetLabel("Read")
-			self.writefpicker.Hide()
-			self.readfpicker.Show()
-			self.checksum.Hide()
-			self.wchecksuml.Hide()
-			self.fixchecksum.Hide()
-			self.offsetl.Show()
-			self.offset.Show()
-		else:
-			self.gobutton.SetLabel("Write")
-			self.writefpicker.Show()
-			self.readfpicker.Hide()
-			self.OnWriteFileSelected(None)
-		self.Layout()
-
-	def OnWriteFileSelected(self, event):
-		self.htfoffset = None
-		self.doHTF = False
-		if len(self.writefpicker.GetPath()) > 0:
-			if os.path.splitext(self.writefpicker.GetPath())[-1] == ".htf":
-				self.doHTF = True
-		if self.doHTF or len(self.writefpicker.GetPath())==0:
-			self.checksum.Hide()
-			self.wchecksuml.Hide()
-			self.fixchecksum.Hide()
-			self.offsetl.Hide()
-			self.offset.Hide()
-		else:
-			self.checksum.Show()
-			self.wchecksuml.Show()
-			self.fixchecksum.Show()
-			self.offsetl.Show()
-			self.offset.Show()
-		self.Layout()
-		self.OnValidateMode(event)
-
-	def OnFix(self, event):
-		if self.fixchecksum.IsChecked():
-			self.checksum.Enable()
-		else:
-			self.checksum.Disable()
-		self.OnValidateMode(None)
-
 	def OnValidateMode(self, event):
 		enable = False
 		if "state" in self.parent.ecuinfo:
-			if self.modebox.GetSelection() == 0:
-				if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.READ]:
+			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30, ECUSTATE.READ]:
+				if self.modebox.GetSelection() == 0:
 					offset = None
 					try:
 						offset = int(self.offset.GetValue(), 16)
 					except:
 						pass
 					enable = (len(self.readfpicker.GetPath()) > 0 and offset != None and offset>=0)
-			else:
-				if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30]:
+				else:
 					if self.doHTF:
 						enable = self.OnValidateModeHTF(event)
 					else:
@@ -250,14 +262,12 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			offset = int(self.offset.GetValue(), 16)
 		except:
 			return False
-		checksum = None
-		try:
-			if self.fixchecksum.IsChecked():
+		checksum = -1
+		if self.fixchecksum.IsChecked():
+			try:
 				checksum = int(self.checksum.GetValue(), 16)
-			else:
-				checksum = 0
-		except:
-			return False
+			except:
+				return False
 		if len(self.writefpicker.GetPath()) > 0:
 			if os.path.isfile(self.writefpicker.GetPath()):
 				fbin = open(self.writefpicker.GetPath(), "rb")
