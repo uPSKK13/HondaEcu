@@ -1,7 +1,6 @@
 import argparse
 import os, sys
 import platform
-sys.path.insert(0, os.path.abspath('/mnt/data/workspace/eculib'))
 from eculib import *
 from pylibftdi import FtdiError
 
