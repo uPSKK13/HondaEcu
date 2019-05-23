@@ -59,10 +59,10 @@ class KlineWorker(Thread):
 	def WritePanelHandler(self, data, offset):
 		self.writeinfo = [data,offset,None]
 
-	def ReadPanelHandler(self, data, offset):
+	def ReadPanelHandler(self, data, offset, passwd):
 		if self.state != ECUSTATE.READ:
 			self.sendpassword = True
-		self.readinfo = [data,offset,None]
+		self.readinfo = [data,offset,None, passwd]
 
 	def DatalogPanelHandler(self, action):
 		if action == "data.on":
@@ -361,8 +361,8 @@ class KlineWorker(Thread):
 				self.reset_state()
 
 	def do_password(self):
-		p1 = self.ecu.send_command([0x27],[0xe0, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f])
-		p2 = self.ecu.send_command([0x27],[0xe0, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75])
+		p1 = self.ecu.send_command([0x27],[0xe0] + self.readinfo[3][:7])
+		p2 = self.ecu.send_command([0x27],[0xe0] + self.readinfo[3][7:])
 		passok = (p1 != None) and (p2 != None)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 
