@@ -1,4 +1,4 @@
-<!-- Written 05/15/2019 01:56:46 -->
+<!-- Written 06/14/2019 12:56:01 -->
 <XDFFORMAT version="1.60">
   <XDFHEADER>
     <flags>0x1</flags>
@@ -12,6 +12,7 @@
     <CATEGORY index="0x3" name="TPS" />
     <CATEGORY index="0x4" name="Limiters" />
     <CATEGORY index="0x5" name="Decel Fuel Cut-Off" />
+    <CATEGORY index="0x6" name="Thailand" />
   </XDFHEADER>
   <XDFTABLE uniqueid="0x44F7" flags="0x30">
     <title>TPS Breakpoints</title>
@@ -421,6 +422,36 @@
     <title>Feedback Enabled</title>
     <EMBEDDEDDATA mmedaddress="0x0B" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
     <mask>0x20</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x5029">
+    <title>Unknown A (master1-bit6)</title>
+    <CATEGORYMEM index="0" category="7" />
+    <EMBEDDEDDATA mmedaddress="0x0B" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x6AF">
+    <title>Unknown B (master4-bit0)</title>
+    <CATEGORYMEM index="0" category="7" />
+    <EMBEDDEDDATA mmedaddress="0x0E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x01</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x362A">
+    <title>Unknown C (master4-bit1)</title>
+    <CATEGORYMEM index="0" category="7" />
+    <EMBEDDEDDATA mmedaddress="0x0E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x02</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x66B4">
+    <title>Unknown D (master4-bit6)</title>
+    <CATEGORYMEM index="0" category="7" />
+    <EMBEDDEDDATA mmedaddress="0x0E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x40</mask>
+  </XDFFLAG>
+  <XDFFLAG uniqueid="0x41AD">
+    <title>Unknown E (master5-bit4)</title>
+    <CATEGORYMEM index="0" category="7" />
+    <EMBEDDEDDATA mmedaddress="0x0F" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
+    <mask>0x10</mask>
   </XDFFLAG>
   <XDFFLAG uniqueid="0x1792">
     <title>Decel Fuel Cut-Off: Master Switch</title>
