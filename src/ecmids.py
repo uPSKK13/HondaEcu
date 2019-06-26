@@ -8,6 +8,7 @@ ECM_IDs = {
 	b"\x01\x00\xe0\x01\x01": {"model":"CBR600F","year":"2011-2012","pn":"38770-MGM-D11","checksum":"0x3fff8","ecmidaddr":"0x2290F","keihinaddr":"0x3FFDE"},
 
 	b"\x01\x00\x33\x03\x02": {"model":"CBR600RR","year":"2007-2008","pn":"38770-MFJ-F03","checksum":"0x3fff8","ecmidaddr":"0x280B5","keihinaddr":"0x3FFDE"},
+	b"\x01\x00\x33\x01\x03": {"model":"CBR600RR","year":"2007-2008","pn":"38770-MFJ-D04","checksum":"0x3fff8","ecmidaddr":"0x280B5","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x7C\x01\x02": {"model":"CBR600RR","year":"2009-2012","pn":"38770-MFJ-D42","checksum":"0x3fff8","ecmidaddr":"0x25439","keihinaddr":"0x3FFDE"},
 
 	b"\x01\x01\x4e\x12\x01": {"model":"CBR650F 35KW","year":"2014","pn":"38770-MJE-G12","checksum":"0x3fff8","ecmidaddr":"0x15F72","keihinaddr":"0x37B98"},
