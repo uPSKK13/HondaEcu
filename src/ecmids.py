@@ -39,7 +39,7 @@ ECM_IDs = {
 
 	b"\x01\x00\xf3\x01\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-D01","checksum":"0x3fff8","region":"EUROPE"},
 	b"\x01\x00\xf3\x03\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-F01","checksum":"0x3fff8","region":"FRANCE"},
-	b"\x01\x00\xf3\x04\x01": {"model":"CBR1000RR","year":"2013","pn":"38770-MGP-A01","checksum":"0x3fff8","region":"CANADA USA"},
+	b"\x01\x00\xf3\x04\x01": {"model":"CBR1000RR","year":"2012-2013","pn":"38770-MGP-A01","checksum":"0x3fff8","region":"CANADA USA"},
 	b"\x01\x01\x83\x01\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-D62","checksum":"0x3fff8","region":"EUROPE"},
 	b"\x01\x01\x83\x03\x02": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-F63","checksum":"0x3fff8","region":"FRANCE"},
 	b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-A92","checksum":"0x3fff8","region":"CANADA USA"},
@@ -53,7 +53,7 @@ ECM_IDs = {
 	b"\x01\x01\x25\x01\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-D02","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x02\xf2\x05\x11": {"model":"CBR500R","year":"2017-2018","pn":"38770-MJW-AQ1","checksum":"0x3fff8","ecmidaddr":"0x18BB7","keihinaddr":"0x3FA70"},
 
-	b"\x01\x01\x35\x05\x01": {"model":"MSX125","year":"2013-2015","pn":"38770-K26-911","checksum":"0x9fff","offset":"0x4000","ecmidaddr":"0x97cd","keihinaddr":"0x7601"},
+	b"\x01\x01\x35\x05\x01": {"model":"MSX125","year":"2013-2015","pn":"38770-K26-911","checksum":"0x9fff","offset":"0x4000","ecmidaddr":"0x97cd","keihinaddr":"0x7601"},	
 	b"\x01\x01\x35\x01\x01": {"model":"MSX125","year":"2013-2015","pn":"38770-K26-931","checksum":"0x9fff","offset":"0x4000","ecmidaddr":"0x97cd","keihinaddr":"0x7601"},
 	b"\x01\x02\x13\x05\x01": {"model":"MSX125","year":"2016-2019","pn":"38770-K26-B13","checksum":"0x0","offset":"0x8000","ecmidaddr":"0x23B8","keihinaddr":"0x1"},
 	b"\x01\x02\x57\x05\x01": {"model":"MSX125","year":"2016-2019","pn":"38770-K26-C31","checksum":"0x0","offset":"0x8000","ecmidaddr":"0x260C","keihinaddr":"0x1"},
