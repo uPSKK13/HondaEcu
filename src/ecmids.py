@@ -1,6 +1,7 @@
 ECM_IDs = {
 
 	b"\x01\x01\x9c\x01\x01": {"model":"CB650F","year":"2014-2016","pn":"38770-MJE-D41","checksum":"0x3fff8","ecmidaddr":"0x15F72","keihinaddr":"0x37B98"},
+	b"\x01\x01\x9c\x12\x01": {"model":"CB650F 35KW","year":"2014","pn":"38770-MJE-G52","checksum":"0x3fff8","ecmidaddr":"0x15F72","keihinaddr":"0x37B98"},
 
 	b"\x01\x00\x6a\x03\x01": {"model":"CB1000R","year":"2008-2017","pn":"38770-MNF-F01","checksum":"0x3fff8","ecmidaddr":"0x21C92","keihinaddr":"0x3FFDE"},
 	b"\x01\x00\x6a\x01\x01": {"model":"CB1000R","year":"2008-2017","pn":"38770-MNF-D01","checksum":"0x3fff8","ecmidaddr":"0x21C92","keihinaddr":"0x3FFDE"},
