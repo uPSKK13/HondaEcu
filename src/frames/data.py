@@ -37,6 +37,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 		data[5] = round(data[5]/0xff*5.0,2)
 		data[6] = -40 + data[6]
 		data[7] = round(data[7]/0xff*5.0,2)
+		data[8] =  10 * data[8]
 		data[11] = round(data[11]/10,2)
 		data[13] = round(data[13]/0xffff*265.5,2)
 		data[14] = round(-64 + data[14]/0xff*127.5,2)
