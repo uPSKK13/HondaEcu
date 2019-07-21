@@ -182,7 +182,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					data[5] = round(data[5]/0xff*5, 3)
 					data[6] = round(data[6]/0xff*5, 3)
 					data[7] = round(data[7]/0xff*100, 2)
-					data[8] = round(data[8]/0xff*50, 3)
+					data[8] = round(data[8]/0xff*5, 3)
 					data[9] = round(data[9]/0xff*5, 3)
 					data[10] = round(data[10]/0xff*5, 2)
 					for s in self.sensors2:
