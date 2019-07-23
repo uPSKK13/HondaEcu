@@ -267,6 +267,7 @@ class KlineWorker(Thread):
 	def do_get_flashcount(self):
 		ret = 1
 		info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03])
+		# print(info)
 		if info:
 			self.flashcount = int(info[2][4])
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)

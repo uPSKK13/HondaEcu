@@ -47,13 +47,12 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 		self.byts = None
 		self.bootwait = False
-		self.statusbar = self.CreateStatusBar(1)
-		self.statusbar.SetSize((-1, 28))
-		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
-		self.SetStatusBar(self.statusbar)
+		# self.statusbar = self.CreateStatusBar(1)
+		# self.statusbar.SetSize((-1, 28))
+		# self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
+		# self.SetStatusBar(self.statusbar)
 
-		self.outerp = wx.Panel(self)
-		self.mainp = wx.Panel(self.outerp)
+		self.mainp = wx.Panel(self)
 		self.wfilel = wx.StaticText(self.mainp, label="File")
 		self.readfpicker = wx.FilePickerCtrl(self.mainp, wildcard="ECU dump (*.bin)|*.bin", style=wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
 		self.writefpicker = wx.FilePickerCtrl(self.mainp,wildcard=self.wildcard, style=wx.FLP_OPEN|wx.FLP_FILE_MUST_EXIST|wx.FLP_USE_TEXTCTRL|wx.FLP_SMALL)
@@ -115,7 +114,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.flashpsizer.Add(self.wfilel, pos=(0,0), flag=wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.LEFT, border=10)
 		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT|wx.BOTTOM, border=10)
 		self.flashpsizer.Add(self.optsp, pos=(1,0), span=(1,6))
-		self.flashpsizer.Add(self.passboxp, pos=(2,0), span=(1,6), flag=wx.LEFT|wx.RIGHT|wx.EXPAND|wx.TOP, border=20)
+		self.flashpsizer.Add(self.passboxp, pos=(2,0), span=(1,6), flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.ALIGN_CENTRE_HORIZONTAL, border=20)
 		self.flashpsizer.Add(self.progress, pos=(3,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.TOP, border=20)
 		self.flashpsizer.Add(self.modebox, pos=(4,0), span=(1,2), flag=wx.ALIGN_LEFT|wx.ALIGN_BOTTOM|wx.LEFT, border=10)
 		self.flashpsizer.Add(self.gobutton, pos=(5,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.RIGHT, border=10)
@@ -123,16 +122,16 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.flashpsizer.AddGrowableCol(5,1)
 		self.mainp.SetSizer(self.flashpsizer)
 
-		self.outersizer = wx.BoxSizer(wx.VERTICAL)
-		self.outersizer.Add(self.mainp, 1, wx.EXPAND|wx.ALL, border=10)
-		self.outerp.SetSizer(self.outersizer)
-
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
-		self.mainsizer.Add(self.outerp, 1, wx.EXPAND)
+		self.mainsizer.Add(self.mainp, 1, wx.EXPAND|wx.ALL, border=10)
 		self.SetSizer(self.mainsizer)
 
 		self.readfpicker.Hide()
-		self.mainsizer.Fit(self)
+		# self.mainsizer.SetSizeHints(self)
+		# self.SetSizer(self.mainsizer)
+		# self.SetSizeHints(self.mainp)
+		# self.mainsizer.Fit(self)
+		self.Fit()
 		self.Layout()
 
 		self.OnModeChange(None)
@@ -228,10 +227,10 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				self.progress.Hide()
 				self.passboxp.Show()
 				self.Layout()
-			self.statusbar.SetStatusText("Read: " + value[1], 0)
+			# self.statusbar.SetStatusText("Read: " + value[1], 0)
 		elif info == "read.result":
 			self.progress.SetValue(0)
-			self.statusbar.SetStatusText("Read: complete (result=%s)" % value, 0)
+			# self.statusbar.SetStatusText("Read: complete (result=%s)" % value, 0)
 			self.progress.Hide()
 			self.passboxp.Show()
 			self.Layout()
@@ -243,18 +242,20 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				if pulse - self.lastpulse > .2:
 					self.progress.Pulse()
 					self.lastpulse = pulse
-			self.statusbar.SetStatusText("Write: " + value[1], 0)
+			# self.statusbar.SetStatusText("Write: " + value[1], 0)
 		elif info == "write.result":
 			self.progress.SetValue(0)
-			self.statusbar.SetStatusText("Write: complete (result=%s)" % value, 0)
+			# self.statusbar.SetStatusText("Write: complete (result=%s)" % value, 0)
 		elif info == "state":
 			if value == ECUSTATE.OFF:
 				if self.bootwait:
-					self.statusbar.SetStatusText("Turn on ECU!", 0)
+					pass
+					# self.statusbar.SetStatusText("Turn on ECU!", 0)
 			self.OnValidateMode(None)
 		elif info == "password":
 			if not value:
-				self.statusbar.SetStatusText("Password failed!", 0)
+				pass
+				# self.statusbar.SetStatusText("Password failed!", 0)
 			else:
 				self.bootwait = False
 			self.progress.Hide()
@@ -268,7 +269,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			data = self.readfpicker.GetPath()
 			if self.parent.ecuinfo["state"] != ECUSTATE.READ:
 				self.bootwait = True
-				self.statusbar.SetStatusText("Turn off ECU!", 0)
+				# self.statusbar.SetStatusText("Turn off ECU!", 0)
 			self.progress.Show()
 			self.passboxp.Hide()
 			self.Layout()

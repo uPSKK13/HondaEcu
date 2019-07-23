@@ -114,7 +114,7 @@ class HondaECU_TunePanelHelper(HondaECU_AppPanel):
 			self.racel.Hide()
 
 		self.Layout()
-		self.mainsizer.Fit(self)
+		# self.mainsizer.Fit(self)
 		self.continueb.Disable()
 		self.openp.Disable()
 

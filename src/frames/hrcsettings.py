@@ -66,7 +66,7 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
 		self.SetSizer(self.mainsizer)
 
 		self.readfpicker.Hide()
-		self.mainsizer.Fit(self)
+		# self.mainsizer.Fit(self)
 		self.Layout()
 
 		self.OnModeChange(None)
