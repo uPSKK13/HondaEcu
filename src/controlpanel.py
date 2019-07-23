@@ -15,8 +15,8 @@ from frames.data import HondaECU_DatalogPanel
 from frames.error import HondaECU_ErrorPanel
 from frames.flash import HondaECU_FlashPanel
 from frames.hrcsettings import HondaECU_HRCDataSettingsPanel
-from frames.tune import TunePanel
-from frames.tunehelper import HondaECU_TunePanelHelper
+# from frames.tune import TunePanel
+# from frames.tunehelper import HondaECU_TunePanelHelper
 
 from threads.kline import KlineWorker
 from threads.usb import USBMonitor
@@ -280,7 +280,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
 		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
-		dispatcher.connect(self.TunePanelHelperHandler, signal="TunePanelHelper", sender=dispatcher.Any)
+		# dispatcher.connect(self.TunePanelHelperHandler, signal="TunePanelHelper", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
 		self.klineworker = KlineWorker(self)
@@ -297,36 +297,36 @@ class HondaECU_ControlPanel(wx.Frame):
 	def __clear_data(self):
 		self.ecuinfo = {}
 
-	def TunePanelHelperHandler(self, xdf, bin, metainfo, htf=None):
-		if htf != None:
-			tar = tarfile.open(htf, "r:xz")
-			xdfs = None
-			binorig = None
-			binmod = None
-			metainfo = None
-			for f in tar.getnames():
-				if f == "metainfo.json":
-					metainfo = json.load(tar.extractfile(f))
-				else:
-					b,e = os.path.splitext(f)
-					if e == ".xdf":
-						xdfs = tar.extractfile(f).read()
-					elif e == ".bin":
-						x, y = os.path.splitext(b)
-						if y == ".orig":
-							binorig = tar.extractfile(f).read()
-						elif y == ".mod":
-							binmod = tar.extractfile(f).read()
-			if xdfs!=None and binorig!=None and binmod!=None and metainfo!=None:
-				tp = TunePanel(self, metainfo, xdfs, binorig, binmod)
-		else:
-			fbin = open(bin, "rb")
-			byts = bytearray(fbin.read(os.path.getsize(bin)))
-			fbin.close()
-			fbin = open(xdf, "rb")
-			xdfs = fbin.read(os.path.getsize(xdf))
-			fbin.close()
-			tp = TunePanel(self, metainfo, xdfs, byts)
+	# def TunePanelHelperHandler(self, xdf, bin, metainfo, htf=None):
+	# 	if htf != None:
+	# 		tar = tarfile.open(htf, "r:xz")
+	# 		xdfs = None
+	# 		binorig = None
+	# 		binmod = None
+	# 		metainfo = None
+	# 		for f in tar.getnames():
+	# 			if f == "metainfo.json":
+	# 				metainfo = json.load(tar.extractfile(f))
+	# 			else:
+	# 				b,e = os.path.splitext(f)
+	# 				if e == ".xdf":
+	# 					xdfs = tar.extractfile(f).read()
+	# 				elif e == ".bin":
+	# 					x, y = os.path.splitext(b)
+	# 					if y == ".orig":
+	# 						binorig = tar.extractfile(f).read()
+	# 					elif y == ".mod":
+	# 						binmod = tar.extractfile(f).read()
+	# 		if xdfs!=None and binorig!=None and binmod!=None and metainfo!=None:
+	# 			tp = TunePanel(self, metainfo, xdfs, binorig, binmod)
+	# 	else:
+	# 		fbin = open(bin, "rb")
+	# 		byts = bytearray(fbin.read(os.path.getsize(bin)))
+	# 		fbin.close()
+	# 		fbin = open(xdf, "rb")
+	# 		xdfs = fbin.read(os.path.getsize(xdf))
+	# 		fbin.close()
+	# 		tp = TunePanel(self, metainfo, xdfs, byts)
 
 	def KlineWorkerHandler(self, info, value):
 		if info in ["ecmid","flashcount","dtc","dtccount","state"]:
