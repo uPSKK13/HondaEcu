@@ -14,6 +14,7 @@ environment:
   matrix:
     - platform: x86
       LIBFTDI: "libftdi1-1.4git_devkit_x86_x64_14June2018/bin32/*.dll"
+      LIBUSB: "libusb-1.0.22/MS32/dll/*.dll"
       PYTHON_HOME: C:\Python37
       PYTHON_VERSION: '3.7'
       PYTHON_ARCH: '32'
@@ -21,7 +22,8 @@ environment:
 build: off
 
 install:
-  - cmd: 7z x drivers\libftdi1-1.4git_devkit_x86_x64_14June2018.zip
+  # - cmd: 7z x drivers\libftdi1-1.4git_devkit_x86_x64_14June2018.zip
+  - cmd: 7z x drivers\libusb-1.0.22.7z
   - cmd: '%PYTHON_HOME%\Scripts\pip install -r requirements-dev.txt --user'
   - cmd: '%PYTHON_HOME%\Scripts\pip install -r requirements.txt --user'
 
