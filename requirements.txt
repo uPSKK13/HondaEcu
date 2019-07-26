@@ -9,4 +9,4 @@ numpy==1.15.4
 colour
 pyparsing
 gitpython
-git+https://github.com/MCU-Innovations/eculib.git#egg=eculib>=1.0.19
+git+https://github.com/MCU-Innovations/eculib.git#egg=eculib>=1.0.20
