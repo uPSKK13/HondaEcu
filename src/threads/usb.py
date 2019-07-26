@@ -14,10 +14,11 @@ class USBMonitor(Thread):
 	def __init__(self, parent):
 		self.parent = parent
 		self.ftdi_devices = {}
-		self.backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb-1.0.dll")
-		if self.backend:
-			self.backend.lib.libusb_set_option.argtypes = [c_void_p, c_int]
-			self.backend.lib.libusb_set_option(self.backend.ctx, 1)
+		self.backend = None
+		# self.backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb-1.0.dll")
+		# if self.backend:
+		# 	self.backend.lib.libusb_set_option.argtypes = [c_void_p, c_int]
+		# 	self.backend.lib.libusb_set_option(self.backend.ctx, 1)
 		Thread.__init__(self)
 
 	def run(self):
