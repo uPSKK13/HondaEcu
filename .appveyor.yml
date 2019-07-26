@@ -22,6 +22,8 @@ build: off
 
 install:
   - cmd: 7z x drivers\libusb-1.0.22.7z
+  - ps: ls
+  - ps: ls drivers
   - cmd: '%PYTHON_HOME%\Scripts\pip install -r requirements-dev.txt --user'
   - cmd: '%PYTHON_HOME%\Scripts\pip install -r requirements.txt --user'
 
