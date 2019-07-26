@@ -1,5 +1,5 @@
 pywin32; sys_platform == 'win32'
-pyusb
+git+https://github.com/minkustree/pyusb
 pyftdi
 pydispatcher
 wxPython
@@ -9,4 +9,4 @@ numpy==1.15.4
 colour
 pyparsing
 gitpython
-git+https://github.com/MCU-Innovations/eculib.git#egg=eculib>=1.0.20
+git+https://github.com/MCU-Innovations/eculib.git#egg=eculib>=1.0.21
