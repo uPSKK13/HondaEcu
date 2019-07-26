@@ -17,6 +17,8 @@ from frames.hrcsettings import HondaECU_HRCDataSettingsPanel
 from frames.tune import TunePanel
 from frames.tunehelper import HondaECU_TunePanelHelper
 
+import usb.util
+
 from threads.kline import KlineWorker
 from threads.usb import USBMonitor
 
@@ -363,35 +365,37 @@ class HondaECU_ControlPanel(wx.Frame):
 			self.appbuttons[b.appid].Disable()
 		self.appanels[b.appid].Raise()
 
-	def USBMonitorHandler(self, action, vendor, product, serial):
+	def USBMonitorHandler(self, action, device, config):
 		dirty = False
 		if action == "add":
-			if not serial in self.ftdi_devices:
-				self.ftdi_devices[serial] = (vendor, product)
+			if not device in self.ftdi_devices:
+				self.ftdi_devices[device] = config
 				dirty = True
 		elif action =="remove":
-			if serial in self.ftdi_devices:
-				if serial == self.active_ftdi_device:
-					dispatcher.send(signal="FTDIDevice", sender=self, action="deactivate", vendor=vendor, product=product, serial=serial)
+			if device in self.ftdi_devices:
+				if device == self.active_ftdi_device:
+					dispatcher.send(signal="FTDIDevice", sender=self, action="deactivate", device=self.active_ftdi_device, config=self.ftdi_devices[self.active_ftdi_device])
 					self.active_ftdi_device = None
 					self.__clear_data()
-				del self.ftdi_devices[serial]
+				del self.ftdi_devices[device]
 				dirty = True
 		if len(self.ftdi_devices) > 0:
 			if not self.active_ftdi_device:
 				self.active_ftdi_device = list(self.ftdi_devices.keys())[0]
-				dispatcher.send(signal="FTDIDevice", sender=self, action="activate", vendor=vendor, product=product, serial=serial)
+				dispatcher.send(signal="FTDIDevice", sender=self, action="activate", device=self.active_ftdi_device, config=self.ftdi_devices[self.active_ftdi_device])
 				dirty = True
 		else:
 				pass
 		if dirty:
 			for i in self.devicesMenu.GetMenuItems():
 				self.devicesMenu.Remove(i)
-			for s in self.ftdi_devices:
-				rb = self.devicesMenu.AppendRadioItem(wx.ID_ANY, "%s : %s : %s" % (self.ftdi_devices[s][0], self.ftdi_devices[s][1], s))
+			for device in self.ftdi_devices:
+				cfg = self.ftdi_devices[device]
+				rb = self.devicesMenu.AppendRadioItem(wx.ID_ANY, "Bus %03d Device %03d: %s %s %s" % (cfg.bus, cfg.address, usb.util.get_string(cfg,cfg.iManufacturer), usb.util.get_string(cfg,cfg.iProduct), usb.util.get_string(cfg,cfg.iSerialNumber)))
 				self.Bind(wx.EVT_MENU, self.OnDeviceSelected, rb)
 			if self.active_ftdi_device:
-				self.statusbar.SetStatusText("%s : %s : %s" % (self.ftdi_devices[self.active_ftdi_device][0], self.ftdi_devices[self.active_ftdi_device][1], self.active_ftdi_device), 0)
+				cfg = self.ftdi_devices[self.active_ftdi_device]
+				self.statusbar.SetStatusText("Bus %03d Device %03d: %s %s %s" % (cfg.bus, cfg.address, usb.util.get_string(cfg,cfg.iManufacturer), usb.util.get_string(cfg,cfg.iProduct), usb.util.get_string(cfg,cfg.iSerialNumber)), 0)
 				self.devicesMenu.FindItemByPosition(list(self.ftdi_devices.keys()).index(self.active_ftdi_device)).Check()
 			else:
 				self.statusbar.SetStatusText("", 0)

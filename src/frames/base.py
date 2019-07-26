@@ -24,7 +24,7 @@ class HondaECU_AppPanel(wx.Frame):
 	def KlineWorkerHandler(self, info, value):
 		pass
 
-	def DeviceHandler(self, action, vendor, product, serial):
+	def DeviceHandler(self, action, device, config):
 		pass
 
 	def Build(self):
