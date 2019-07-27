@@ -90,8 +90,11 @@ class KlineWorker(Thread):
 				self.__cleanup()
 		elif action == "activate":
 			self.__clear_data()
-			self.ecu = HondaECU(KlineAdapter(config))
-			self.ready = True
+			try:
+				self.ecu = HondaECU(KlineAdapter(config))
+				self.ready = True
+			except:
+				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="libusberror", value=None)
 
 	def read_flash(self):
 		readsize = 12

@@ -315,6 +315,8 @@ class HondaECU_ControlPanel(wx.Frame):
 			if not info in self.ecuinfo:
 				self.ecuinfo[info] = {}
 			self.ecuinfo[info][value[0]] = value[1:]
+		elif info == "libusberror":
+			self.statusbar.SetStatusText("libusb error: make sure libusbk is installed", 0)
 
 	def OnClose(self, event):
 		self.run = False
