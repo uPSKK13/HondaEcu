@@ -70,8 +70,6 @@ The easiest way to talk to the ECU via the k-line is a USB to serial (TTL) conve
 
 ![kline_interface](http://projects.gonzos.net/wp-content/uploads/2017/04/CTX-kline-interface-1024x514.png)
 
-_Note: Other resistor combinations will work, you do not need to use the ones that are list here exactly. On the FTDI side of the k-line circuit going up in resistance works. For example, I have built this circuit substituting 360 and 560 ohm resistors with 470 and 510 ohm resistors respectively. On the bike side of the k-line circuit, a 1k ohm resistor is fine._
-
 ### Bench Harness
 
 If you make a bench harness to work with your ECU you will need a 2.5 amp power supply. The ECU will power-up with a 2.0 amp power supply but transfer rates will be slow and you will get CRC errors.
