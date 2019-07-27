@@ -27,9 +27,9 @@ class USBMonitor(Thread):
 			new_devices = {}
 			devices = usb.core.find(find_all=True, idVendor=pyftdi.ftdi.Ftdi.FTDI_VENDOR, backend=self.backend)
 			for cfg in devices:
+				device = "%03d:%03d" % (cfg.bus,cfg.address)
 				try:
 					usb.util.get_string(cfg,cfg.iSerialNumber)
-					device = "%03d:%03d" % (cfg.bus,cfg.address)
 					new_devices[device] = cfg
 					if not device in self.ftdi_devices:
 						wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", device=device, config=cfg)
