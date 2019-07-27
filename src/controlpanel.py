@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 
 import json
 import time
@@ -315,8 +316,6 @@ class HondaECU_ControlPanel(wx.Frame):
 			if not info in self.ecuinfo:
 				self.ecuinfo[info] = {}
 			self.ecuinfo[info][value[0]] = value[1:]
-		elif info == "libusberror":
-			self.statusbar.SetStatusText("libusb error: make sure libusbk is installed", 0)
 
 	def OnClose(self, event):
 		self.run = False
@@ -369,7 +368,10 @@ class HondaECU_ControlPanel(wx.Frame):
 
 	def USBMonitorHandler(self, action, device, config):
 		dirty = False
-		if action == "add":
+		if action == "error":
+			if platform.system() == "Windows":
+				self.statusbar.SetStatusText("libusb error: make sure libusbk is installed", 0)
+		elif action == "add":
 			if not device in self.ftdi_devices:
 				self.ftdi_devices[device] = config
 				dirty = True
