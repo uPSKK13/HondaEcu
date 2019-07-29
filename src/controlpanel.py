@@ -144,12 +144,6 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.version_short = self.version_full.split("-")[0]
 
 		self.apps = {
-			"info": {
-				"label":"ECU Info",
-				"icon":"images/info2.png",
-				"conflicts":["flash","hrc"],
-				"panel":HondaECU_InfoPanel,
-			},
 			"flash": {
 				"label":"Flash",
 				"icon":"images/chip2.png",
@@ -253,9 +247,26 @@ class HondaECU_ControlPanel(wx.Frame):
 		for k in self.bookpages.keys():
 			self.bookpages[k].SetMinSize(maxdims)
 
+		self.modelp = wx.Panel(self.outerp, style=wx.BORDER_SUNKEN)
+		self.modelbox = wx.BoxSizer(wx.VERTICAL)
+		self.modell = wx.StaticText(self.modelp, label="", style=wx.ALIGN_CENTRE_HORIZONTAL|wx.ALIGN_CENTRE_VERTICAL)
+		self.ecupnl = wx.StaticText(self.modelp, label="", style=wx.ALIGN_CENTRE_HORIZONTAL|wx.ALIGN_CENTRE_VERTICAL)
+		font1 = self.GetFont().Bold()
+		font2 = self.GetFont().Bold()
+		font1.SetPointSize(font1.GetPointSize()*1.25)
+		font2.SetPointSize(font2.GetPointSize()*2)
+		self.modell.SetFont(font2)
+		self.ecupnl.SetFont(font1)
+		self.modelbox.AddSpacer(5)
+		self.modelbox.Add(self.modell, 0, wx.CENTER)
+		self.modelbox.Add(self.ecupnl, 0, wx.CENTER)
+		self.modelbox.AddSpacer(5)
+		self.modelp.SetSizer(self.modelbox)
+
 		self.outersizer = wx.BoxSizer(wx.VERTICAL)
 		self.outersizer.Add(self.adapterboxp, 0, wx.EXPAND | wx.ALL, 5)
-		self.outersizer.Add(self.labelbook, 1, wx.EXPAND | wx.ALL, 5)
+		self.outersizer.Add(self.modelp, 0, wx.EXPAND | wx.ALL, 5)
+		self.outersizer.Add(self.labelbook, 2, wx.EXPAND | wx.ALL, 5)
 		self.outerp.SetSizer(self.outersizer)
 
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
@@ -311,7 +322,14 @@ class HondaECU_ControlPanel(wx.Frame):
 				elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
 					self.statusicon.SetBitmap(self.statusicons[5])
 			elif info == "ecmid":
-				self.ecmidl.SetLabel("   ECM ID: %s" % " ".join(["%02x" % i for i in value]))
+				if len(value) > 0:
+					ecmid = " ".join(["%02x" % i for i in value])
+					self.ecmidl.SetLabel("   ECM ID: %s" % ecmid)
+					if value in ECM_IDs:
+						model = "%s (%s)" % (ECM_IDs[value]["model"], ECM_IDs[value]["year"])
+					self.modell.SetLabel(model)
+					self.ecupnl.SetLabel(ECM_IDs[value]["pn"])
+					self.Layout()
 			elif info == "flashcount":
 				if value >= 0:
 					self.flashcountl.SetLabel("   Flash Count: %d" % value)
