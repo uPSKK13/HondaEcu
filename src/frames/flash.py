@@ -9,6 +9,41 @@ from pydispatch import dispatcher
 
 from eculib.honda import *
 
+class PowerCycleDialog(wx.Dialog):
+
+	def __init__(self, parent, msg1="", msg2=""):
+		super(PowerCycleDialog, self).__init__(parent, size=(300,150), style=wx.STAY_ON_TOP)
+		panel = wx.Panel(self)
+
+		v_sizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+		self.font2 = self.GetFont().Bold()
+		self.font2.SetPointSize(self.font2.GetPointSize()*1.25)
+
+		self.msg1 = wx.StaticText(panel, label=msg1, style=wx.ALIGN_CENTRE_HORIZONTAL, size=(260,30))
+		self.msg1.SetFont(self.font2)
+		self.msg2 = wx.StaticText(panel, label=msg2, style=wx.ALIGN_CENTRE_HORIZONTAL, size=(260,30))
+		self.msg2.SetFont(self.font2)
+		v_sizer.Add(self.msg1, 0, wx.CENTER|wx.ALL, border=5)
+		v_sizer.Add(self.msg2, 0, wx.CENTER|wx.ALL, border=5)
+
+		main_sizer.AddStretchSpacer(prop=1)
+		main_sizer.Add(v_sizer, 0, wx.CENTER)
+		main_sizer.AddStretchSpacer(prop=1)
+
+		panel.SetSizer(main_sizer)
+
+	def ShowPowerOn(self, msg1=""):
+		self.msg1.SetLabel(msg1)
+		self.msg2.SetLabel("Turn on ECU")
+		self.Show()
+
+	def ShowPowerOff(self, msg1=""):
+		self.msg1.SetLabel(msg1)
+		self.msg2.SetLabel("Turn off ECU")
+		self.Show()
+
 class CharValidator(wx.Validator):
 
 	def __init__(self, flag):
@@ -47,6 +82,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 		self.byts = None
 		self.bootwait = False
+		self.reboot = False
 		# self.statusbar = self.CreateStatusBar(1)
 		# self.statusbar.SetSize((-1, 28))
 		# self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
@@ -144,6 +180,8 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
 		self.modebox.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 
+		self.powercycle = PowerCycleDialog(self)
+
 	def OnPassByte(self, event, i):
 		B = ""
 		try:
@@ -227,10 +265,12 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				self.progress.Hide()
 				self.passboxp.Show()
 				self.Layout()
+				wx.MessageDialog(None, 'Read interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			# self.statusbar.SetStatusText("Read: " + value[1], 0)
 		elif info == "read.result":
 			self.progress.SetValue(0)
-			# self.statusbar.SetStatusText("Read: complete (result=%s)" % value, 0)
+			self.reboot = True
+			self.powercycle.ShowPowerOff("Read: complete (result=%s)" % value)
 			self.progress.Hide()
 			self.passboxp.Show()
 			self.Layout()
@@ -245,21 +285,28 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			# self.statusbar.SetStatusText("Write: " + value[1], 0)
 		elif info == "write.result":
 			self.progress.SetValue(0)
+			self.reboot = True
+			self.powercycle.ShowPowerOff("Write: complete (result=%s)" % value)
+			# wx.MessageDialog(None, 'Write: complete (result=%s)" % value', 'Power-cycle ECU', wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			# self.statusbar.SetStatusText("Write: complete (result=%s)" % value, 0)
 		elif info == "state":
 			if value == ECUSTATE.OFF:
 				if self.bootwait:
-					pass
+					self.powercycle.ShowPowerOn("Preparing to read ECU...")
+				if self.reboot:
+					self.powercycle.Hide()
+					self.reboot = False
 					# self.statusbar.SetStatusText("Turn on ECU!", 0)
 			self.OnValidateMode(None)
 		elif info == "password":
+			self.powercycle.Hide()
 			if not value:
-				pass
-				# self.statusbar.SetStatusText("Password failed!", 0)
+				self.progress.Hide()
+				self.passboxp.Show()
 			else:
+				self.progress.Show()
+				self.passboxp.Hide()
 				self.bootwait = False
-			self.progress.Hide()
-			self.passboxp.Show()
 			self.Layout()
 
 	def OnGo(self, event):
@@ -269,6 +316,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			data = self.readfpicker.GetPath()
 			if self.parent.ecuinfo["state"] != ECUSTATE.READ:
 				self.bootwait = True
+				self.powercycle.ShowPowerOff("Preparing to read ECU...")
 				# self.statusbar.SetStatusText("Turn off ECU!", 0)
 			self.progress.Show()
 			self.passboxp.Hide()

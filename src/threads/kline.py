@@ -3,8 +3,9 @@ import os
 import wx
 from threading import Thread
 from pydispatch import dispatcher
-from pylibftdi import Driver, FtdiError, LibraryMissingError
 import numpy as np
+
+import pyftdi
 
 from eculib import KlineAdapter
 from eculib.honda import *
@@ -24,7 +25,10 @@ class KlineWorker(Thread):
 
 	def __cleanup(self):
 		if self.ecu:
-			self.ecu.dev.close()
+			try:
+				self.ecu.dev.close()
+			except pyftdi.ftdi.FtdiError as e:
+				pass
 			del self.ecu
 		self.__clear_data()
 
@@ -78,7 +82,7 @@ class KlineWorker(Thread):
 		elif action == "dtc.off":
 			self.update_errors = False
 
-	def DeviceHandler(self, action, vendor, product, serial):
+	def DeviceHandler(self, action, device, config):
 		if action == "interrupt":
 			raise Exception()
 		elif action == "deactivate":
@@ -86,11 +90,8 @@ class KlineWorker(Thread):
 				self.__cleanup()
 		elif action == "activate":
 			self.__clear_data()
-			try:
-				self.ecu = HondaECU(KlineAdapter(device_id=serial))
-				self.ready = True
-			except FtdiError:
-				pass
+			self.ecu = HondaECU(KlineAdapter(config))
+			self.ready = True
 
 	def read_flash(self):
 		readsize = 12
@@ -435,8 +436,6 @@ class KlineWorker(Thread):
 						else:
 							if self.do_exceptions() > 0:
 								self.do_update_state()
-				except FtdiError:
-					pass
 				except AttributeError:
 					pass
 				except OSError:

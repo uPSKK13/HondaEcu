@@ -339,7 +339,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 			self.Layout()
 			# self.mainsizer.Fit(self)
 
-	def DeviceHandler(self, action, vendor, product, serial):
+	def DeviceHandler(self, action, device, config):
 		if action == "deactivate":
 			for s in self.sensors:
 				if self.sensors[s][5]:
