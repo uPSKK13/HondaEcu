@@ -42,7 +42,7 @@ class KlineWorker(Thread):
 		self.senderase = False
 		self.readinfo = None
 		self.writeinfo = None
-		self.state = ECUSTATE.UNDEFINED
+		self.state = ECUSTATE.UNKNOWN
 		self.reset_state()
 
 	def reset_state(self):
@@ -268,7 +268,6 @@ class KlineWorker(Thread):
 	def do_get_flashcount(self):
 		ret = 1
 		info = self.ecu.send_command([0x7d], [0x01, 0x01, 0x03])
-		# print(info)
 		if info:
 			self.flashcount = int(info[2][4])
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
@@ -422,9 +421,9 @@ class KlineWorker(Thread):
 				time.sleep(.001)
 			else:
 				try:
-					if self.state in [ECUSTATE.UNDEFINED, ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
+					if self.state in [ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
 						self.do_update_state()
-						if self.state not in [ECUSTATE.UNDEFINED, ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
+						if self.state not in [ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
 							self.do_on_power()
 						else:
 							self.ecu.init()

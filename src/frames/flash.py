@@ -118,10 +118,16 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.fpickerbox.Add(self.readfpicker, 1)
 		self.fpickerbox.Add(self.writefpicker, 1)
 
+		self.progressboxp = wx.Panel(self.mainp)
+		self.progressbox = wx.BoxSizer(wx.VERTICAL)
 		self.lastpulse = time.time()
-		self.progress = wx.Gauge(self.mainp, style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
+		self.progress = wx.Gauge(self.progressboxp, style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
 		self.progress.SetRange(100)
-		self.progress.Hide()
+		self.progressboxp.Hide()
+		self.progress_text = wx.StaticText(self.progressboxp, size=(32,-1), style=wx.ALIGN_CENTRE_HORIZONTAL)
+		self.progressbox.Add(self.progress, 1, flag=wx.EXPAND)
+		self.progressbox.Add(self.progress_text, 0, flag=wx.EXPAND|wx.TOP, border=10)
+		self.progressboxp.SetSizer(self.progressbox)
 
 		self.passboxp = wx.Panel(self.mainp)
 		self.passp = wx.Panel(self.passboxp)
@@ -151,7 +157,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		self.flashpsizer.Add(self.fpickerbox, pos=(0,1), span=(1,5), flag=wx.EXPAND|wx.RIGHT|wx.BOTTOM, border=10)
 		self.flashpsizer.Add(self.optsp, pos=(1,0), span=(1,6))
 		self.flashpsizer.Add(self.passboxp, pos=(2,0), span=(1,6), flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.ALIGN_CENTRE_HORIZONTAL, border=20)
-		self.flashpsizer.Add(self.progress, pos=(3,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.TOP, border=20)
+		self.flashpsizer.Add(self.progressboxp, pos=(3,0), span=(1,6), flag=wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND|wx.TOP, border=20)
 		self.flashpsizer.Add(self.modebox, pos=(4,0), span=(1,2), flag=wx.ALIGN_LEFT|wx.ALIGN_BOTTOM|wx.LEFT, border=10)
 		self.flashpsizer.Add(self.gobutton, pos=(5,5), flag=wx.ALIGN_RIGHT|wx.ALIGN_BOTTOM|wx.RIGHT, border=10)
 		self.flashpsizer.AddGrowableRow(4,1)
@@ -241,10 +247,10 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			self.offsetl.Show()
 			self.offset.Show()
 			self.passboxp.Show()
-			self.progress.Hide()
+			self.progressboxp.Hide()
 		else:
 			self.passboxp.Hide()
-			self.progress.Show()
+			self.progressboxp.Show()
 			self.gobutton.SetLabel("Write")
 			self.writefpicker.Show()
 			self.readfpicker.Hide()
@@ -262,16 +268,16 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 					self.progress.Pulse()
 					self.lastpulse = pulse
 			if value[1] and value[1] == "interrupted":
-				self.progress.Hide()
+				self.progressboxp.Hide()
 				self.passboxp.Show()
-				self.Layout()
 				wx.MessageDialog(None, 'Read interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
-			# self.statusbar.SetStatusText("Read: " + value[1], 0)
+			self.progress_text.SetLabel("Read: " + value[1])
+			self.Layout()
 		elif info == "read.result":
 			self.progress.SetValue(0)
 			self.reboot = True
 			self.powercycle.ShowPowerOff("Read: complete (result=%s)" % value)
-			self.progress.Hide()
+			self.progressboxp.Hide()
 			self.passboxp.Show()
 			self.Layout()
 		if info == "write.progress":
@@ -282,29 +288,31 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				if pulse - self.lastpulse > .2:
 					self.progress.Pulse()
 					self.lastpulse = pulse
-			# self.statusbar.SetStatusText("Write: " + value[1], 0)
+			self.progress_text.SetLabel("Write: " + value[1])
+			self.Layout()
 		elif info == "write.result":
 			self.progress.SetValue(0)
 			self.reboot = True
 			self.powercycle.ShowPowerOff("Write: complete (result=%s)" % value)
-			# wx.MessageDialog(None, 'Write: complete (result=%s)" % value', 'Power-cycle ECU', wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
-			# self.statusbar.SetStatusText("Write: complete (result=%s)" % value, 0)
+			self.progress_text.SetLabel("Write: complete (result=%s)" % value)
+			self.Layout()
 		elif info == "state":
 			if value == ECUSTATE.OFF:
 				if self.bootwait:
 					self.powercycle.ShowPowerOn("Preparing to read ECU...")
-				if self.reboot:
-					self.powercycle.Hide()
-					self.reboot = False
-					# self.statusbar.SetStatusText("Turn on ECU!", 0)
+				else:
+					if self.reboot:
+						self.powercycle.Hide()
+						self.reboot = False
+					self.progress_text.SetLabel("")
 			self.OnValidateMode(None)
 		elif info == "password":
 			self.powercycle.Hide()
 			if not value:
-				self.progress.Hide()
+				self.progressboxp.Hide()
 				self.passboxp.Show()
 			else:
-				self.progress.Show()
+				self.progressboxp.Show()
 				self.passboxp.Hide()
 				self.bootwait = False
 			self.Layout()
@@ -317,8 +325,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			if self.parent.ecuinfo["state"] != ECUSTATE.READ:
 				self.bootwait = True
 				self.powercycle.ShowPowerOff("Preparing to read ECU...")
-				# self.statusbar.SetStatusText("Turn off ECU!", 0)
-			self.progress.Show()
+			self.progressboxp.Show()
 			self.passboxp.Hide()
 			self.Layout()
 			passwd = [int(P[1].GetValue(),16) for P in self.password_chars]

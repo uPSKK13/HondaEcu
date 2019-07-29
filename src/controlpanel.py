@@ -11,13 +11,13 @@ import wx
 import wx.lib.buttons as buttons
 import wx.lib.agw.labelbook as LB
 
+import EnhancedStatusBar as ESB
+
 from frames.info import HondaECU_InfoPanel
 from frames.data import HondaECU_DatalogPanel
 from frames.error import HondaECU_ErrorPanel
 from frames.flash import HondaECU_FlashPanel
 from frames.hrcsettings import HondaECU_HRCDataSettingsPanel
-# from frames.tune import TunePanel
-# from frames.tunehelper import HondaECU_TunePanelHelper
 
 import usb.util
 
@@ -174,20 +174,6 @@ class HondaECU_ControlPanel(wx.Frame):
 				# "disabled":True,
 				"enable": [ECUSTATE.OK],
 			},
-			# "tunehelper": {
-			# 	"label":"Tune",
-			# 	"icon":"images/bike.png",
-			# 	"panel":HondaECU_TunePanelHelper,
-			# },
-			# "hrcsettings": {
-			# 	"label":"HRC Settings",
-			# 	"icon":"images/cog.png",
-			# 	"conflicts":["flash","data","dtc","info"],
-			# 	"panel":HondaECU_HRCDataSettingsPanel,
-			# 	"disabled":True,
-			# 	"enable": [ECUSTATE.OK],
-			# },
-
 		}
 		self.appanels = {}
 
@@ -217,10 +203,29 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.OnBinChecksum, checksumItem)
 		helpMenu.Append(checksumItem)
 
-		# self.statusbar = self.CreateStatusBar(1)
-		# self.statusbar.SetSize((-1, 28))
-		# self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
-		# self.SetStatusBar(self.statusbar)
+		self.statusicons = [
+			wx.Image(os.path.join(self.basepath, "images/bullet_black.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_yellow.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_green.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_blue.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_purple.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
+			wx.Image(os.path.join(self.basepath, "images/bullet_red.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+		]
+		self.statusbar = ESB.EnhancedStatusBar(self, -1)
+		self.SetStatusBar(self.statusbar)
+		self.statusbar.SetSize((-1, 28))
+		self.statusicon = wx.StaticBitmap(self.statusbar)
+		self.statusicon.SetBitmap(self.statusicons[0])
+		self.ecmidl = wx.StaticText(self.statusbar)
+		self.flashcountl = wx.StaticText(self.statusbar)
+		self.dtccountl = wx.StaticText(self.statusbar)
+		self.statusbar.SetFieldsCount(4)
+		self.statusbar.SetStatusWidths([32, 170, 130, 110])
+		self.statusbar.AddWidget(self.statusicon, pos=0)
+		self.statusbar.AddWidget(self.ecmidl, pos=1, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.AddWidget(self.flashcountl, pos=2, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.AddWidget(self.dtccountl, pos=3, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+		self.statusbar.SetStatusStyles([wx.SB_SUNKEN,wx.SB_SUNKEN,wx.SB_SUNKEN,wx.SB_SUNKEN])
 
 		self.outerp = wx.Panel(self)
 
@@ -240,7 +245,6 @@ class HondaECU_ControlPanel(wx.Frame):
 				enablestates = self.apps[a]["enable"]
 			self.bookpages[a] = d["panel"](self, a, self.apps[a], enablestates)
 			x,y = self.bookpages[a].GetSize()
-			# print(d["label"],(x,y))
 			if x > maxdims[0]:
 				maxdims[0] = x
 			if y > maxdims[1]:
@@ -249,25 +253,9 @@ class HondaECU_ControlPanel(wx.Frame):
 		for k in self.bookpages.keys():
 			self.bookpages[k].SetMinSize(maxdims)
 
-		# self.wrappanel = wx.Panel(self.outerp)
-		# wrapsizer = wx.WrapSizer(wx.HORIZONTAL)
-		# self.appbuttons = {}
-		# for a,d in self.apps.items():
-		# 	icon = wx.Image(os.path.join(self.basepath, d["icon"]), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-		# 	enablestates = None
-		# 	if "enable" in d:
-		# 		enablestates = d["enable"]
-		# 	self.appbuttons[a] = HondaECU_AppButton(a, enablestates, self.wrappanel, wx.ID_ANY, icon, label=d["label"])
-		# 	if "disabled" in d and d["disabled"]:
-		# 		self.appbuttons[a].Disable()
-		# 	wrapsizer.Add(self.appbuttons[a], 0)
-		# 	self.Bind(wx.EVT_BUTTON, self.OnAppButtonClicked, self.appbuttons[a])
-		# self.wrappanel.SetSizer(wrapsizer)
-
 		self.outersizer = wx.BoxSizer(wx.VERTICAL)
 		self.outersizer.Add(self.adapterboxp, 0, wx.EXPAND | wx.ALL, 5)
 		self.outersizer.Add(self.labelbook, 1, wx.EXPAND | wx.ALL, 5)
-		# self.outersizer.Add(self.wrappanel, 1, wx.EXPAND)
 		self.outerp.SetSizer(self.outersizer)
 
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
@@ -283,14 +271,11 @@ class HondaECU_ControlPanel(wx.Frame):
 		dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
 		dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
-		# dispatcher.connect(self.TunePanelHelperHandler, signal="TunePanelHelper", sender=dispatcher.Any)
 
 		self.usbmonitor = USBMonitor(self)
 		self.klineworker = KlineWorker(self)
 
 		self.Layout()
-		# self.Fit()
-		# self.mainsizer.Fit(self)
 		self.Center()
 		self.Show()
 
@@ -300,40 +285,40 @@ class HondaECU_ControlPanel(wx.Frame):
 	def __clear_data(self):
 		self.ecuinfo = {}
 
-	# def TunePanelHelperHandler(self, xdf, bin, metainfo, htf=None):
-	# 	if htf != None:
-	# 		tar = tarfile.open(htf, "r:xz")
-	# 		xdfs = None
-	# 		binorig = None
-	# 		binmod = None
-	# 		metainfo = None
-	# 		for f in tar.getnames():
-	# 			if f == "metainfo.json":
-	# 				metainfo = json.load(tar.extractfile(f))
-	# 			else:
-	# 				b,e = os.path.splitext(f)
-	# 				if e == ".xdf":
-	# 					xdfs = tar.extractfile(f).read()
-	# 				elif e == ".bin":
-	# 					x, y = os.path.splitext(b)
-	# 					if y == ".orig":
-	# 						binorig = tar.extractfile(f).read()
-	# 					elif y == ".mod":
-	# 						binmod = tar.extractfile(f).read()
-	# 		if xdfs!=None and binorig!=None and binmod!=None and metainfo!=None:
-	# 			tp = TunePanel(self, metainfo, xdfs, binorig, binmod)
-	# 	else:
-	# 		fbin = open(bin, "rb")
-	# 		byts = bytearray(fbin.read(os.path.getsize(bin)))
-	# 		fbin.close()
-	# 		fbin = open(xdf, "rb")
-	# 		xdfs = fbin.read(os.path.getsize(xdf))
-	# 		fbin.close()
-	# 		tp = TunePanel(self, metainfo, xdfs, byts)
+	def __clear_widgets(self):
+		self.ecmidl.SetLabel("")
+		self.flashcountl.SetLabel("")
+		self.dtccountl.SetLabel("")
+		self.statusicon.SetBitmap(self.statusicons[0])
+		self.statusicon.Show(False)
+		self.statusbar.OnSize(None)
 
 	def KlineWorkerHandler(self, info, value):
 		if info in ["ecmid","flashcount","dtc","dtccount","state"]:
 			self.ecuinfo[info] = value
+			if info == "state":
+				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
+				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
+					self.statusicon.SetBitmap(self.statusicons[0])
+				elif value in [ECUSTATE.RECOVER_OLD,ECUSTATE.RECOVER_NEW]: #YELLOW
+					self.statusicon.SetBitmap(self.statusicons[1])
+				elif value in [ECUSTATE.OK]: #GREEN
+					self.statusicon.SetBitmap(self.statusicons[2])
+				elif value in [ECUSTATE.READ,ECUSTATE.READING,ECUSTATE.WRITEx00,ECUSTATE.WRITEx10,ECUSTATE.WRITEx20,ECUSTATE.WRITEx30,ECUSTATE.WRITEx40,ECUSTATE.WRITEx50,ECUSTATE.WRITING,ECUSTATE.ERASING,ECUSTATE.INIT_WRITE,ECUSTATE.INIT_RECOVER]: #BLUE
+					self.statusicon.SetBitmap(self.statusicons[3])
+				elif value in [ECUSTATE.POSTWRITEx0F,ECUSTATE.WRITEx0F]: #PURPLE
+					self.statusicon.SetBitmap(self.statusicons[4])
+				elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
+					self.statusicon.SetBitmap(self.statusicons[5])
+			elif info == "ecmid":
+				self.ecmidl.SetLabel("   ECM ID: %s" % " ".join(["%02x" % i for i in value]))
+			elif info == "flashcount":
+				if value >= 0:
+					self.flashcountl.SetLabel("   Flash Count: %d" % value)
+			elif info == "dtccount":
+				if value >= 0:
+					self.dtccountl.SetLabel("   DTC Count: %d" % value)
+			self.statusbar.OnSize(None)
 		elif info == "data":
 			if not info in self.ecuinfo:
 				self.ecuinfo[info] = {}
@@ -359,9 +344,9 @@ class HondaECU_ControlPanel(wx.Frame):
 					byts = bytearray(fbin.read(nbyts))
 					fbin.close()
 					idadr = int(i["keihinaddr"],16)
-					# self.statusbar.SetStatusText("Map ID: " + byts[idadr:(idadr+7)].decode("ascii"), 0)
+					wx.MessageDialog(None, "Map ID: " + byts[idadr:(idadr+7)].decode("ascii"), "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 					return
-			# self.statusbar.SetStatusText("Map ID: unknown", 0)
+			wx.MessageDialog(None, "Map ID: unknown", "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 
 	def OnBinChecksum(self, event):
 		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
@@ -372,7 +357,7 @@ class HondaECU_ControlPanel(wx.Frame):
 			nbyts = os.path.getsize(pathname)
 			byts = bytearray(fbin.read(nbyts))
 			fbin.close()
-			# self.statusbar.SetStatusText("Checksum: %s" % ("good" if checksum8bitHonda(byts)==0 else "bad"), 0)
+			wx.MessageDialog(None, "Checksum: %s" % ("good" if checksum8bitHonda(byts)==0 else "bad"), "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			return
 
 	def OnDebug(self, event):
@@ -392,7 +377,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		dirty = False
 		if action == "error":
 			if platform.system() == "Windows":
-				self.statusbar.SetStatusText("libusb error: make sure libusbk is installed", 0)
+				wx.MessageDialog(None, "libusb error: make sure libusbk is installed", "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 		elif action == "add":
 			if not device in self.ftdi_devices:
 				self.ftdi_devices[device] = config
