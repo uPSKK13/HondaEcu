@@ -103,13 +103,13 @@ class KlineWorker(Thread):
 			size = location
 			rate = 0
 			while not self.readinfo is None:
-				info = self.ecu.send_command([0x82, 0x82, 0x00], format_read(location) + [readsize])
+				info = self.ecu._read_flash_bytes(location, readsize)
 				if not info:
 					readsize -= 1
 					if readsize < 1:
 						break
 				else:
-					fbin.write(info[2])
+					fbin.write(info)
 					fbin.flush()
 					location += readsize
 					n = time.time()
