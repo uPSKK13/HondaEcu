@@ -23,9 +23,6 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 		self.Build()
 		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
 		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
-		# self.Bind(wx.EVT_CLOSE, self.OnClose)
-		# self.Center()
-		# wx.CallAfter(self.Show)
 
 	def prepare_data1(self, data, t):
 		if t in [0x13, 0x17]:
@@ -138,66 +135,12 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 				self.o2sensor[j][l][6].Add(self.o2sensor[j][l][1], pos=(i,3), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT|wx.ALL, border=5)
 				self.o2sensor[j][l][6].Add(self.o2sensor[j][l][2], pos=(i,4), flag=wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL, border=5)
 				self.o2sensor[j][l][6].Add(wx.StaticText(self.o2sensor[j][l][7], label=" "), pos=(i,5))
-		# if "data" in self.parent.ecuinfo:
-		# 	if not self.parent.ecuinfo["data"] in [0x11]:
-		# 		for s in ["IACV pulse count","IACV command"]:
-		# 			self.sensors[s][0].Hide()
-		# 			self.sensors[s][1].Hide()
-		# 			self.sensors[s][2].Hide()
-		# 			self.sensors[s][5] = False
-		# 	if not 0x20 in self.parent.ecuinfo["data"]:
-		# 		self.d2pbox.Disable()
-		# 	if not 0x21 in self.parent.ecuinfo["data"]:
-		# 		self.d3pbox.Disable()
-		# 	if not 0xd0 in self.parent.ecuinfo["data"]:
-		# 		self.d4pbox.Disable()
-		# 	for t in [0x10,0x11,0x13,0x17]:
-		# 		if t in self.parent.ecuinfo["data"]:
-		# 			u = ">H12B"
-		# 			if t is not 0x13:
-		# 				u += "HB"
-		# 				if t == 0x11:
-		# 					u += "BH"
-		# 				elif t == 0x17:
-		# 					u += "BB"
-		# 			data = self.prepare_data1(list(struct.unpack(u, self.parent.ecuinfo["data"][t][1][2:])), t)
-		# 			for s in self.sensors:
-		# 				if self.sensors[s][5]:
-		# 					self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
-		# 			self.maintable = t
-		# 			break
-		# 	for t in [0x20,0x21]:
-		# 		if t in self.parent.ecuinfo["data"]:
-		# 			data = list(struct.unpack(">3B", self.parent.ecuinfo["data"][t][1][2:]))
-		# 			data[0] = round(data[0]/0xff*5, 2)
-		# 			data[1] = round(data[1]/0xff*2, 4)
-		# 			data[2] = round(data[2]/0xff*5, 2)
-		# 			for s in self.o2sensor[t]:
-		# 				if self.o2sensor[t][s][5]:
-		# 					self.o2sensor[t][s][1].SetLabel(str(data[self.o2sensor[t][s][4]]))
-		# 					self.o2sensor[t][s][8].Show()
-		# 	if t == 0xd0:
-		# 		if t in self.parent.ecuinfo["data"]:
-		# 			data = list(struct.unpack(">7Bb%dB" % (self.parent.ecuinfo["data"][t][0]-10), self.parent.ecuinfo["data"][t][1][2:]))
-		# 			data[5] = round(data[5]/0xff*5, 3)
-		# 			data[6] = round(data[6]/0xff*5, 3)
-		# 			data[7] = round(data[7]/0xff*100, 2)
-		# 			data[8] = round(data[8]/0xff*5, 3)
-		# 			data[9] = round(data[9]/0xff*5, 3)
-		# 			data[10] = round(data[10]/0xff*5, 2)
-		# 			for s in self.sensors2:
-		# 				if self.sensors2[s][5]:
-		# 					self.sensors2[s][1].SetLabel(str(data[self.sensors2[s][4]]))
-		# 					self.sensors2[s][8].Show()
 
 		self.d1p.SetSizer(self.d1psizer)
 		self.d2p.SetSizer(self.d2psizer)
 		self.d3p.SetSizer(self.d3psizer)
 		self.d4p.SetSizer(self.d4psizer)
 
-		# mt = "0x??"
-		# if not self.maintable is None:
-		# 	mt = "0x%x" % self.maintable
 		self.d1pboxsizer = wx.StaticBoxSizer(wx.VERTICAL, self.d1pbox, "Table 0x??")
 		self.d1pboxsizer.Add(self.d1p, 0, wx.ALL, border=10)
 		self.d1pbox.SetSizer(self.d1pboxsizer)

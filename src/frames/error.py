@@ -31,14 +31,6 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 		self.errorsizer.Add(self.resetbutton, 0, flag=wx.ALIGN_RIGHT|wx.BOTTOM|wx.RIGHT, border=10)
 		self.errorp.SetSizer(self.errorsizer)
 
-		# if "dtccount" in self.parent.ecuinfo and self.parent.ecuinfo["dtccount"] > 0:
-		# 	self.resetbutton.Enable(True)
-		# if "dtc" in self.parent.ecuinfo:
-		# 	for code in self.parent.ecuinfo["dtc"][hex(0x74)]:
-		# 		self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "current"])
-		# 	for code in self.parent.ecuinfo["dtc"][hex(0x73)]:
-		# 		self.errorlist.Append([code, DTC[code] if code in DTC else "Unknown", "past"])
-
 		self.mainsizer = wx.BoxSizer(wx.VERTICAL)
 		self.mainsizer.Add(self.errorp, 1, wx.EXPAND)
 		self.SetSizer(self.mainsizer)
@@ -56,7 +48,6 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 
 	def OnClearCodes(self, event):
 		self.resetbutton.Disable()
-		# self.errorlist.DeleteAllItems()
 		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.clear")
 
 	def KlineWorkerHandler(self, info, value):

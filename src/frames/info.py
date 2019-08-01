@@ -19,24 +19,7 @@ class HondaECU_InfoPanel(HondaECU_AppPanel):
 		ecus = "unknown"
 		flashcounts = "unknown"
 		state = ECUSTATE.UNKNOWN
-		# if "state" in self.parent.ecuinfo:
-		# 	state = self.parent.ecuinfo["state"]
-		# if "ecmid" in self.parent.ecuinfo and len(self.parent.ecuinfo["ecmid"])==5:
-		# 	ecmids = " ".join(["%02x" % i for i in self.parent.ecuinfo["ecmid"]])
-		# 	if self.parent.ecuinfo["ecmid"] in ECM_IDs:
-		# 		models = "%s (%s)" % (ECM_IDs[self.parent.ecuinfo["ecmid"]]["model"], ECM_IDs[self.parent.ecuinfo["ecmid"]]["year"])
-		# 		ecus = ECM_IDs[self.parent.ecuinfo["ecmid"]]["pn"]
-		# 	else:
-		# 		et = bytearray(self.parent.ecuinfo["ecmid"])
-		# 		if len(et) > 0:
-		# 			for i in range(5):
-		# 				et[i] ^= 0xFF
-		# 			et = bytes(et)
-		# 			if et in ECM_IDs:
-		# 				models = "%s (%s) Restricted" % (ECM_IDs[et]["model"], ECM_IDs[et]["year"])
-		# 				ecus = ECM_IDs[et]["pn"]
-		# if "flashcount" in self.parent.ecuinfo and self.parent.ecuinfo["flashcount"] >= 0:
-		# 	flashcounts = str(self.parent.ecuinfo["flashcount"])
+
 		self.ecmid = wx.StaticText(self.infop, label=ecmids)
 		self.flashcount = wx.StaticText(self.infop, label=flashcounts)
 		self.model = wx.StaticText(self.infop, label=models,size=(200,-1))
