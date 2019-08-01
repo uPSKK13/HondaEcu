@@ -2,7 +2,7 @@ import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from .base import HondaECU_AppPanel
 from pydispatch import dispatcher
-from eculib.honda import DTC
+from eculib.honda import *
 
 class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
 	def __init__(self, parent, ID, pos=wx.DefaultPosition,
@@ -56,7 +56,7 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 
 	def OnClearCodes(self, event):
 		self.resetbutton.Disable()
-		self.errorlist.DeleteAllItems()
+		# self.errorlist.DeleteAllItems()
 		wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.clear")
 
 	def KlineWorkerHandler(self, info, value):
@@ -80,3 +80,10 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 			for k,v in codes.items():
 				self.errorlist.Append([k, v[0], "X" if v[1] else "", "X" if v[2] else ""])
 			self.Layout()
+		elif info == "state":
+			if value == ECUSTATE.OK:
+				wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.on")
+			else:
+				wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.off")
+				self.resetbutton.Enable(False)
+				self.errorlist.DeleteAllItems()
