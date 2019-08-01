@@ -12,10 +12,6 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
 		self.wildcard = "HRC Data Settings File (*.Fsd;*.fsd)|*.Fsd;*.fsd"
 		self.byts = None
 		self.bootwait = False
-		self.statusbar = self.CreateStatusBar(1)
-		self.statusbar.SetSize((-1, 28))
-		self.statusbar.SetStatusStyles([wx.SB_SUNKEN])
-		self.SetStatusBar(self.statusbar)
 
 		self.outerp = wx.Panel(self)
 		self.mainp = wx.Panel(self.outerp)
@@ -81,23 +77,26 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
 		if info == "state":
 			if value == ECUSTATE.OFF:
 				if self.bootwait:
-					self.statusbar.SetStatusText("Turn on ECU!", 0)
+					if self.modebox.GetSelection() == 0:
+						self.parent.powercycle.ShowPowerOn("Preparing to read HRC data settings...")
+					else:
+						self.parent.powercycle.ShowPowerOn("Preparing to write HRC data settings...")
 		elif info == "hrc.read.progress":
 			if value[0]!= None and value[0] >= 0:
 				self.progress.SetValue(value[0])
-				self.statusbar.SetStatusText(value[1], 0)
+				print(value[1], 0)
 		elif info == "hrc.read.result":
 			self.progress.SetValue(0)
-			self.statusbar.SetStatusText("Read complete", 0)
+			self.parent.powercycle.ShowPowerOff("Read: complete (result=%s)" % value)
 
 	def OnGo(self, event):
 		self.gobutton.Disable()
 		self.bootwait = True
 		if self.modebox.GetSelection() == 0:
-			self.statusbar.SetStatusText("Turn off ECU!", 0)
+			self.parent.powercycle.ShowPowerOff("Preparing to read HRC data settings...")
 			dispatcher.send(signal="HRCSettingsPanel", sender=self, mode="read", data=(self.readfpicker.GetPath(),self.name.GetValue()))
 		else:
-			self.statusbar.SetStatusText("Turn off ECU!", 0)
+			self.parent.powercycle.ShowPowerOff("Preparing to write HRC data settings...")
 			dispatcher.send(signal="HRCSettingsPanel", sender=self, mode="write", data=None)
 
 	def OnModeChange(self, event):

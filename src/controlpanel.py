@@ -30,6 +30,41 @@ from ecmids import ECM_IDs
 
 from eculib.honda import ECUSTATE, checksum8bitHonda
 
+class PowerCycleDialog(wx.Dialog):
+
+	def __init__(self, parent, msg1="", msg2=""):
+		super(PowerCycleDialog, self).__init__(parent, size=(300,150), style=wx.STAY_ON_TOP)
+		panel = wx.Panel(self)
+
+		v_sizer = wx.BoxSizer(wx.VERTICAL)
+		main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+		self.font2 = self.GetFont().Bold()
+		self.font2.SetPointSize(self.font2.GetPointSize()*1.25)
+
+		self.msg1 = wx.StaticText(panel, label=msg1, style=wx.ALIGN_CENTRE_HORIZONTAL, size=(260,30))
+		self.msg1.SetFont(self.font2)
+		self.msg2 = wx.StaticText(panel, label=msg2, style=wx.ALIGN_CENTRE_HORIZONTAL, size=(260,30))
+		self.msg2.SetFont(self.font2)
+		v_sizer.Add(self.msg1, 0, wx.CENTER|wx.ALL, border=5)
+		v_sizer.Add(self.msg2, 0, wx.CENTER|wx.ALL, border=5)
+
+		main_sizer.AddStretchSpacer(prop=1)
+		main_sizer.Add(v_sizer, 0, wx.CENTER)
+		main_sizer.AddStretchSpacer(prop=1)
+
+		panel.SetSizer(main_sizer)
+
+	def ShowPowerOn(self, msg1=""):
+		self.msg1.SetLabel(msg1)
+		self.msg2.SetLabel("Turn on ECU")
+		self.Show()
+
+	def ShowPowerOff(self, msg1=""):
+		self.msg1.SetLabel(msg1)
+		self.msg2.SetLabel("Turn off ECU")
+		self.Show()
+
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
 	def __init__(self, appid, enablestates, *args, **kwargs):
@@ -146,27 +181,19 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.apps = {
 			"flash": {
 				"label":"Flash",
-				"icon":"images/chip2.png",
-				"conflicts":["data","hrc"],
 				"panel":HondaECU_FlashPanel,
-				# "disabled":True,
-				"enable": [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30, ECUSTATE.READ],
 			},
+			# "hrc": {
+			# 	"label":"HRC Data Settings",
+			# 	"panel":HondaECU_HRCDataSettingsPanel,
+			# },
 			"data": {
 				"label":"Data Logging",
-				"icon":"images/monitor.png",
-				"conflicts":["flash","hrc"],
 				"panel":HondaECU_DatalogPanel,
-				# "disabled":True,
-				"enable": [ECUSTATE.OK],
 			},
 			"dtc": {
 				"label":"Trouble Codes",
-				"icon":"images/warning.png",
-				"conflicts":["flash","hrc"],
 				"panel":HondaECU_ErrorPanel,
-				# "disabled":True,
-				"enable": [ECUSTATE.OK],
 			},
 		}
 		self.appanels = {}
@@ -293,6 +320,8 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.usbmonitor.start()
 		self.klineworker.start()
 
+		self.powercycle = PowerCycleDialog(None)
+
 	def __clear_data(self):
 		self.ecuinfo = {}
 
@@ -327,8 +356,12 @@ class HondaECU_ControlPanel(wx.Frame):
 					self.ecmidl.SetLabel("   ECM ID: %s" % ecmid)
 					if value in ECM_IDs:
 						model = "%s (%s)" % (ECM_IDs[value]["model"], ECM_IDs[value]["year"])
+						pn = ECM_IDs[value]["pn"]
+					else:
+						model = "Unknown Model"
+						pn = "-"
 					self.modell.SetLabel(model)
-					self.ecupnl.SetLabel(ECM_IDs[value]["pn"])
+					self.ecupnl.SetLabel(pn)
 					self.Layout()
 			elif info == "flashcount":
 				if value >= 0:

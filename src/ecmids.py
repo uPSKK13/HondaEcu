@@ -69,7 +69,9 @@ ECM_IDs = {
 
 	b"\x01\x02\xca\x05\x01": {"model":"Z125","year":"2019","pn":"38770-K0F-A01"},
 
-	b"\x01\x02\xe8\x05\x01": {"model":"CRF450R","year":"2017-2019","pn":"38770-MKE-A71"},
+	b"\x01\x02\x89\x01\x01": {"model":"CRF250R","year":"2019","pn":"38770-K95-A41"},
+	
+	b"\x01\x02\xe8\x05\x01": {"model":"CRF450R","year":"2019","pn":"38770-MKE-A71"},
 
 	b"\x01\x00\xfa\x10\x01": {"model":"CBR150R","year":"2010-2014","pn":"38770-KPP-N02"},
 

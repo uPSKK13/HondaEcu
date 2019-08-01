@@ -287,9 +287,11 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
 					elif t == 0x17:
 						u += "BB"
 				data = self.prepare_data1(list(struct.unpack(u, d)), t)
+				ld = len(data)
 				for s in self.sensors:
-					if self.sensors[s][5]:
-						self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
+					if self.sensors[s][4] < ld:
+						if self.sensors[s][5]:
+							self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
 				if self.maintable is None:
 					if not t in [0x11]:
 						for s in ["IACV pulse count","IACV command"]:
