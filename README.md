@@ -20,7 +20,7 @@ HondaECU for Windows requires the libusbK driver. Download [Zadig](https://zadig
  https://sourceforge.net/projects/picusb/files/libftdi1-1.4git_devkit_x86_x64_14June2018.zip
 
  ```
-pip install pylibftdi wxPython pydispatcher
+pip install -r requirements.txt
  ```
 
 ## Checksums
@@ -30,7 +30,7 @@ pip install pylibftdi wxPython pydispatcher
 | Z125M        | 2019      | 92 kb    | 38770-K0F-A01  | 0                | 8000   | M16C   | 10,1,30        |
 | CRF110F      | 2019      | 64 kb    | 38770-KYK-D12  | 0                | 8000   | M16C   | 10,1,30        |
 | MSX125       | 2017      | 64 kb    | 38770-K26-B13  | 0                | 8000   | M16C   | 10,1,30        |
-| MSX125       | 2014      | 48 kb    | 38770-K26-911  | 9FFF             | 4000   | M16C   | 10,1,30        |
+| MSX125       | 2014      | 48 kb    | 38770-K26-911  | 0                | 4000   | M16C   | 10,1,30        |
 | CBR250R      | 2012      | 56 kb    | 38770-KYJ-971  | DFEF             |        |        |                |
 | CBR250R HRC  | 2014      | 256 kb   | 38770-K33-R51  | 18FFE            |        |        |                |
 | CBR250RR HRC | 2017      | 1024 kb  | 38770-K64-R02  | 7FFF8            |        |        |                |

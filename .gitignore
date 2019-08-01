@@ -110,3 +110,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# exceptions
+!requirements.txt
+!requirements-dev.txt
