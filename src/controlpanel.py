@@ -329,8 +329,9 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.ecmidl.SetLabel("")
 		self.flashcountl.SetLabel("")
 		self.dtccountl.SetLabel("")
+		self.modell.SetLabel("")
+		self.ecupnl.SetLabel("")
 		self.statusicon.SetBitmap(self.statusicons[0])
-		self.statusicon.Show(False)
 		self.statusbar.OnSize(None)
 
 	def KlineWorkerHandler(self, info, value):
@@ -339,7 +340,8 @@ class HondaECU_ControlPanel(wx.Frame):
 			if info == "state":
 				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
 				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
-					self.statusicon.SetBitmap(self.statusicons[0])
+					self.__clear_widgets()
+					# self.statusicon.SetBitmap(self.statusicons[0])
 				elif value in [ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD]: #YELLOW
 					self.statusicon.SetBitmap(self.statusicons[1])
 				elif value in [ECUSTATE.OK]: #GREEN
@@ -360,6 +362,10 @@ class HondaECU_ControlPanel(wx.Frame):
 					else:
 						model = "Unknown Model"
 						pn = "-"
+						for m in ECM_IDs.keys():
+							if m[:3] == value[:3]:
+								model = "%s (%s)" % (ECM_IDs[m]["model"], ECM_IDs[m]["year"])
+								break
 					self.modell.SetLabel(model)
 					self.ecupnl.SetLabel(pn)
 					self.Layout()

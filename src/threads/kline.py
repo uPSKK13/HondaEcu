@@ -335,10 +335,14 @@ class KlineWorker(Thread):
 				return 1
 		return 0
 
-	def do_idle_tasks(self):
+	def do_basic_tasks(self):
 		ret = 0
 		if not self.ecmid:
 			ret += self.do_get_ecmid()
+		return ret
+
+	def do_idle_tasks(self):
+		ret = self.do_basic_tasks()
 		if self.flashcount < 0:
 			ret += self.do_get_flashcount()
 		if self.clear_codes:
@@ -394,9 +398,11 @@ class KlineWorker(Thread):
 			else:
 				return self.do_idle_tasks()
 		elif self.state == ECUSTATE.RECOVER_OLD:
+			self.do_basic_tasks()
 			if self.writeinfo is not None:
 				return self.write_helper(init=True)
 		elif self.state == ECUSTATE.RECOVER_NEW:
+			self.do_basic_tasks()
 			if self.writeinfo is not None:
 				return self.write_helper(init=True, recover=True)
 		return False
