@@ -8,6 +8,7 @@ from eculib import *
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--offset', type=int, default=0, help="read start offset")
 parser.add_argument('--bytes', type=int, default=512, help="number of bytes to read")
+parser.add_argument('--output', type=str, default="eeprom.bin", help="file to save read bytes to")
 db_grp = parser.add_argument_group('debugging options')
 db_grp.add_argument('--debug', action='store_true', help="turn on debugging output")
 args = parser.parse_args()
@@ -19,6 +20,10 @@ if args.debug:
     dispatcher.connect(ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
 
 devices = [d for d in usb.core.find(find_all=True, idVendor=pyftdi.ftdi.Ftdi.FTDI_VENDOR)]
+
+if len(devices) < 0:
+    print("No devices")
+    sys.exit(-1)
 
 ecu = HondaECU(KlineAdapter(devices[0]))
 
@@ -42,7 +47,7 @@ print("Saving eeprom")
 
 offset = args.offset
 nbytes = args.bytes / 2
-with open("eeprom.bin","wb") as eeprom:
+with open(args.output,"wb") as eeprom:
 	while offset < nbytes:
 		status, data = ecu._read_eeprom_word(offset)
 		if status:
