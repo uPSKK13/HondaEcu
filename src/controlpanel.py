@@ -340,16 +340,16 @@ class HondaECU_ControlPanel(wx.Frame):
 				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
 				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
 					self.statusicon.SetBitmap(self.statusicons[0])
-				elif value in [ECUSTATE.RECOVER_OLD,ECUSTATE.RECOVER_NEW]: #YELLOW
+				elif value in [ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD]: #YELLOW
 					self.statusicon.SetBitmap(self.statusicons[1])
 				elif value in [ECUSTATE.OK]: #GREEN
 					self.statusicon.SetBitmap(self.statusicons[2])
-				elif value in [ECUSTATE.READ,ECUSTATE.READING,ECUSTATE.WRITEx00,ECUSTATE.WRITEx10,ECUSTATE.WRITEx20,ECUSTATE.WRITEx30,ECUSTATE.WRITEx40,ECUSTATE.WRITEx50,ECUSTATE.WRITING,ECUSTATE.ERASING,ECUSTATE.INIT_WRITE,ECUSTATE.INIT_RECOVER]: #BLUE
+				elif value in [ECUSTATE.FLASH]: #BLUE
 					self.statusicon.SetBitmap(self.statusicons[3])
-				elif value in [ECUSTATE.POSTWRITEx0F,ECUSTATE.WRITEx0F]: #PURPLE
+				elif value in [ECUSTATE.SECURE]: #PURPLE
 					self.statusicon.SetBitmap(self.statusicons[4])
-				elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
-					self.statusicon.SetBitmap(self.statusicons[5])
+				# elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
+				# 	self.statusicon.SetBitmap(self.statusicons[5])
 			elif info == "ecmid":
 				if len(value) > 0:
 					ecmid = " ".join(["%02x" % i for i in value])
