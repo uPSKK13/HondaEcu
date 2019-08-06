@@ -168,6 +168,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.run = True
 		self.active_ftdi_device = None
 		self.ftdi_devices = {}
+		self.warned = []
 		self.__clear_data()
 
 		if getattr(sys, 'frozen', False):
@@ -427,8 +428,10 @@ class HondaECU_ControlPanel(wx.Frame):
 	def USBMonitorHandler(self, action, device, config):
 		dirty = False
 		if action == "error":
-			if platform.system() == "Windows":
-				wx.MessageDialog(None, "libusb error: make sure libusbk is installed", "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
+			if not device in self.warned:
+				self.warned.append(device)
+				if platform.system() == "Windows":
+					wx.MessageDialog(None, "libusb error: make sure libusbk is installed", "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 		elif action == "add":
 			if not device in self.ftdi_devices:
 				self.ftdi_devices[device] = config
