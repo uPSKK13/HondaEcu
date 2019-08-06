@@ -17,10 +17,8 @@ HondaECU for Windows requires the libusbK driver. Download [Zadig](https://zadig
 
  https://conda.io/miniconda.html
 
- https://sourceforge.net/projects/picusb/files/libftdi1-1.4git_devkit_x86_x64_14June2018.zip
-
  ```
-pip install -r requirements.txt
+pip install -r requirements.txt --user
  ```
 
 ## Checksums
