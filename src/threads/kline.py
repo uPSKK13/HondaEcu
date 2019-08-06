@@ -64,7 +64,7 @@ class KlineWorker(Thread):
 		self.writeinfo = [data,offset,None]
 
 	def ReadPanelHandler(self, data, offset, passwd):
-		if self.state != ECUSTATE.READ:
+		if self.state != ECUSTATE.SECURE:
 			self.sendpassword = True
 		self.readinfo = [data,offset,None, passwd]
 
@@ -90,7 +90,7 @@ class KlineWorker(Thread):
 				self.__cleanup()
 		elif action == "activate":
 			self.__clear_data()
-			self.ecu = HondaECU(KlineAdapter(config))
+			self.ecu = HondaECU(KlineAdapter(config),retries=int(self.parent.config["DEFAULT"]["retries"]))
 			self.ready = True
 
 	def read_flash(self):
@@ -103,13 +103,9 @@ class KlineWorker(Thread):
 			size = location
 			rate = 0
 			while not self.readinfo is None:
-				info = self.ecu._read_flash_bytes(location, readsize)
-				if not info:
-					readsize -= 1
-					if readsize < 1:
-						break
-				else:
-					fbin.write(info)
+				status, data = self.ecu._read_flash_bytes(location, readsize)
+				if status:
+					fbin.write(data)
 					fbin.flush()
 					location += readsize
 					n = time.time()
@@ -118,6 +114,10 @@ class KlineWorker(Thread):
 						rate = (location-size)/(n-t)
 						t = n
 						size = location
+				else:
+					readsize -= 1
+					if readsize < 1:
+						break
 			if self.ecu.dev.kline():
 				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=(-1,"%.02fKB @ %s" % (location/1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
 			else:
@@ -185,23 +185,20 @@ class KlineWorker(Thread):
 		return 0
 
 	def do_init_write(self, recover=False):
+		self.do_update_state()
 		if recover:
-			self.state = ECUSTATE.INIT_RECOVER
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 			self.ecu.do_init_recover()
 			self.ecu.send_command([0x72],[0x00, 0xf1])
 			time.sleep(1)
 			self.ecu.send_command([0x27],[0x00, 0x01, 0x00])
 		else:
-			self.state = ECUSTATE.INIT_WRITE
-			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 			self.ecu.do_init_write()
+		self.do_update_state()
 		time.sleep(.100)
 
 	def do_erase(self, wait=11):
+		self.do_update_state()
 		ret = 1
-		self.state = ECUSTATE.ERASING
-		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
 		self.ecu.get_write_status()
 		for i in range(wait):
@@ -230,23 +227,23 @@ class KlineWorker(Thread):
 					break
 		else:
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(0, "erase failed"))
+		self.do_update_state()
 		return ret
 
 	def do_write(self):
+		self.do_update_state()
 		ret = 1
-		self.state = ECUSTATE.WRITING
-		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write", value=None)
 		if self.write_flash(self.writeinfo[0], offset=self.writeinfo[1]) == 0:
 			self.writeinfo[2] = "good" if self.ecu.do_post_write() else "bad"
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.result", value=self.writeinfo[2])
 			ret = 0
+		self.do_update_state()
 		return ret
 
 	def do_read(self):
+		self.do_update_state()
 		ret = 1
-		self.state = ECUSTATE.READING
-		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read", value=None)
 		self.readinfo[2] = self.read_flash()
 		if self.readinfo[2] == "interrupted":
@@ -254,6 +251,7 @@ class KlineWorker(Thread):
 		else:
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.result", value=self.readinfo[2])
 			ret = 0
+		self.do_update_state()
 		return ret
 
 	def do_get_ecmid(self):
@@ -337,10 +335,14 @@ class KlineWorker(Thread):
 				return 1
 		return 0
 
-	def do_idle_tasks(self):
+	def do_basic_tasks(self):
 		ret = 0
 		if not self.ecmid:
 			ret += self.do_get_ecmid()
+		return ret
+
+	def do_idle_tasks(self):
+		ret = self.do_basic_tasks()
 		if self.flashcount < 0:
 			ret += self.do_get_flashcount()
 		if self.clear_codes:
@@ -396,19 +398,21 @@ class KlineWorker(Thread):
 			else:
 				return self.do_idle_tasks()
 		elif self.state == ECUSTATE.RECOVER_OLD:
+			self.do_basic_tasks()
 			if self.writeinfo is not None:
 				return self.write_helper(init=True)
 		elif self.state == ECUSTATE.RECOVER_NEW:
+			self.do_basic_tasks()
 			if self.writeinfo is not None:
 				return self.write_helper(init=True, recover=True)
 		return False
 
 	def do_exceptions(self):
 		ret = 1
-		if self.state == ECUSTATE.READ:
+		if self.state == ECUSTATE.SECURE:
 			if self.readinfo is not None:
 				ret = self.read_helper()
-		elif self.state == ECUSTATE.WRITEx00:
+		elif self.state == ECUSTATE.FLASH:
 			if self.writeinfo is not None:
 				return self.write_helper(nodiag=True)
 		else:

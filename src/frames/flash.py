@@ -281,7 +281,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		if self.modebox.GetSelection() == 0:
 			offset = int(self.offset.GetValue(), 16)
 			data = self.readfpicker.GetPath()
-			if self.parent.ecuinfo["state"] != ECUSTATE.READ:
+			if self.parent.ecuinfo["state"] != ECUSTATE.SECURE:
 				self.bootwait = True
 				self.parent.powercycle.ShowPowerOff("Preparing to read ECU...")
 			self.progressboxp.Show()
@@ -300,7 +300,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 	def OnValidateMode(self, event):
 		enable = False
 		if "state" in self.parent.ecuinfo:
-			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_OLD, ECUSTATE.RECOVER_NEW, ECUSTATE.WRITEx00, ECUSTATE.WRITEx30, ECUSTATE.READ]:
+			if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD, ECUSTATE.FLASH, ECUSTATE.SECURE]:
 				if self.modebox.GetSelection() == 0:
 					offset = None
 					try:

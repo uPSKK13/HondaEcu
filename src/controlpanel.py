@@ -30,6 +30,9 @@ from ecmids import ECM_IDs
 
 from eculib.honda import ECUSTATE, checksum8bitHonda
 
+from appdirs import *
+import configparser
+
 class PowerCycleDialog(wx.Dialog):
 
 	def __init__(self, parent, msg1="", msg2=""):
@@ -162,6 +165,15 @@ class HondaECU_LogPanel(wx.Frame):
 class HondaECU_ControlPanel(wx.Frame):
 
 	def __init__(self, version_full, nobins=False, restrictions=None, force_restrictions=False):
+		self.prefsdir = user_data_dir("HondaECU","MCUInnovationsInc")
+		if not os.path.exists(self.prefsdir):
+			os.makedirs(self.prefsdir)
+		self.configfile = os.path.join(self.prefsdir,'hondaecu.ini')
+		self.config = configparser.ConfigParser()
+		if os.path.isfile(self.configfile):
+			self.config.read(self.configfile)
+		if not "retries" in self.config['DEFAULT']:
+			self.config['DEFAULT'] = {'retries': '1'}
 		self.nobins = nobins
 		self.restrictions = restrictions
 		self.force_restrictions = force_restrictions
@@ -330,8 +342,9 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.ecmidl.SetLabel("")
 		self.flashcountl.SetLabel("")
 		self.dtccountl.SetLabel("")
+		self.modell.SetLabel("")
+		self.ecupnl.SetLabel("")
 		self.statusicon.SetBitmap(self.statusicons[0])
-		self.statusicon.Show(False)
 		self.statusbar.OnSize(None)
 
 	def KlineWorkerHandler(self, info, value):
@@ -340,17 +353,18 @@ class HondaECU_ControlPanel(wx.Frame):
 			if info == "state":
 				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
 				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
-					self.statusicon.SetBitmap(self.statusicons[0])
-				elif value in [ECUSTATE.RECOVER_OLD,ECUSTATE.RECOVER_NEW]: #YELLOW
+					self.__clear_widgets()
+					# self.statusicon.SetBitmap(self.statusicons[0])
+				elif value in [ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD]: #YELLOW
 					self.statusicon.SetBitmap(self.statusicons[1])
 				elif value in [ECUSTATE.OK]: #GREEN
 					self.statusicon.SetBitmap(self.statusicons[2])
-				elif value in [ECUSTATE.READ,ECUSTATE.READING,ECUSTATE.WRITEx00,ECUSTATE.WRITEx10,ECUSTATE.WRITEx20,ECUSTATE.WRITEx30,ECUSTATE.WRITEx40,ECUSTATE.WRITEx50,ECUSTATE.WRITING,ECUSTATE.ERASING,ECUSTATE.INIT_WRITE,ECUSTATE.INIT_RECOVER]: #BLUE
+				elif value in [ECUSTATE.FLASH]: #BLUE
 					self.statusicon.SetBitmap(self.statusicons[3])
-				elif value in [ECUSTATE.POSTWRITEx0F,ECUSTATE.WRITEx0F]: #PURPLE
+				elif value in [ECUSTATE.SECURE]: #PURPLE
 					self.statusicon.SetBitmap(self.statusicons[4])
-				elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
-					self.statusicon.SetBitmap(self.statusicons[5])
+				# elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
+				# 	self.statusicon.SetBitmap(self.statusicons[5])
 			elif info == "ecmid":
 				if len(value) > 0:
 					ecmid = " ".join(["%02x" % i for i in value])
@@ -361,6 +375,10 @@ class HondaECU_ControlPanel(wx.Frame):
 					else:
 						model = "Unknown Model"
 						pn = "-"
+						for m in ECM_IDs.keys():
+							if m[:3] == value[:3]:
+								model = "%s (%s)" % (ECM_IDs[m]["model"], ECM_IDs[m]["year"])
+								break
 					self.modell.SetLabel(model)
 					self.ecupnl.SetLabel(pn)
 					self.Layout()
@@ -377,6 +395,8 @@ class HondaECU_ControlPanel(wx.Frame):
 			self.ecuinfo[info][value[0]] = value[1:]
 
 	def OnClose(self, event):
+		with open(self.configfile, 'w') as configfile:
+			self.config.write(configfile)
 		self.run = False
 		self.usbmonitor.join()
 		self.klineworker.join()
