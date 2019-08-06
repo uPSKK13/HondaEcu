@@ -30,6 +30,9 @@ from ecmids import ECM_IDs
 
 from eculib.honda import ECUSTATE, checksum8bitHonda
 
+from appdirs import *
+import configparser
+
 class PowerCycleDialog(wx.Dialog):
 
 	def __init__(self, parent, msg1="", msg2=""):
@@ -162,6 +165,15 @@ class HondaECU_LogPanel(wx.Frame):
 class HondaECU_ControlPanel(wx.Frame):
 
 	def __init__(self, version_full, nobins=False, restrictions=None, force_restrictions=False):
+		self.prefsdir = user_data_dir("HondaECU","MCUInnovationsInc")
+		if not os.path.exists(self.prefsdir):
+			os.makedirs(self.prefsdir)
+		self.configfile = os.path.join(self.prefsdir,'hondaecu.ini')
+		self.config = configparser.ConfigParser()
+		if os.path.isfile(self.configfile):
+			self.config.read(self.configfile)
+		if not "retries" in self.config['DEFAULT']:
+			self.config['DEFAULT'] = {'retries': '1'}
 		self.nobins = nobins
 		self.restrictions = restrictions
 		self.force_restrictions = force_restrictions
@@ -382,6 +394,8 @@ class HondaECU_ControlPanel(wx.Frame):
 			self.ecuinfo[info][value[0]] = value[1:]
 
 	def OnClose(self, event):
+		with open(self.configfile, 'w') as configfile:
+			self.config.write(configfile)
 		self.run = False
 		self.usbmonitor.join()
 		self.klineworker.join()

@@ -90,7 +90,7 @@ class KlineWorker(Thread):
 				self.__cleanup()
 		elif action == "activate":
 			self.__clear_data()
-			self.ecu = HondaECU(KlineAdapter(config))
+			self.ecu = HondaECU(KlineAdapter(config),retries=int(self.parent.config["DEFAULT"]["retries"]))
 			self.ready = True
 
 	def read_flash(self):
