@@ -48,8 +48,8 @@ ECM_IDs = {
 	b"\x01\x01\x83\x03\x02": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-F63","checksum":"0x3fff8","region":"FRANCE"},
 	b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-A92","checksum":"0x3fff8","region":"CANADA USA"},
 
+	b"\x01\x02\x49\x01\x01": {"model":"CBR1000RR","year":"2017-2018","pn":"38770-MKF-D43","checksum":"0xffff8"},
 	b"\x01\x02\x49\x05\x01": {"model":"CBR1000RR","year":"2017-2018","pn":"38770-MKF-L13","checksum":"0xffff8"},
-	# b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2017-2018","pn":"38770-MGP-D43","checksum":"0xffff8"},
 
 	b"\x01\x01\x25\x05\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-A03","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
 	b"\x01\x01\x25\x0b\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-C02","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},

@@ -173,7 +173,11 @@ class HondaECU_ControlPanel(wx.Frame):
 		if os.path.isfile(self.configfile):
 			self.config.read(self.configfile)
 		if not "retries" in self.config['DEFAULT']:
-			self.config['DEFAULT'] = {'retries': '1'}
+			self.config['DEFAULT']['retries'] = "1"
+		if not "timeout" in self.config['DEFAULT']:
+			self.config['DEFAULT']['timeout'] = "0.1"
+		with open(self.configfile, 'w') as configfile:
+			self.config.write(configfile)
 		self.nobins = nobins
 		self.restrictions = restrictions
 		self.force_restrictions = force_restrictions
