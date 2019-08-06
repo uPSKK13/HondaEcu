@@ -48,7 +48,7 @@ ECM_IDs = {
 	b"\x01\x01\x83\x03\x02": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-F63","checksum":"0x3fff8","region":"FRANCE"},
 	b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2014-2016","pn":"38770-MGP-A92","checksum":"0x3fff8","region":"CANADA USA"},
 
-	# b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2017-2018","pn":"38770-MGP-L13","checksum":"0xffff8"},
+	b"\x01\x02\x49\x05\x01": {"model":"CBR1000RR","year":"2017-2018","pn":"38770-MKF-L13","checksum":"0xffff8"},
 	# b"\x01\x01\x83\x04\x01": {"model":"CBR1000RR","year":"2017-2018","pn":"38770-MGP-D43","checksum":"0xffff8"},
 
 	b"\x01\x01\x25\x05\x01": {"model":"CBR500R","year":"2013-2016","pn":"38770-MGZ-A03","checksum":"0x3fff8","ecmidaddr":"0x17FC7","keihinaddr":"0x32D80"},
@@ -70,7 +70,7 @@ ECM_IDs = {
 	b"\x01\x02\xca\x05\x01": {"model":"Z125","year":"2019","pn":"38770-K0F-A01"},
 
 	b"\x01\x02\x89\x01\x01": {"model":"CRF250R","year":"2019","pn":"38770-K95-A41"},
-	
+
 	b"\x01\x02\xe8\x05\x01": {"model":"CRF450R","year":"2019","pn":"38770-MKE-A71"},
 
 	b"\x01\x00\xfa\x10\x01": {"model":"CBR150R","year":"2010-2014","pn":"38770-KPP-N02"},
