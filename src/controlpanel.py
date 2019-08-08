@@ -466,6 +466,9 @@ class HondaECU_ControlPanel(wx.Frame):
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
+	def sigint_handler(self, sig, frame):
+		self.OnClose(None)
+
 	def OnDetectMap(self, event):
 		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
 			if fileDialog.ShowModal() == wx.ID_CANCEL:
