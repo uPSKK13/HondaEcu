@@ -68,6 +68,57 @@ class PowerCycleDialog(wx.Dialog):
 		self.msg2.SetLabel("Turn off ECU")
 		self.Show()
 
+class SettingsDialog(wx.Dialog):
+
+	def __init__(self, parent):
+		self.parent = parent
+		super(SettingsDialog, self).__init__(parent, title="HondaECU Settings")
+
+		panel = wx.Panel(self)
+
+		g_sizer = wx.GridBagSizer()
+
+		self.retriesl = wx.StaticText(panel, label="Retries:", style=wx.ALIGN_RIGHT)
+		self.retries = wx.TextCtrl(panel)
+		self.retriesu = wx.StaticText(panel, label="attempts", style=wx.ALIGN_LEFT)
+		self.retries.SetValue(self.parent.config["DEFAULT"]["retries"])
+		self.timeoutl = wx.StaticText(panel, label="Timeout:", style=wx.ALIGN_RIGHT)
+		self.timeout = wx.TextCtrl(panel)
+		self.timeoutu = wx.StaticText(panel, label="seconds", style=wx.ALIGN_LEFT)
+		self.timeout.SetValue(self.parent.config["DEFAULT"]["timeout"])
+		self.cancel = wx.Button(panel, label="Cancel")
+		self.ok = wx.Button(panel, label="Ok")
+
+		g_sizer.Add(self.retriesl, span=(1,2), pos=(0,1), flag=wx.TOP|wx.EXPAND, border=5)
+		g_sizer.Add(self.retries, pos=(0,3), flag=wx.TOP|wx.LEFT|wx.RIGHT, border=5)
+		g_sizer.Add(self.retriesu, span=(1,2), pos=(0,4), flag=wx.TOP|wx.EXPAND, border=5)
+
+		g_sizer.Add(self.timeoutl, span=(1,2), pos=(1,1), flag=wx.EXPAND)
+		g_sizer.Add(self.timeout, pos=(1,3), flag=wx.LEFT|wx.RIGHT, border=5)
+		g_sizer.Add(self.timeoutu, span=(1,2), pos=(1,4), flag=wx.EXPAND)
+
+		g_sizer.Add(self.cancel, span=(1,2), pos=(2,0), flag=wx.ALL, border=10)
+		g_sizer.Add(self.ok, span=(1,2), pos=(2,4), flag=wx.ALL, border=10)
+
+		mainsizer = wx.BoxSizer(wx.VERTICAL)
+		mainsizer.Add(g_sizer, 1, wx.EXPAND)
+		mainsizer.SetSizeHints(self)
+		self.SetSizer(mainsizer)
+
+		self.cancel.Bind(wx.EVT_BUTTON, self.OnCancel)
+		self.ok.Bind(wx.EVT_BUTTON, self.OnOk)
+
+		self.Center()
+		self.Layout()
+
+	def OnOk(self, event):
+		self.parent.config["DEFAULT"]["retries"] = self.retries.GetValue()
+		self.parent.config["DEFAULT"]["timeout"] = self.timeout.GetValue()
+		self.Hide()
+
+	def OnCancel(self, event):
+		self.Hide()
+
 class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
 	def __init__(self, appid, enablestates, *args, **kwargs):
@@ -225,6 +276,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.SetMenuBar(self.menubar)
 		fileMenu = wx.Menu()
 		self.menubar.Append(fileMenu, '&File')
+		settingsItem = wx.MenuItem(fileMenu, wx.ID_ANY, 'Settings')
+		self.Bind(wx.EVT_MENU, self.OnSettings, settingsItem)
+		fileMenu.Append(settingsItem)
+		fileMenu.AppendSeparator()
 		quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
 		self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
 		fileMenu.Append(quitItem)
@@ -338,6 +393,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.klineworker.start()
 
 		self.powercycle = PowerCycleDialog(None)
+		self.settings = SettingsDialog(self)
 
 	def __clear_data(self):
 		self.ecuinfo = {}
@@ -397,6 +453,9 @@ class HondaECU_ControlPanel(wx.Frame):
 			if not info in self.ecuinfo:
 				self.ecuinfo[info] = {}
 			self.ecuinfo[info][value[0]] = value[1:]
+
+	def OnSettings(self, event):
+		self.settings.Show()
 
 	def OnClose(self, event):
 		with open(self.configfile, 'w') as configfile:
