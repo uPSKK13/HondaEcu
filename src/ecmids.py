@@ -58,7 +58,7 @@ ECM_IDs = {
 
 	b"\x01\x02\xe8\x05\x01": {"model":"CRF450R","year":"2019","pn":"38770-MKE-A71"},
 
-	b"\x01\x00\xb8\x0f\x01": {"model":"CB300R","year":"2015","pn":"38770-KVK-B23"},
+	b"\x01\x00\xb8\x0f\x01": {"model":"CB300R","year":"2015","pn":"38770-KVK-B23","region":["BRASIL"]},
 
 	b"\x01\x00\xb8\x05\x02": {"model":"CBR250R","year":"2011-2013","pn":"38770-KYJ-922","ecmidaddr":"0xC3EE","checksum":"0xDFEF","keihinaddr":"0xDFF0"},
 	b"\x01\x00\xb8\x0f\x01": {"model":"CBR250R","year":"2011-2013","pn":"38770-KYJ-971","ecmidaddr":"0xC3EE","checksum":"0xDFEF","keihinaddr":"0xDFF0"},

@@ -392,7 +392,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.usbmonitor.start()
 		self.klineworker.start()
 
-		self.powercycle = PowerCycleDialog(None)
+		self.powercycle = PowerCycleDialog(self)
 		self.settings = SettingsDialog(self)
 
 	def __clear_data(self):
