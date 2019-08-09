@@ -21,6 +21,7 @@ class KlineWorker(Thread):
 		dispatcher.connect(self.ReadPanelHandler, signal="ReadPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.WritePanelHandler, signal="WritePanel", sender=dispatcher.Any)
 		dispatcher.connect(self.HRCSettingsPanelHandler, signal="HRCSettingsPanel", sender=dispatcher.Any)
+		dispatcher.connect(self.SettingsHandler, signal="settings", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -56,6 +57,14 @@ class KlineWorker(Thread):
 		self.tables = None
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+
+	def SettingsHandler(self, config):
+		self.ecu.dev.timeout = config["DEFAULT"]["timeout"]
+		self.ecu.dev.retries = config["DEFAULT"]["retries"]
+		if config["DEFAULT"]["klinemethod"] == "poll_modem_status":
+			self.ecu.dev.kline = self.ecu.dev.kline_poll_modem_status
+		else:
+			self.ecu.dev.kline = self.ecu.dev.kline_loopback_ping
 
 	def HRCSettingsPanelHandler(self, mode, data):
 		self.hrcmode = (mode, data)

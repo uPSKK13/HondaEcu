@@ -18,6 +18,7 @@ from frames.data import HondaECU_DatalogPanel
 from frames.error import HondaECU_ErrorPanel
 from frames.flash import HondaECU_FlashPanel
 from frames.hrcsettings import HondaECU_HRCDataSettingsPanel
+from frames.eeprom import HondaECU_EEPROMPanel
 
 import usb.util
 
@@ -82,10 +83,17 @@ class SettingsDialog(wx.Dialog):
 		self.retries = wx.TextCtrl(panel)
 		self.retriesu = wx.StaticText(panel, label="attempts", style=wx.ALIGN_LEFT)
 		self.retries.SetValue(self.parent.config["DEFAULT"]["retries"])
+
 		self.timeoutl = wx.StaticText(panel, label="Timeout:", style=wx.ALIGN_RIGHT)
 		self.timeout = wx.TextCtrl(panel)
 		self.timeoutu = wx.StaticText(panel, label="seconds", style=wx.ALIGN_LEFT)
 		self.timeout.SetValue(self.parent.config["DEFAULT"]["timeout"])
+
+		self.klinemethods = ["loopback_ping","poll_modem_status"]
+		self.klinedetectl = wx.StaticText(panel, label="Kline Detection:", style=wx.ALIGN_RIGHT)
+		self.klinedetect = wx.ComboBox(panel, value="loopback_ping", choices=self.klinemethods, style=wx.CB_READONLY)
+		self.klinedetect.SetValue(self.parent.config["DEFAULT"]["klinemethod"])
+
 		self.cancel = wx.Button(panel, label="Cancel")
 		self.ok = wx.Button(panel, label="Ok")
 
@@ -97,8 +105,11 @@ class SettingsDialog(wx.Dialog):
 		g_sizer.Add(self.timeout, pos=(1,3), flag=wx.LEFT|wx.RIGHT, border=5)
 		g_sizer.Add(self.timeoutu, span=(1,2), pos=(1,4), flag=wx.EXPAND)
 
-		g_sizer.Add(self.cancel, span=(1,2), pos=(2,0), flag=wx.ALL, border=10)
-		g_sizer.Add(self.ok, span=(1,2), pos=(2,4), flag=wx.ALL, border=10)
+		g_sizer.Add(self.klinedetectl, span=(1,2), pos=(2,1), flag=wx.EXPAND)
+		g_sizer.Add(self.klinedetect, pos=(2,3), flag=wx.LEFT|wx.RIGHT, border=5)
+
+		g_sizer.Add(self.cancel, span=(1,2), pos=(3,0), flag=wx.ALL, border=10)
+		g_sizer.Add(self.ok, span=(1,2), pos=(3,4), flag=wx.ALL, border=10)
 
 		mainsizer = wx.BoxSizer(wx.VERTICAL)
 		mainsizer.Add(g_sizer, 1, wx.EXPAND)
@@ -114,6 +125,8 @@ class SettingsDialog(wx.Dialog):
 	def OnOk(self, event):
 		self.parent.config["DEFAULT"]["retries"] = self.retries.GetValue()
 		self.parent.config["DEFAULT"]["timeout"] = self.timeout.GetValue()
+		self.parent.config["DEFAULT"]["klinemethod"] = self.klinedetect.GetValue()
+		dispatcher.send(signal="settings", sender=self, config=self.parent.config)
 		self.Hide()
 
 	def OnCancel(self, event):
@@ -227,6 +240,8 @@ class HondaECU_ControlPanel(wx.Frame):
 			self.config['DEFAULT']['retries'] = "1"
 		if not "timeout" in self.config['DEFAULT']:
 			self.config['DEFAULT']['timeout'] = "0.1"
+		if not "klinemethod" in self.config['DEFAULT']:
+			self.config['DEFAULT']['klinemethod'] = "poll_modem_status"
 		with open(self.configfile, 'w') as configfile:
 			self.config.write(configfile)
 		self.nobins = nobins
@@ -251,6 +266,10 @@ class HondaECU_ControlPanel(wx.Frame):
 				"label":"Flash",
 				"panel":HondaECU_FlashPanel,
 			},
+			# "eeprom": {
+			# 	"label":"EEPROM",
+			# 	"panel":HondaECU_EEPROMPanel,
+			# },
 			# "hrc": {
 			# 	"label":"HRC Data Settings",
 			# 	"panel":HondaECU_HRCDataSettingsPanel,
@@ -304,6 +323,7 @@ class HondaECU_ControlPanel(wx.Frame):
 			wx.Image(os.path.join(self.basepath, "images/bullet_purple.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
 			wx.Image(os.path.join(self.basepath, "images/bullet_red.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
 		]
+
 		self.statusbar = ESB.EnhancedStatusBar(self, -1)
 		self.SetStatusBar(self.statusbar)
 		self.statusbar.SetSize((-1, 28))
@@ -323,10 +343,13 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.outerp = wx.Panel(self)
 
 		self.adapterboxp = wx.Panel(self.outerp)
-		self.adapterboxsizer = wx.StaticBoxSizer(wx.VERTICAL, self.adapterboxp, "FTDI Devices:")
+		self.securebutton = wx.Button(self.adapterboxp, label="Secure Mode")
+		self.securebutton.Hide()
+		self.adapterboxsizer = wx.StaticBoxSizer(wx.HORIZONTAL, self.adapterboxp, "FTDI Devices:")
 		self.adapterboxp.SetSizer(self.adapterboxsizer)
 		self.adapterlist = wx.Choice(self.adapterboxp, wx.ID_ANY, size=(-1,32))
-		self.adapterboxsizer.Add(self.adapterlist, 1, wx.ALL|wx.EXPAND, border=10)
+		self.adapterboxsizer.Add(self.adapterlist, 1, wx.ALL|wx.EXPAND, border=5)
+		self.adapterboxsizer.Add(self.securebutton, 0, wx.ALL, border=5)
 
 		self.labelbook = LB.LabelBook(self.outerp, agwStyle=LB.INB_FIT_LABELTEXT|LB.INB_LEFT|LB.INB_DRAW_SHADOW|LB.INB_GRADIENT_BACKGROUND)
 
@@ -373,6 +396,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.mainsizer.SetSizeHints(self)
 		self.SetSizer(self.mainsizer)
 
+		self.securebutton.Bind(wx.EVT_BUTTON, self.OnSecure)
 		self.adapterlist.Bind(wx.EVT_CHOICE, self.OnAdapterSelected)
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -453,6 +477,9 @@ class HondaECU_ControlPanel(wx.Frame):
 			if not info in self.ecuinfo:
 				self.ecuinfo[info] = {}
 			self.ecuinfo[info][value[0]] = value[1:]
+
+	def OnSecure(self, event):
+		print(event)
 
 	def OnSettings(self, event):
 		self.settings.Show()
