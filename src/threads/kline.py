@@ -22,6 +22,7 @@ class KlineWorker(Thread):
 		dispatcher.connect(self.WritePanelHandler, signal="WritePanel", sender=dispatcher.Any)
 		dispatcher.connect(self.HRCSettingsPanelHandler, signal="HRCSettingsPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.SettingsHandler, signal="settings", sender=dispatcher.Any)
+		dispatcher.connect(self.PasswordHandler, signal="sendpassword", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -40,6 +41,7 @@ class KlineWorker(Thread):
 		self.sendwriteinit = False
 		self.sendrecoverinint = False
 		self.hrcmode = None
+		self.securemode = False
 		self.senderase = False
 		self.readinfo = None
 		self.writeinfo = None
@@ -71,6 +73,10 @@ class KlineWorker(Thread):
 
 	def WritePanelHandler(self, data, offset):
 		self.writeinfo = [data,offset,None]
+
+	def PasswordHandler(self, password):
+		if self.state != ECUSTATE.SECURE:
+			self.sendpassword = True
 
 	def ReadPanelHandler(self, data, offset, passwd):
 		if self.state != ECUSTATE.SECURE:
