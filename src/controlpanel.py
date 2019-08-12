@@ -34,40 +34,129 @@ from eculib.honda import ECUSTATE, checksum8bitHonda
 from appdirs import *
 import configparser
 
-class PowerCycleDialog(wx.Dialog):
+class CharValidator(wx.Validator):
 
-	def __init__(self, parent, msg1="", msg2=""):
-		super(PowerCycleDialog, self).__init__(parent, size=(300,150), style=wx.STAY_ON_TOP)
+	def __init__(self, flag):
+		wx.Validator.__init__(self)
+		self.flag = flag
+		self.Bind(wx.EVT_CHAR, self.OnChar)
+
+	def Clone(self):
+		return CharValidator(self.flag)
+
+	def Validate(self, win):
+		return True
+
+	def TransferToWindow(self):
+		return True
+
+	def TransferFromWindow(self):
+		return True
+
+	def OnChar(self, event):
+		keycode = int(event.GetKeyCode())
+		if keycode in [wx.WXK_BACK, wx.WXK_DELETE]:
+			pass
+		elif keycode < 256:
+			self.key = chr(keycode)
+			if not key in string.hexdigits:
+				return
+		event.Skip()
+
+class PasswordDialog(wx.Dialog):
+
+	def __init__(self, parent):
+		self.parent = parent
+		super(PasswordDialog, self).__init__(parent)
+
+		self.secure = False
+
 		panel = wx.Panel(self)
 
-		v_sizer = wx.BoxSizer(wx.VERTICAL)
-		main_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.g_sizer = wx.GridBagSizer()
+
+		self.cancel = wx.Button(panel, label="Cancel")
+		self.ok = wx.Button(panel, label="Ok")
 
 		self.font2 = self.GetFont().Bold()
-		self.font2.SetPointSize(self.font2.GetPointSize()*1.25)
-
-		self.msg1 = wx.StaticText(panel, label=msg1, style=wx.ALIGN_CENTRE_HORIZONTAL, size=(260,30))
+		self.font2.SetPointSize(self.font2.GetPointSize()*1.5)
+		self.msg1 = wx.StaticText(panel,label="Turn OFF ECU",style=wx.ALIGN_CENTRE_HORIZONTAL|wx.ALIGN_CENTRE_VERTICAL)
 		self.msg1.SetFont(self.font2)
-		self.msg2 = wx.StaticText(panel, label=msg2, style=wx.ALIGN_CENTRE_HORIZONTAL, size=(260,30))
-		self.msg2.SetFont(self.font2)
-		v_sizer.Add(self.msg1, 0, wx.CENTER|wx.ALL, border=5)
-		v_sizer.Add(self.msg2, 0, wx.CENTER|wx.ALL, border=5)
+		self.msg1.Hide()
 
-		main_sizer.AddStretchSpacer(prop=1)
-		main_sizer.Add(v_sizer, 0, wx.CENTER)
-		main_sizer.AddStretchSpacer(prop=1)
+		self.passboxp = wx.Panel(panel)
+		self.passp = wx.Panel(self.passboxp)
+		self.passboxsizer = wx.StaticBoxSizer(wx.VERTICAL, self.passboxp, "Password")
+		self.passpsizer = wx.GridBagSizer()
+		self.passp.SetSizer(self.passpsizer)
+		self.passboxp.SetSizer(self.passboxsizer)
+		self.password_chars = []
+		for i, val in enumerate([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75]):
+			H = "%2X" % val
+			self.password_chars.append([
+				wx.StaticText(self.passp, size=(32,-1), label="%s" % chr(val), style=wx.ALIGN_CENTRE_HORIZONTAL),
+				wx.TextCtrl(self.passp, size=(32,32), value=H, validator=CharValidator("hexdigits"))
+			])
+			self.password_chars[-1][0].Disable()
+			self.password_chars[-1][1].SetMaxLength(2)
+			self.password_chars[-1][1].SetHint(H)
+			self.Bind(wx.EVT_TEXT, lambda x, index=i: self.OnPassByte(x, index), self.password_chars[-1][1])
+			self.passpsizer.Add(self.password_chars[-1][1], pos=(0,i), flag=wx.LEFT|wx.RIGHT, border=1)
+			self.passpsizer.Add(self.password_chars[-1][0], pos=(1,i), flag=wx.LEFT|wx.RIGHT, border=1)
+		self.passboxsizer.Add(self.passp, 0, wx.ALL, border=10)
 
-		panel.SetSizer(main_sizer)
+		self.g_sizer.Add(self.passboxp, span=(1,4), pos=(0,0), flag=wx.TOP|wx.EXPAND, border=5)
+		self.g_sizer.Add(self.cancel, pos=(1,1), flag=wx.ALL, border=10)
+		self.g_sizer.Add(self.ok, pos=(1,2), flag=wx.ALL, border=10)
 
-	def ShowPowerOn(self, msg1=""):
+		mainsizer = wx.BoxSizer(wx.VERTICAL)
+		mainsizer.Add(self.g_sizer, 1, wx.EXPAND)
+		mainsizer.Add(self.msg1, 1, wx.EXPAND|wx.TOP, border=50)
+		mainsizer.SetSizeHints(self)
+		self.SetSizer(mainsizer)
+
+		self.cancel.Bind(wx.EVT_BUTTON, self.OnCancel)
+		self.ok.Bind(wx.EVT_BUTTON, self.OnOk)
+
+		self.Center()
+		self.Layout()
+
+		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+
+	def KlineWorkerHandler(self, info, value):
+		if info == "state":
+			if value == ECUSTATE.SECURE:
+				if self.secure:
+					self.secure = False
+					self.Hide()
+			elif value == ECUSTATE.OFF:
+				if self.secure:
+					self.msg1.SetLabel("Turn On ECU")
+					self.Layout()
+
+	def _Show(self, msg1="Turn Off ECU"):
+		self.secure = False
 		self.msg1.SetLabel(msg1)
-		self.msg2.SetLabel("Turn on ECU")
+		self.msg1.Hide()
+		self.passboxp.Show()
+		self.ok.Show()
+		self.cancel.Show()
 		self.Show()
+		self.Layout()
 
-	def ShowPowerOff(self, msg1=""):
-		self.msg1.SetLabel(msg1)
-		self.msg2.SetLabel("Turn off ECU")
-		self.Show()
+	def OnOk(self, event):
+		self.secure = True
+		self.passboxp.Hide()
+		self.ok.Hide()
+		self.cancel.Hide()
+		self.msg1.Show()
+		self.msg1.SetLabel("Turn Off ECU")
+		self.Layout()
+		passwd = [int(P[1].GetValue(),16) for P in self.password_chars]
+		dispatcher.send(signal="sendpassword", sender=self, passwd=passwd)
+
+	def OnCancel(self, event):
+		self.Hide()
 
 class SettingsDialog(wx.Dialog):
 
@@ -89,7 +178,7 @@ class SettingsDialog(wx.Dialog):
 		self.timeoutu = wx.StaticText(panel, label="seconds", style=wx.ALIGN_LEFT)
 		self.timeout.SetValue(self.parent.config["DEFAULT"]["timeout"])
 
-		self.klinemethods = ["loopback_ping","poll_modem_status"]
+		self.klinemethods = ["loopback_ping"]
 		self.klinedetectl = wx.StaticText(panel, label="Kline Detection:", style=wx.ALIGN_RIGHT)
 		self.klinedetect = wx.ComboBox(panel, value="loopback_ping", choices=self.klinemethods, style=wx.CB_READONLY)
 		self.klinedetect.SetValue(self.parent.config["DEFAULT"]["klinemethod"])
@@ -194,7 +283,7 @@ class HondaECU_LogPanel(wx.Frame):
 		self.menubar.Append(viewMenu, '&View')
 		self.autoscrollItem = viewMenu.AppendCheckItem(wx.ID_ANY, 'Auto scroll log')
 		self.autoscrollItem.Check()
-		self.logText = wx.TextCtrl(self, style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+		self.logText = wx.TextCtrl(self, style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		sizer.Add(self.logText, 1, wx.EXPAND|wx.ALL, 5)
 		self.SetSizer(sizer)
@@ -241,7 +330,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		if not "timeout" in self.config['DEFAULT']:
 			self.config['DEFAULT']['timeout'] = "0.1"
 		if not "klinemethod" in self.config['DEFAULT']:
-			self.config['DEFAULT']['klinemethod'] = "poll_modem_status"
+			self.config['DEFAULT']['klinemethod'] = "loopback_ping"
+		else:
+			if self.config['DEFAULT']['klinemethod'] == "poll_modem_status":
+				self.config['DEFAULT']['klinemethod'] = "loopback_ping"
 		with open(self.configfile, 'w') as configfile:
 			self.config.write(configfile)
 		self.nobins = nobins
@@ -344,7 +436,6 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		self.adapterboxp = wx.Panel(self.outerp)
 		self.securebutton = wx.Button(self.adapterboxp, label="Secure Mode")
-		self.securebutton.Hide()
 		self.adapterboxsizer = wx.StaticBoxSizer(wx.HORIZONTAL, self.adapterboxp, "FTDI Devices:")
 		self.adapterboxp.SetSizer(self.adapterboxsizer)
 		self.adapterlist = wx.Choice(self.adapterboxp, wx.ID_ANY, size=(-1,32))
@@ -416,8 +507,8 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.usbmonitor.start()
 		self.klineworker.start()
 
-		self.powercycle = PowerCycleDialog(self)
 		self.settings = SettingsDialog(self)
+		self.passwordd = PasswordDialog(self)
 
 	def __clear_data(self):
 		self.ecuinfo = {}
@@ -435,6 +526,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		if info in ["ecmid","flashcount","dtc","dtccount","state"]:
 			self.ecuinfo[info] = value
 			if info == "state":
+				self.securebutton.Enable(False)
 				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
 				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
 					self.__clear_widgets()
@@ -442,6 +534,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				elif value in [ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD]: #YELLOW
 					self.statusicon.SetBitmap(self.statusicons[1])
 				elif value in [ECUSTATE.OK]: #GREEN
+					self.securebutton.Enable(True)
 					self.statusicon.SetBitmap(self.statusicons[2])
 				elif value in [ECUSTATE.FLASH]: #BLUE
 					self.statusicon.SetBitmap(self.statusicons[3])
@@ -479,7 +572,7 @@ class HondaECU_ControlPanel(wx.Frame):
 			self.ecuinfo[info][value[0]] = value[1:]
 
 	def OnSecure(self, event):
-		print(event)
+		self.passwordd._Show()
 
 	def OnSettings(self, event):
 		self.settings.Show()
@@ -490,11 +583,12 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.run = False
 		self.usbmonitor.join()
 		self.klineworker.join()
+		wx.Yield()
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
 	def sigint_handler(self, sig, frame):
-		self.OnClose(None)
+		wx.CallAfter(self.OnClose,None)
 
 	def OnDetectMap(self, event):
 		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
