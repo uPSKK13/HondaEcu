@@ -67,6 +67,8 @@ ECM_IDs = {
 	b"\x01\x00\xfa\x10\x01": {"model":"CBR150R","year":"2010-2014","pn":"38770-KPP-N02"},
 	b"\x01\x00\xc5\x0d\x02": {"model":"CBR150R","year":"?","pn":"38770-KPP-????"},
 
+	b"\x01\x02\x32\x0f\x01": {"model":"CRF150L","year":"2017","pn":"38770-K84-901"},
+
 	b"\x01\x01\x35\x05\x01": {"model":"MSX125","year":"2013-2015","pn":"38770-K26-911","checksum":"0x0","offset":"0x4000","ecmidaddr":"0x97cd","keihinaddr":"0x7601"},
 	b"\x01\x01\x35\x01\x01": {"model":"MSX125","year":"2013-2015","pn":"38770-K26-931","checksum":"0x0","offset":"0x4000","ecmidaddr":"0x97cd","keihinaddr":"0x7601"},
 	b"\x01\x02\x13\x05\x01": {"model":"MSX125","year":"2016-2019","pn":"38770-K26-B13","checksum":"0x0","offset":"0x8000","ecmidaddr":"0x23B8","keihinaddr":"0x1"},
