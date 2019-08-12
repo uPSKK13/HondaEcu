@@ -36,6 +36,7 @@ class KlineWorker(Thread):
 
 	def __clear_data(self):
 		self.ecu = None
+		self.password = None
 		self.ready = False
 		self.sendpassword = False
 		self.sendwriteinit = False
@@ -74,14 +75,13 @@ class KlineWorker(Thread):
 	def WritePanelHandler(self, data, offset):
 		self.writeinfo = [data,offset,None]
 
-	def PasswordHandler(self, password):
+	def PasswordHandler(self, passwd):
 		if self.state != ECUSTATE.SECURE:
 			self.sendpassword = True
+			self.password = passwd
 
-	def ReadPanelHandler(self, data, offset, passwd):
-		if self.state != ECUSTATE.SECURE:
-			self.sendpassword = True
-		self.readinfo = [data,offset,None, passwd]
+	def ReadPanelHandler(self, data, offset):
+		self.readinfo = [data,offset,None]
 
 	def DatalogPanelHandler(self, action):
 		if action == "data.on":
@@ -105,7 +105,7 @@ class KlineWorker(Thread):
 				self.__cleanup()
 		elif action == "activate":
 			self.__clear_data()
-			self.ecu = HondaECU(KlineAdapter(config), retries=int(self.parent.config["DEFAULT"]["retries"]), timeout=float(self.parent.config["DEFAULT"]["timeout"]))
+			self.ecu = HondaECU(KlineAdapter(config, retries=int(self.parent.config["DEFAULT"]["retries"]), timeout=float(self.parent.config["DEFAULT"]["timeout"])))
 			self.ready = True
 
 	def read_flash(self):
@@ -118,6 +118,8 @@ class KlineWorker(Thread):
 			size = location
 			rate = 0
 			while not self.readinfo is None:
+				if not self.parent.run:
+					return "interrupted"
 				status, data = self.ecu._read_flash_bytes(location, readsize)
 				if status:
 					fbin.write(data)
@@ -379,8 +381,8 @@ class KlineWorker(Thread):
 				self.reset_state()
 
 	def do_password(self):
-		p1 = self.ecu.send_command([0x27],[0xe0] + self.readinfo[3][:7])
-		p2 = self.ecu.send_command([0x27],[0xe0] + self.readinfo[3][7:])
+		p1 = self.ecu.send_command([0x27],[0xe0] + self.password[:7])
+		p2 = self.ecu.send_command([0x27],[0xe0] + self.password[7:])
 		passok = (p1 != None) and (p2 != None)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 

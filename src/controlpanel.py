@@ -80,7 +80,7 @@ class PasswordDialog(wx.Dialog):
 
 		self.font2 = self.GetFont().Bold()
 		self.font2.SetPointSize(self.font2.GetPointSize()*1.5)
-		self.msg1 = wx.StaticText(panel,label="Turn OFF ECU")
+		self.msg1 = wx.StaticText(panel,label="Turn OFF ECU",style=wx.ALIGN_CENTRE_HORIZONTAL|wx.ALIGN_CENTRE_VERTICAL)
 		self.msg1.SetFont(self.font2)
 		self.msg1.Hide()
 
@@ -111,7 +111,7 @@ class PasswordDialog(wx.Dialog):
 
 		mainsizer = wx.BoxSizer(wx.VERTICAL)
 		mainsizer.Add(self.g_sizer, 1, wx.EXPAND)
-		mainsizer.Add(self.msg1, 0, wx.ALIGN_CENTRE_HORIZONTAL|wx.ALIGN_CENTRE_VERTICAL|wx.TOP, border=50)
+		mainsizer.Add(self.msg1, 1, wx.EXPAND|wx.TOP, border=50)
 		mainsizer.SetSizeHints(self)
 		self.SetSizer(mainsizer)
 
@@ -125,9 +125,14 @@ class PasswordDialog(wx.Dialog):
 
 	def KlineWorkerHandler(self, info, value):
 		if info == "state":
-			if self.secure and value == ECUSTATE.SECURE:
-				self.secure = False
-				self.Hide()
+			if value == ECUSTATE.SECURE:
+				if self.secure:
+					self.secure = False
+					self.Hide()
+			elif value == ECUSTATE.OFF:
+				if self.secure:
+					self.msg1.SetLabel("Turn On ECU")
+					self.Layout()
 
 	def _Show(self, msg1="Turn Off ECU"):
 		self.secure = False
@@ -145,9 +150,10 @@ class PasswordDialog(wx.Dialog):
 		self.ok.Hide()
 		self.cancel.Hide()
 		self.msg1.Show()
+		self.msg1.SetLabel("Turn Off ECU")
 		self.Layout()
 		passwd = [int(P[1].GetValue(),16) for P in self.password_chars]
-		dispatcher.send(signal="sendpassowrd", sender=self, passwd=passwd)
+		dispatcher.send(signal="sendpassword", sender=self, passwd=passwd)
 
 	def OnCancel(self, event):
 		self.Hide()
@@ -172,7 +178,7 @@ class SettingsDialog(wx.Dialog):
 		self.timeoutu = wx.StaticText(panel, label="seconds", style=wx.ALIGN_LEFT)
 		self.timeout.SetValue(self.parent.config["DEFAULT"]["timeout"])
 
-		self.klinemethods = ["loopback_ping","poll_modem_status"]
+		self.klinemethods = ["loopback_ping"]
 		self.klinedetectl = wx.StaticText(panel, label="Kline Detection:", style=wx.ALIGN_RIGHT)
 		self.klinedetect = wx.ComboBox(panel, value="loopback_ping", choices=self.klinemethods, style=wx.CB_READONLY)
 		self.klinedetect.SetValue(self.parent.config["DEFAULT"]["klinemethod"])
@@ -324,7 +330,10 @@ class HondaECU_ControlPanel(wx.Frame):
 		if not "timeout" in self.config['DEFAULT']:
 			self.config['DEFAULT']['timeout'] = "0.1"
 		if not "klinemethod" in self.config['DEFAULT']:
-			self.config['DEFAULT']['klinemethod'] = "poll_modem_status"
+			self.config['DEFAULT']['klinemethod'] = "loopback_ping"
+		else:
+			if self.config['DEFAULT']['klinemethod'] == "poll_modem_status":
+				self.config['DEFAULT']['klinemethod'] = "loopback_ping"
 		with open(self.configfile, 'w') as configfile:
 			self.config.write(configfile)
 		self.nobins = nobins
@@ -517,6 +526,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		if info in ["ecmid","flashcount","dtc","dtccount","state"]:
 			self.ecuinfo[info] = value
 			if info == "state":
+				self.securebutton.Enable(False)
 				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
 				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
 					self.__clear_widgets()
@@ -524,6 +534,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				elif value in [ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD]: #YELLOW
 					self.statusicon.SetBitmap(self.statusicons[1])
 				elif value in [ECUSTATE.OK]: #GREEN
+					self.securebutton.Enable(True)
 					self.statusicon.SetBitmap(self.statusicons[2])
 				elif value in [ECUSTATE.FLASH]: #BLUE
 					self.statusicon.SetBitmap(self.statusicons[3])
@@ -572,11 +583,12 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.run = False
 		self.usbmonitor.join()
 		self.klineworker.join()
+		wx.Yield()
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
 
 	def sigint_handler(self, sig, frame):
-		self.OnClose(None)
+		wx.CallAfter(self.OnClose,None)
 
 	def OnDetectMap(self, event):
 		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:

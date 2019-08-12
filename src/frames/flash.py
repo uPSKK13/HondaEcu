@@ -178,16 +178,14 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 					self.lastpulse = pulse
 			if value[1] and value[1] == "interrupted":
 				self.progressboxp.Hide()
-				# self.passboxp.Show()
 				wx.MessageDialog(None, 'Read interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progress_text.SetLabel("Read: " + value[1])
 			self.Layout()
 		elif info == "read.result":
 			self.progress.SetValue(0)
 			self.reboot = True
-			self.parent.powercycle.ShowPowerOff("Read: complete (result=%s)" % value)
+			wx.MessageDialog(None, 'Read: complete (result=%s)' % value, "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progressboxp.Hide()
-			# self.passboxp.Show()
 			self.Layout()
 		if info == "write.progress":
 			if value[0]!= None and value[0] >= 0:
@@ -202,27 +200,14 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		elif info == "write.result":
 			self.progress.SetValue(0)
 			self.reboot = True
-			self.parent.powercycle.ShowPowerOff("Write: complete (result=%s)" % value)
-			self.progress_text.SetLabel("Write: complete (result=%s)" % value)
+			wx.MessageDialog(None, 'Write: complete (result=%s)' % value, "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.Layout()
-		# elif info == "state":
-		# 	if value == ECUSTATE.OFF:
-		# 		if self.bootwait:
-		# 			self.parent.powercycle.ShowPowerOn("Preparing to read ECU...")
-		# 		else:
-		# 			if self.reboot:
-		# 				self.parent.powercycle.Hide()
-		# 				self.reboot = False
-		# 			self.progress_text.SetLabel("")
-		# 	self.OnValidateMode(None)
 		elif info == "password":
-			self.parent.powercycle.Hide()
+			self.parent.passwordd.Hide()
 			if not value:
 				self.progressboxp.Hide()
-				# self.passboxp.Show()
 			else:
 				self.progressboxp.Show()
-				# self.passboxp.Hide()
 				self.bootwait = False
 			self.Layout()
 
@@ -233,11 +218,8 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			data = self.readfpicker.GetPath()
 			if self.parent.ecuinfo["state"] != ECUSTATE.SECURE:
 				self.bootwait = True
-				self.parent.powercycle.ShowPowerOff("Preparing to read ECU...")
 			self.progressboxp.Show()
-			# self.passboxp.Hide()
 			self.Layout()
-			# passwd = [int(P[1].GetValue(),16) for P in self.password_chars]
 			dispatcher.send(signal="ReadPanel", sender=self, data=data, offset=offset)
 		else:
 			if self.htfoffset != None:
