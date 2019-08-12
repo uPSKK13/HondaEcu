@@ -1,8 +1,6 @@
 import sys
 import argparse
 
-import signal
-
 from wx import App
 
 from version import __VERSION__
@@ -21,7 +19,6 @@ if __name__ == '__main__':
 		print(__VERSION__)
 		sys.exit(0)
 
-	app = App(redirect=not args.noredirect)
+	app = App(redirect=not args.noredirect, useBestVisual=True)
 	gui = HondaECU_ControlPanel(__VERSION__)
-	signal.signal(signal.SIGINT, gui.sigint_handler)
 	app.MainLoop()

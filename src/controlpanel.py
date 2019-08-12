@@ -358,10 +358,10 @@ class HondaECU_ControlPanel(wx.Frame):
 				"label":"Flash",
 				"panel":HondaECU_FlashPanel,
 			},
-			# "eeprom": {
-			# 	"label":"EEPROM",
-			# 	"panel":HondaECU_EEPROMPanel,
-			# },
+			"eeprom": {
+				"label":"EEPROM",
+				"panel":HondaECU_EEPROMPanel,
+			},
 			# "hrc": {
 			# 	"label":"HRC Data Settings",
 			# 	"panel":HondaECU_HRCDataSettingsPanel,
@@ -435,7 +435,7 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.outerp = wx.Panel(self)
 
 		self.adapterboxp = wx.Panel(self.outerp)
-		self.securebutton = wx.Button(self.adapterboxp, label="Secure Mode")
+		self.securebutton = wx.Button(self.adapterboxp, label="Security Access")
 		self.adapterboxsizer = wx.StaticBoxSizer(wx.HORIZONTAL, self.adapterboxp, "FTDI Devices:")
 		self.adapterboxp.SetSizer(self.adapterboxsizer)
 		self.adapterlist = wx.Choice(self.adapterboxp, wx.ID_ANY, size=(-1,32))
@@ -586,12 +586,8 @@ class HondaECU_ControlPanel(wx.Frame):
 		self.run = False
 		self.usbmonitor.join()
 		self.klineworker.join()
-		wx.Yield()
 		for w in wx.GetTopLevelWindows():
 			w.Destroy()
-
-	def sigint_handler(self, sig, frame):
-		wx.CallAfter(self.OnClose,None)
 
 	def OnDetectMap(self, event):
 		with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:

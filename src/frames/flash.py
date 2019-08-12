@@ -17,8 +17,6 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		else:
 			self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
 		self.byts = None
-		self.bootwait = False
-		self.reboot = False
 
 		self.mainp = wx.Panel(self)
 		self.wfilel = wx.StaticText(self.mainp, label="File")
@@ -183,7 +181,6 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			self.Layout()
 		elif info == "read.result":
 			self.progress.SetValue(0)
-			self.reboot = True
 			wx.MessageDialog(None, 'Read: complete (result=%s)' % value, "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progressboxp.Hide()
 			self.Layout()
@@ -199,7 +196,6 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 			self.Layout()
 		elif info == "write.result":
 			self.progress.SetValue(0)
-			self.reboot = True
 			wx.MessageDialog(None, 'Write: complete (result=%s)' % value, "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.Layout()
 		elif info == "password":
@@ -208,7 +204,6 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				self.progressboxp.Hide()
 			else:
 				self.progressboxp.Show()
-				self.bootwait = False
 			self.Layout()
 
 	def OnGo(self, event):
@@ -216,8 +211,6 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 		if self.modebox.GetSelection() == 0:
 			offset = int(self.offset.GetValue(), 16)
 			data = self.readfpicker.GetPath()
-			if self.parent.ecuinfo["state"] != ECUSTATE.SECURE:
-				self.bootwait = True
 			self.progressboxp.Show()
 			self.Layout()
 			dispatcher.send(signal="ReadPanel", sender=self, data=data, offset=offset)

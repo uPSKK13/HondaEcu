@@ -23,6 +23,7 @@ class KlineWorker(Thread):
 		dispatcher.connect(self.HRCSettingsPanelHandler, signal="HRCSettingsPanel", sender=dispatcher.Any)
 		dispatcher.connect(self.SettingsHandler, signal="settings", sender=dispatcher.Any)
 		dispatcher.connect(self.PasswordHandler, signal="sendpassword", sender=dispatcher.Any)
+		dispatcher.connect(self.EEPROMHandler, signal="eeprom", sender=dispatcher.Any)
 		Thread.__init__(self)
 
 	def __cleanup(self):
@@ -46,6 +47,7 @@ class KlineWorker(Thread):
 		self.senderase = False
 		self.readinfo = None
 		self.writeinfo = None
+		self.eeprominfo = None
 		self.state = ECUSTATE.UNKNOWN
 		self.reset_state()
 
@@ -62,8 +64,8 @@ class KlineWorker(Thread):
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
 
 	def SettingsHandler(self, config):
-		self.ecu.dev.timeout = config["DEFAULT"]["timeout"]
-		self.ecu.dev.retries = config["DEFAULT"]["retries"]
+		self.ecu.dev.timeout = float(config["DEFAULT"]["timeout"])
+		self.ecu.dev.retries = int(config["DEFAULT"]["retries"])
 		if config["DEFAULT"]["klinemethod"] == "poll_modem_status":
 			self.ecu.dev.kline = self.ecu.dev.kline_poll_modem_status
 		else:
@@ -73,7 +75,10 @@ class KlineWorker(Thread):
 		self.hrcmode = (mode, data)
 
 	def WritePanelHandler(self, data, offset):
-		self.writeinfo = [data,offset,None]
+		self.writeinfo = [data, offset, None]
+
+	def EEPROMHandler(self, cmd, data):
+		self.eeprominfo = [cmd, data, None]
 
 	def PasswordHandler(self, passwd):
 		if self.state != ECUSTATE.SECURE:
@@ -81,7 +86,7 @@ class KlineWorker(Thread):
 			self.password = passwd
 
 	def ReadPanelHandler(self, data, offset):
-		self.readinfo = [data,offset,None]
+		self.readinfo = [data, offset, None]
 
 	def DatalogPanelHandler(self, action):
 		if action == "data.on":
@@ -107,6 +112,40 @@ class KlineWorker(Thread):
 			self.__clear_data()
 			self.ecu = HondaECU(KlineAdapter(config, retries=int(self.parent.config["DEFAULT"]["retries"]), timeout=float(self.parent.config["DEFAULT"]["timeout"])))
 			self.ready = True
+
+	def read_eeprom(self):
+		ret = "good"
+		binfile = self.eeprominfo[1]
+		rom = bytearray()
+		t = time.time()
+		offset = 0
+		rate = 0
+		rb = 0
+		while not self.eeprominfo is None and offset <= 0xff:
+			if not self.parent.run:
+				return "interrupted"
+			status, data = self.ecu._read_eeprom_word(offset)
+			if status:
+				rom += bytearray(data)
+				offset += 1
+				rb += 2
+				n = time.time()
+				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.progress", value=(offset/256*100.0,None))
+				if n-t > 1:
+					rate = rb/(n-t)
+					t = n
+					rb = 0
+			else:
+				ret = "bad"
+				break
+		if ret == "good":
+			end = 512
+			if rom[:256] == rom[256:]:
+				end = 256
+			with open(binfile, "wb") as eeprom:
+				eeprom.write(rom[:end])
+				eeprom.flush()
+		return ret
 
 	def read_flash(self):
 		readsize = 12
@@ -258,6 +297,19 @@ class KlineWorker(Thread):
 		self.do_update_state()
 		return ret
 
+	def do_read_eeprom(self):
+		self.do_update_state()
+		ret = 1
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom", value=None)
+		self.eeprominfo[2] = self.read_eeprom()
+		if self.eeprominfo[2] == "interrupted":
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.progress", value=(0, "interrupted"))
+		else:
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.result", value=self.eeprominfo[2])
+			ret = 0
+		self.do_update_state()
+		return ret
+
 	def do_read(self):
 		self.do_update_state()
 		ret = 1
@@ -385,6 +437,7 @@ class KlineWorker(Thread):
 		p2 = self.ecu.send_command([0x27],[0xe0] + self.password[7:])
 		passok = (p1 != None) and (p2 != None)
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
+		return not passok
 
 	def write_helper(self, init=False, recover=False, nodiag=False):
 		ret = 1
@@ -403,37 +456,54 @@ class KlineWorker(Thread):
 		self.readinfo = None
 		return ret
 
+	def read_eeprom_helper(self):
+		ret = self.do_read_eeprom()
+		self.eeprominfo = None
+		return ret
+
 	def do_on_power(self):
+		ret = 0
 		if self.sendpassword:
-			self.do_password()
+			ret += self.do_password()
 			self.sendpassword = False
+		return ret
 
 	def do_connected(self):
+		ret = 1
 		if self.state == ECUSTATE.OK:
 			if self.writeinfo is not None:
-				return self.write_helper(init=True)
+				ret = self.write_helper(init=True)
 			else:
-				return self.do_idle_tasks()
+				ret = self.do_idle_tasks()
 		elif self.state == ECUSTATE.RECOVER_OLD:
 			self.do_basic_tasks()
 			if self.writeinfo is not None:
-				return self.write_helper(init=True)
+				ret = self.write_helper(init=True)
 		elif self.state == ECUSTATE.RECOVER_NEW:
 			self.do_basic_tasks()
 			if self.writeinfo is not None:
-				return self.write_helper(init=True, recover=True)
-		return False
+				ret = self.write_helper(init=True, recover=True)
+		return ret
 
-	def do_exceptions(self):
+	def do_secure(self):
 		ret = 1
 		if self.state == ECUSTATE.SECURE:
 			if self.readinfo is not None:
 				ret = self.read_helper()
-		elif self.state == ECUSTATE.FLASH:
+			elif self.eeprominfo is not None:
+				if self.eeprominfo[0] == "read":
+					ret = self.read_eeprom_helper()
+				elif self.eeprominfo[0] == "write":
+					print("write eeprom")
+				elif self.eeprominfo[0] == "format":
+					print("format eeprom")
+		return ret
+
+	def do_exceptions(self):
+		ret = 1
+		if self.state == ECUSTATE.FLASH:
 			if self.writeinfo is not None:
 				return self.write_helper(nodiag=True)
-		else:
-			pass
 		return ret
 
 	def run(self):
@@ -441,21 +511,24 @@ class KlineWorker(Thread):
 			if not self.ready:
 				time.sleep(.001)
 			else:
+				print(self.state,self.sendpassword)
 				try:
-					if self.state in [ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
+					if self.state == ECUSTATE.UNKNOWN:
 						self.do_update_state()
-						if self.state not in [ECUSTATE.OFF, ECUSTATE.UNKNOWN]:
-							self.do_on_power()
-						else:
-							self.ecu.init()
-							self.ecu.ping()
+					elif self.state == ECUSTATE.OFF:
+						self.do_update_state()
+						if self.state  == ECUSTATE.OK:
+							if self.do_on_power() > 0:
+								self.do_update_state()
+					elif self.state == ECUSTATE.SECURE:
+						if self.do_secure() > 0:
+							self.do_update_state()
+					elif self.state == ECUSTATE.OK:
+						if self.do_connected() > 0:
+							self.do_update_state()
 					else:
-						if self.ecu.diag():
-							if self.do_connected() > 0:
-								self.do_update_state()
-						else:
-							if self.do_exceptions() > 0:
-								self.do_update_state()
+						if self.do_exceptions() > 0:
+							self.do_update_state()
 				except AttributeError:
 					pass
 				except OSError:
