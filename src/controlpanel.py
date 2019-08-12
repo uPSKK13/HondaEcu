@@ -436,6 +436,7 @@ class HondaECU_ControlPanel(wx.Frame):
 
 		self.adapterboxp = wx.Panel(self.outerp)
 		self.securebutton = wx.Button(self.adapterboxp, label="Security Access")
+		self.securebutton.Enable(False)
 		self.adapterboxsizer = wx.StaticBoxSizer(wx.HORIZONTAL, self.adapterboxp, "FTDI Devices:")
 		self.adapterboxp.SetSizer(self.adapterboxsizer)
 		self.adapterlist = wx.Choice(self.adapterboxp, wx.ID_ANY, size=(-1,32))

@@ -310,6 +310,17 @@ class KlineWorker(Thread):
 		self.do_update_state()
 		return ret
 
+	def do_format_eeprom(self, mode):
+		self.do_update_state()
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="format_eeprom", value=None)
+		if mode == 1:
+			status, _ = self.ecu._format_eeprom_FF()
+		else:
+			status, _ = self.ecu._format_eeprom_00()
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="format_eeprom.result", value=status)
+		self.do_update_state()
+		return not status
+
 	def do_read(self):
 		self.do_update_state()
 		ret = 1
@@ -461,6 +472,11 @@ class KlineWorker(Thread):
 		self.eeprominfo = None
 		return ret
 
+	def format_eeprom_helper(self, mode):
+		ret = self.do_format_eeprom(mode)
+		self.eeprominfo = None
+		return ret
+
 	def do_on_power(self):
 		ret = 0
 		if self.sendpassword:
@@ -496,7 +512,7 @@ class KlineWorker(Thread):
 				elif self.eeprominfo[0] == "write":
 					print("write eeprom")
 				elif self.eeprominfo[0] == "format":
-					print("format eeprom")
+					ret = self.format_eeprom_helper(self.eeprominfo[1])
 		return ret
 
 	def do_exceptions(self):
@@ -511,7 +527,6 @@ class KlineWorker(Thread):
 			if not self.ready:
 				time.sleep(.001)
 			else:
-				print(self.state,self.sendpassword)
 				try:
 					if self.state == ECUSTATE.UNKNOWN:
 						self.do_update_state()

@@ -141,9 +141,21 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
 				self.progressboxp.Hide()
 				wx.MessageDialog(None, 'Read EEPROM interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progress_text.SetLabel("Reading EEPROM")
-			self.Layout()
+			self.OnValidateMode(None)
 		elif info == "read_eeprom.result":
 			self.progress.SetValue(0)
 			wx.MessageDialog(None, 'Read EEPROM complete', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progressboxp.Hide()
-			self.Layout()
+			self.OnValidateMode(None)
+		elif info == "format_eeprom":
+			self.progress_text.SetLabel("")
+			self.progress.SetValue(0)
+			self.OnValidateMode(None)
+		elif info == "format_eeprom.result":
+			self.progress_text.SetLabel("")
+			self.progress.SetValue(0)
+			wx.MessageDialog(None, 'Format EEPROM complete', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
+			self.progressboxp.Hide()
+			self.OnValidateMode(None)
+		elif info == "state":
+			wx.CallAfter(self.OnValidateMode, None)
