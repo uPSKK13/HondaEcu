@@ -540,6 +540,9 @@ class HondaECU_ControlPanel(wx.Frame):
 					self.statusicon.SetBitmap(self.statusicons[3])
 				elif value in [ECUSTATE.SECURE]: #PURPLE
 					self.statusicon.SetBitmap(self.statusicons[4])
+					self.modell.SetLabel("Unknown Model")
+					self.ecupnl.SetLabel("~ Security Access Mode ~")
+					self.Layout()
 				# elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
 				# 	self.statusicon.SetBitmap(self.statusicons[5])
 			elif info == "ecmid":
