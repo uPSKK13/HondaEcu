@@ -43,7 +43,7 @@ class CharValidator(wx.Validator):
             pass
         elif keycode < 256:
             self.key = chr(keycode)
-            if not key in string.hexdigits:
+            if key not in string.hexdigits:
                 return
         event.Skip()
 
@@ -101,15 +101,23 @@ class PasswordDialog(wx.Dialog):
         mainsizer.SetSizeHints(self)
         self.SetSizer(mainsizer)
 
-        self.cancel.Bind(wx.EVT_BUTTON, self.OnCancel)
-        self.ok.Bind(wx.EVT_BUTTON, self.OnOk)
+        self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
+        self.ok.Bind(wx.EVT_BUTTON, self.on_ok)
 
         self.Center()
         self.Layout()
 
-        dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+        dispatcher.connect(self.kline_worker_handler, signal="KlineWorker", sender=dispatcher.Any)
 
-    def KlineWorkerHandler(self, info, value):
+    def OnPassByte(self, event, i):
+        B = ""
+        try:
+            B = "%s" % chr(int(self.password_chars[i][1].GetValue(), 16))
+        except:
+            pass
+        self.password_chars[i][0].SetLabel(B)
+
+    def kline_worker_handler(self, info, value):
         if info == "state":
             if value == ECUSTATE.SECURE:
                 if self.secure:
@@ -130,7 +138,7 @@ class PasswordDialog(wx.Dialog):
         self.Show()
         self.Layout()
 
-    def OnOk(self, event):
+    def on_ok(self, event):
         self.secure = True
         self.passboxp.Hide()
         self.ok.Hide()
@@ -141,7 +149,7 @@ class PasswordDialog(wx.Dialog):
         passwd = [int(P[1].GetValue(), 16) for P in self.password_chars]
         dispatcher.send(signal="sendpassword", sender=self, passwd=passwd)
 
-    def OnCancel(self, event):
+    def on_cancel(self, event):
         self.Hide()
 
 
@@ -192,20 +200,20 @@ class SettingsDialog(wx.Dialog):
         mainsizer.SetSizeHints(self)
         self.SetSizer(mainsizer)
 
-        self.cancel.Bind(wx.EVT_BUTTON, self.OnCancel)
-        self.ok.Bind(wx.EVT_BUTTON, self.OnOk)
+        self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
+        self.ok.Bind(wx.EVT_BUTTON, self.on_ok)
 
         self.Center()
         self.Layout()
 
-    def OnOk(self, event):
+    def on_ok(self, event):
         self.parent.config["DEFAULT"]["retries"] = self.retries.GetValue()
         self.parent.config["DEFAULT"]["timeout"] = self.timeout.GetValue()
         self.parent.config["DEFAULT"]["klinemethod"] = self.klinedetect.GetValue()
         dispatcher.send(signal="settings", sender=self, config=self.parent.config)
         self.Hide()
 
-    def OnCancel(self, event):
+    def on_cancel(self, event):
         self.Hide()
 
 
@@ -227,8 +235,6 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
             if self.bmpSelected and not self.up:
                 bmp = self.bmpSelected
             bw, bh = bmp.GetWidth(), bmp.GetHeight()
-            if not self.up:
-                dx = dy = self.labelDelta
             hasMask = bmp.GetMask() is not None
         else:
             bw = bh = 0
@@ -242,8 +248,6 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
 
         label = self.GetLabel()
         tw, th = dc.GetTextExtent(label)
-        if not self.up:
-            dx = dy = self.labelDelta
 
         if bmp is not None:
             dc.DrawBitmap(bmp, (width - bw) / 2, (height - bh - th - 4) / 2, hasMask)
@@ -259,18 +263,18 @@ class HondaECU_LogPanel(wx.Frame):
 
         self.menubar = wx.MenuBar()
         self.SetMenuBar(self.menubar)
-        fileMenu = wx.Menu()
-        self.menubar.Append(fileMenu, '&File')
-        saveItem = wx.MenuItem(fileMenu, wx.ID_SAVEAS, '&Save As\tCtrl+S')
+        filemenu = wx.Menu()
+        self.menubar.Append(filemenu, '&File')
+        saveItem = wx.MenuItem(filemenu, wx.ID_SAVEAS, '&Save As\tCtrl+S')
         self.Bind(wx.EVT_MENU, self.OnSave, saveItem)
-        fileMenu.Append(saveItem)
-        fileMenu.AppendSeparator()
-        quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
-        self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
-        fileMenu.Append(quitItem)
-        viewMenu = wx.Menu()
-        self.menubar.Append(viewMenu, '&View')
-        self.autoscrollItem = viewMenu.AppendCheckItem(wx.ID_ANY, 'Auto scroll log')
+        filemenu.Append(saveItem)
+        filemenu.AppendSeparator()
+        quititem = wx.MenuItem(filemenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
+        self.Bind(wx.EVT_MENU, self.OnClose, quititem)
+        filemenu.Append(quititem)
+        viewmenu = wx.Menu()
+        self.menubar.Append(viewmenu, '&View')
+        self.autoscrollItem = viewmenu.AppendCheckItem(wx.ID_ANY, 'Auto scroll log')
         self.autoscrollItem.Check()
         self.logText = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL | wx.TE_RICH)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -316,11 +320,11 @@ class HondaECU_ControlPanel(wx.Frame):
         self.config = configparser.ConfigParser()
         if os.path.isfile(self.configfile):
             self.config.read(self.configfile)
-        if not "retries" in self.config['DEFAULT']:
+        if "retries" not in self.config['DEFAULT']:
             self.config['DEFAULT']['retries'] = "1"
-        if not "timeout" in self.config['DEFAULT']:
+        if "timeout" not in self.config['DEFAULT']:
             self.config['DEFAULT']['timeout'] = "0.1"
-        if not "klinemethod" in self.config['DEFAULT']:
+        if "klinemethod" not in self.config['DEFAULT']:
             self.config['DEFAULT']['klinemethod'] = "loopback_ping"
         else:
             if self.config['DEFAULT']['klinemethod'] == "poll_modem_status":
@@ -368,7 +372,7 @@ class HondaECU_ControlPanel(wx.Frame):
         }
         self.appanels = {}
 
-        wx.Frame.__init__(self, None, title="HondaECU %s" % (self.version_short),
+        wx.Frame.__init__(self, None, title="HondaECU %s" % self.version_short,
                           style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500, 300))
 
         ib = wx.IconBundle()
@@ -377,27 +381,27 @@ class HondaECU_ControlPanel(wx.Frame):
 
         self.menubar = wx.MenuBar()
         self.SetMenuBar(self.menubar)
-        fileMenu = wx.Menu()
-        self.menubar.Append(fileMenu, '&File')
-        settingsItem = wx.MenuItem(fileMenu, wx.ID_ANY, 'Settings')
-        self.Bind(wx.EVT_MENU, self.OnSettings, settingsItem)
-        fileMenu.Append(settingsItem)
-        fileMenu.AppendSeparator()
-        quitItem = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
-        self.Bind(wx.EVT_MENU, self.OnClose, quitItem)
-        fileMenu.Append(quitItem)
-        helpMenu = wx.Menu()
-        self.menubar.Append(helpMenu, '&Help')
-        debugItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Show debug log')
-        self.Bind(wx.EVT_MENU, self.OnDebug, debugItem)
-        helpMenu.Append(debugItem)
-        helpMenu.AppendSeparator()
-        detectmapItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Detect map id')
-        self.Bind(wx.EVT_MENU, self.OnDetectMap, detectmapItem)
-        helpMenu.Append(detectmapItem)
-        checksumItem = wx.MenuItem(helpMenu, wx.ID_ANY, 'Validate bin checksum')
-        self.Bind(wx.EVT_MENU, self.OnBinChecksum, checksumItem)
-        helpMenu.Append(checksumItem)
+        filemenu = wx.Menu()
+        self.menubar.Append(filemenu, '&File')
+        settingsitem = wx.MenuItem(filemenu, wx.ID_ANY, 'Settings')
+        self.Bind(wx.EVT_MENU, self.OnSettings, settingsitem)
+        filemenu.Append(settingsitem)
+        filemenu.AppendSeparator()
+        quititem = wx.MenuItem(filemenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
+        self.Bind(wx.EVT_MENU, self.OnClose, quititem)
+        filemenu.Append(quititem)
+        helpmenu = wx.Menu()
+        self.menubar.Append(helpmenu, '&Help')
+        debugitem = wx.MenuItem(helpmenu, wx.ID_ANY, 'Show debug log')
+        self.Bind(wx.EVT_MENU, self.OnDebug, debugitem)
+        helpmenu.Append(debugitem)
+        helpmenu.AppendSeparator()
+        detectmapitem = wx.MenuItem(helpmenu, wx.ID_ANY, 'Detect map id')
+        self.Bind(wx.EVT_MENU, self.OnDetectMap, detectmapitem)
+        helpmenu.Append(detectmapitem)
+        checksumitem = wx.MenuItem(helpmenu, wx.ID_ANY, 'Validate bin checksum')
+        self.Bind(wx.EVT_MENU, self.OnBinChecksum, checksumitem)
+        helpmenu.Append(checksumitem)
 
         self.statusicons = [
             wx.Image(os.path.join(self.basepath, "images/bullet_black.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
@@ -488,8 +492,7 @@ class HondaECU_ControlPanel(wx.Frame):
         self.debuglog = HondaECU_LogPanel(self)
 
         dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
-        dispatcher.connect(self.AppPanelHandler, signal="AppPanel", sender=dispatcher.Any)
-        dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+        dispatcher.connect(self.kline_worker_handler, signal="KlineWorker", sender=dispatcher.Any)
 
         self.usbmonitor = USBMonitor(self)
         self.klineworker = KlineWorker(self)
@@ -516,7 +519,7 @@ class HondaECU_ControlPanel(wx.Frame):
         self.statusicon.SetBitmap(self.statusicons[0])
         self.statusbar.OnSize(None)
 
-    def KlineWorkerHandler(self, info, value):
+    def kline_worker_handler(self, info, value):
         if info in ["ecmid", "flashcount", "dtc", "dtccount", "state"]:
             self.ecuinfo[info] = value
             if info == "state":
@@ -562,7 +565,7 @@ class HondaECU_ControlPanel(wx.Frame):
                     self.dtccountl.SetLabel("   DTC Count: %d" % value)
             self.statusbar.OnSize(None)
         elif info == "data":
-            if not info in self.ecuinfo:
+            if info not in self.ecuinfo:
                 self.ecuinfo[info] = {}
             self.ecuinfo[info][value[0]] = value[1:]
 
@@ -617,26 +620,16 @@ class HondaECU_ControlPanel(wx.Frame):
     def OnDebug(self, event):
         self.debuglog.Show()
 
-    def OnAppButtonClicked(self, event):
-        b = event.GetEventObject()
-        if not b.appid in self.appanels:
-            enablestates = None
-            if "enable" in self.apps[b.appid]:
-                enablestates = self.apps[b.appid]["enable"]
-            self.appanels[b.appid] = self.apps[b.appid]["panel"](self, b.appid, self.apps[b.appid], enablestates)
-            self.appbuttons[b.appid].Disable()
-        self.appanels[b.appid].Raise()
-
     def USBMonitorHandler(self, action, device, config):
         dirty = False
         if action == "error":
-            if not device in self.warned:
+            if device not in self.warned:
                 self.warned.append(device)
                 if platform.system() == "Windows":
                     wx.MessageDialog(None, "libusb error: make sure libusbk is installed", "",
                                      wx.CENTRE | wx.STAY_ON_TOP).ShowModal()
         elif action == "add":
-            if not device in self.ftdi_devices:
+            if device not in self.ftdi_devices:
                 self.ftdi_devices[device] = config
                 dirty = True
         elif action == "remove":
@@ -661,24 +654,18 @@ class HondaECU_ControlPanel(wx.Frame):
             for device in self.ftdi_devices:
                 cfg = self.ftdi_devices[device]
                 self.adapterlist.Append("Bus %03d Device %03d: %s %s %s" % (
-                cfg.bus, cfg.address, usb.util.get_string(cfg, cfg.iManufacturer),
-                usb.util.get_string(cfg, cfg.iProduct), usb.util.get_string(cfg, cfg.iSerialNumber)))
+                    cfg.bus, cfg.address, usb.util.get_string(cfg, cfg.iManufacturer),
+                    usb.util.get_string(cfg, cfg.iProduct), usb.util.get_string(cfg, cfg.iSerialNumber)))
             if self.active_ftdi_device:
                 self.adapterlist.SetSelection(list(self.ftdi_devices.keys()).index(self.active_ftdi_device))
 
     def OnAdapterSelected(self, event):
         device = list(self.ftdi_devices.keys())[self.adapterlist.GetSelection()]
         if device != self.active_ftdi_device:
-            if self.active_ftdi_device != None:
+            if self.active_ftdi_device is not None:
                 dispatcher.send(signal="FTDIDevice", sender=self, action="deactivate", device=self.active_ftdi_device,
                                 config=self.ftdi_devices[self.active_ftdi_device])
             self.__clear_data()
             self.active_ftdi_device = device
             dispatcher.send(signal="FTDIDevice", sender=self, action="activate", device=self.active_ftdi_device,
                             config=self.ftdi_devices[self.active_ftdi_device])
-
-    def AppPanelHandler(self, appid, action):
-        if action == "close":
-            if appid in self.appanels:
-                del self.appanels[appid]
-                self.appbuttons[appid].Enable()

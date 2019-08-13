@@ -99,14 +99,6 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
         self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
         self.modebox.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 
-    def OnPassByte(self, event, i):
-        B = ""
-        try:
-            B = "%s" % chr(int(self.password_chars[i][1].GetValue(), 16))
-        except:
-            pass
-        self.password_chars[i][0].SetLabel(B)
-
     def OnWriteFileSelected(self, event):
         self.htfoffset = None
         self.doHTF = False

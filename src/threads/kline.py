@@ -1,14 +1,8 @@
 import os
-import wx
-from threading import Thread
-import numpy as np
-
-from eculib import KlineAdapter
-from eculib.honda import *
-import os
 from threading import Thread
 
 import numpy as np
+import pyftdi.ftdi
 import wx
 from eculib import KlineAdapter
 from eculib.honda import *
@@ -34,7 +28,7 @@ class KlineWorker(Thread):
         if self.ecu:
             try:
                 self.ecu.dev.close()
-            except pyftdi.ftdi.FtdiError as e:
+            except pyftdi.ftdi.FtdiError:
                 pass
             del self.ecu
         self.__clear_data()
@@ -123,7 +117,7 @@ class KlineWorker(Thread):
         binfile = self.eeprominfo[1]
         rom = bytearray()
         offset = 0
-        while not self.eeprominfo is None and offset <= 0xff:
+        while self.eeprominfo is not None and offset <= 0xff:
             if not self.parent.run:
                 return "interrupted"
             status, data = self.ecu._read_eeprom_word(offset)
@@ -153,7 +147,7 @@ class KlineWorker(Thread):
             t = time.time()
             size = location
             rate = 0
-            while not self.readinfo is None:
+            while self.readinfo is not None:
                 if not self.parent.run:
                     return "interrupted"
                 status, data = self.ecu._read_flash_bytes(location, readsize)
@@ -162,8 +156,8 @@ class KlineWorker(Thread):
                     fbin.flush()
                     location += readsize
                     n = time.time()
-                    wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=(
-                    -1, "%.02fKB @ %s" % (location / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+                    v = (-1, "%.02fKB @ %s" % (location / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+                    wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=v)
                     if n - t > 1:
                         rate = (location - size) / (n - t)
                         t = n
@@ -173,8 +167,8 @@ class KlineWorker(Thread):
                     if readsize < 1:
                         break
             if self.ecu.dev.kline():
-                wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=(
-                -1, "%.02fKB @ %s" % (location / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+                v = (-1, "%.02fKB @ %s" % (location / 1024.0, "%.02fB/s" % rate if rate > 0 else "---"))
+                wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=v)
             else:
                 return "interrupted"
         with open(binfile, "rb") as fbin:
@@ -187,7 +181,7 @@ class KlineWorker(Thread):
     def write_eeprom(self, byts):
         maxi = len(byts) / 2
         i = 0
-        while not self.eeprominfo is None and i < maxi:
+        while self.eeprominfo is not None and i < maxi:
             status, data = self.ecu._write_eeprom_word(i, byts[i:(i + 2)])
             wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom.progress",
                          value=(i / maxi * 100, None))
@@ -210,7 +204,7 @@ class KlineWorker(Thread):
         t = time.time()
         rate = 0
         size = 0
-        while not self.writeinfo is None and i < maxi:
+        while self.writeinfo is not None and i < maxi:
             w = (i * writesize)
             bytstart = [s for s in struct.pack(">H", offseti + (z * i))]
             if i + 1 == maxi:
@@ -245,8 +239,8 @@ class KlineWorker(Thread):
                     return 3
             n = time.time()
             wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(
-            i / maxi * 100,
-            "%.02fKB of %.02fKB @ %s" % (w / 1024.0, ossize / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---")))
+                i / maxi * 100,
+                "%.02fKB of %.02fKB @ %s" % (w / 1024.0, ossize / 1024.0, "%.02fB/s" % rate if rate > 0 else "---")))
             if n - t > 1:
                 rate = (w - size) / (n - t)
                 t = n
@@ -256,12 +250,9 @@ class KlineWorker(Thread):
                 if writesize == 64:
                     self.ecu.send_command([0x7e], [0x01, 0x07])
                     time.sleep(.200)
-        wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=(i / maxi * 100,
-                                                                                                 "%.02fKB of %.02fKB @ %s" % (
-                                                                                                 (w - offset) / 1024.0,
-                                                                                                 ossize / 1024.0,
-                                                                                                 "%.02fB/s" % (
-                                                                                                     rate) if rate > 0 else "---")))
+        r = rate if rate > 0 else "---"
+        v = (i / maxi * 100, "%.02fKB of %.02fKB @ %s" % ((w - offset) / 1024.0, ossize / 1024.0, "%.02fB/s" % r))
+        wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=v)
         return 0
 
     def do_init_write(self, recover=False):
@@ -281,13 +272,14 @@ class KlineWorker(Thread):
         ret = 1
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="erase", value=None)
         self.ecu.get_write_status()
+        w = wait
         for i in range(wait):
             w = wait - i
             wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress",
-                         value=(w / wait * 100, "waiting for %d seconds" % (w)))
+                         value=(w / wait * 100, "waiting for %d seconds" % w))
             time.sleep(1)
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress",
-                     value=(0, "waiting for %d seconds" % (w)))
+                     value=(0, "waiting for %d seconds" % w))
         if self.ecu.do_erase():
             time.sleep(2)
             e = 0
@@ -418,14 +410,14 @@ class KlineWorker(Thread):
 
     def do_get_dtcs(self):
         errorcodes = {}
-        for type in [0x74, 0x73]:
-            errorcodes[hex(type)] = []
+        for t in [0x74, 0x73]:
+            errorcodes[hex(t)] = []
             for i in range(1, 0x0c):
-                info = self.ecu.send_command([0x72], [type, i])
+                info = self.ecu.send_command([0x72], [t, i])
                 if info:
                     for j in [3, 5, 7]:
                         if info[2][j] != 0:
-                            errorcodes[hex(type)].append("%02d-%02d" % (info[2][j], info[2][j + 1]))
+                            errorcodes[hex(t)].append("%02d-%02d" % (info[2][j], info[2][j + 1]))
                     if info[2] == 0:
                         return 1
                 else:
@@ -443,7 +435,6 @@ class KlineWorker(Thread):
         tables = self.ecu.probe_tables()
         if len(tables) > 0:
             self.tables = tables
-            tables = " ".join([hex(x) for x in self.tables.keys()])
             for t, d in self.tables.items():
                 wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="data", value=(t, d[0], d[1]))
             return 0
@@ -495,7 +486,7 @@ class KlineWorker(Thread):
     def do_password(self):
         p1 = self.ecu.send_command([0x27], [0xe0] + self.password[:7])
         p2 = self.ecu.send_command([0x27], [0xe0] + self.password[7:])
-        passok = (p1 != None) and (p2 != None)
+        passok = (p1 is not None) and (p2 is not None)
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
         return not passok
 
@@ -553,7 +544,6 @@ class KlineWorker(Thread):
 
     def run(self):
         while self.parent.run:
-            ret = 0
             if not self.ready:
                 time.sleep(.002)
             else:
@@ -567,7 +557,7 @@ class KlineWorker(Thread):
                             self.do_update_state()
                     elif self.state == ECUSTATE.SECURE:
                         self.do_secure()
-                        time.sleep(.002)
+                        self.do_update_state()
                     elif self.state == ECUSTATE.OK:
                         if self.writeinfo is not None:
                             self.write_helper(init=True)
@@ -587,7 +577,7 @@ class KlineWorker(Thread):
                             self.do_update_state()
                     elif self.state == ECUSTATE.FLASH:
                         if self.writeinfo is not None:
-                            self.write_helper(nodiag=True)
+                            self.write_helper()
                         self.do_update_state()
                     else:
                         time.sleep(.002)

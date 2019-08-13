@@ -15,14 +15,6 @@ class HondaECU_AppPanel(wx.Panel):
         dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
         dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 
-    # self.Bind(wx.EVT_CLOSE, self.OnClose)
-    # self.Center()
-    # wx.CallAfter(self.Show)
-
-    # def OnClose(self, event):
-    # 	dispatcher.send(signal="AppPanel", sender=self, appid=self.appid, action="close")
-    # 	self.Destroy()
-
     def KlineWorkerHandler(self, info, value):
         pass
 

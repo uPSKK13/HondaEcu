@@ -31,14 +31,14 @@ class USBMonitor(Thread):
                 try:
                     usb.util.get_string(cfg, cfg.iSerialNumber)
                     new_devices[device] = cfg
-                    if not device in self.ftdi_devices:
+                    if device not in self.ftdi_devices:
                         wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="add", device=device,
                                      config=cfg)
                 except:
                     wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="error", device=device,
                                  config=cfg)
             for device in self.ftdi_devices:
-                if not device in new_devices:
+                if device not in new_devices:
                     wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="remove", device=device,
                                  config=self.ftdi_devices[device])
             self.ftdi_devices = new_devices
