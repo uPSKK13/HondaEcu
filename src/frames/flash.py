@@ -178,12 +178,12 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 				self.progressboxp.Hide()
 				wx.MessageDialog(None, 'Read interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progress_text.SetLabel("Read: " + value[1])
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "read.result":
 			self.progress.SetValue(0)
 			wx.MessageDialog(None, 'Read: complete (result=%s)' % value, "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progressboxp.Hide()
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		if info == "write.progress":
 			if value[0]!= None and value[0] >= 0:
 				self.progress.SetValue(value[0])
@@ -193,13 +193,13 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 					self.progress.Pulse()
 					self.lastpulse = pulse
 			self.progress_text.SetLabel("Write: " + value[1])
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "write.result":
 			self.progress.SetValue(0)
 			wx.MessageDialog(None, 'Write: complete (result=%s)' % value, "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "state":
-			wx.CallAfter(self.OnValidateMode, None)
+			wx.CallAfter(self.OnModeChange, None)
 
 	def OnGo(self, event):
 		self.gobutton.Disable()

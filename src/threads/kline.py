@@ -117,10 +117,7 @@ class KlineWorker(Thread):
 		ret = "good"
 		binfile = self.eeprominfo[1]
 		rom = bytearray()
-		t = time.time()
 		offset = 0
-		rate = 0
-		rb = 0
 		while not self.eeprominfo is None and offset <= 0xff:
 			if not self.parent.run:
 				return "interrupted"
@@ -128,13 +125,7 @@ class KlineWorker(Thread):
 			if status:
 				rom += bytearray(data)
 				offset += 1
-				rb += 2
-				n = time.time()
 				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.progress", value=(offset/256*100.0,None))
-				if n-t > 1:
-					rate = rb/(n-t)
-					t = n
-					rb = 0
 			else:
 				ret = "bad"
 				break
@@ -184,6 +175,19 @@ class KlineWorker(Thread):
 				byts = bytearray(fbin.read(nbyts))
 				_, status, _ = do_validation(byts, nbyts)
 			return status
+
+	def write_eeprom(self, byts):
+		maxi = len(byts) / 2
+		i = 0
+		while not self.eeprominfo is None and i < maxi:
+			status, data = self.ecu._write_eeprom_word(i, byts[i:(i+2)])
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom.progress", value=(i/maxi*100,None))
+			if status:
+				i += 1
+			else:
+				wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom.progress", value=(0, "interrupted"))
+				return 1
+		return 0
 
 	def write_flash(self, byts, offset=0):
 		ossize = len(byts)
@@ -306,6 +310,19 @@ class KlineWorker(Thread):
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.progress", value=(0, "interrupted"))
 		else:
 			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.result", value=self.eeprominfo[2])
+			ret = 0
+		self.do_update_state()
+		return ret
+
+	def do_write_eeprom(self):
+		self.do_update_state()
+		ret = 1
+		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom", value=None)
+		self.eeprominfo[2] = self.write_eeprom(self.eeprominfo[1])
+		if self.eeprominfo[2] == "interrupted":
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom.progress", value=(0, "interrupted"))
+		else:
+			wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom.result", value=self.eeprominfo[2])
 			ret = 0
 		self.do_update_state()
 		return ret
@@ -450,16 +467,15 @@ class KlineWorker(Thread):
 		wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="password", value=passok)
 		return not passok
 
-	def write_helper(self, init=False, recover=False, nodiag=False):
+	def write_helper(self, init=False, recover=False):
 		ret = 1
-		if nodiag or self.ecu.diag():
-			if init:
-				self.do_init_write(recover=recover)
-				time.sleep(.100)
-			if self.do_erase() == 0:
-				self.do_write()
-				ret = 0
-			self.writeinfo = None
+		if init:
+			self.do_init_write(recover=recover)
+			time.sleep(.100)
+		if self.do_erase() == 0:
+			self.do_write()
+			ret = 0
+		self.writeinfo = None
 		return ret
 
 	def read_helper(self):
@@ -469,6 +485,11 @@ class KlineWorker(Thread):
 
 	def read_eeprom_helper(self):
 		ret = self.do_read_eeprom()
+		self.eeprominfo = None
+		return ret
+
+	def write_eeprom_helper(self):
+		ret = self.do_write_eeprom()
 		self.eeprominfo = None
 		return ret
 
@@ -484,23 +505,6 @@ class KlineWorker(Thread):
 			self.sendpassword = False
 		return ret
 
-	def do_connected(self):
-		ret = 1
-		if self.state == ECUSTATE.OK:
-			if self.writeinfo is not None:
-				ret = self.write_helper(init=True)
-			else:
-				ret = self.do_idle_tasks()
-		elif self.state == ECUSTATE.RECOVER_OLD:
-			self.do_basic_tasks()
-			if self.writeinfo is not None:
-				ret = self.write_helper(init=True)
-		elif self.state == ECUSTATE.RECOVER_NEW:
-			self.do_basic_tasks()
-			if self.writeinfo is not None:
-				ret = self.write_helper(init=True, recover=True)
-		return ret
-
 	def do_secure(self):
 		ret = 1
 		if self.state == ECUSTATE.SECURE:
@@ -510,22 +514,16 @@ class KlineWorker(Thread):
 				if self.eeprominfo[0] == "read":
 					ret = self.read_eeprom_helper()
 				elif self.eeprominfo[0] == "write":
-					print("write eeprom")
+					ret = self.write_eeprom_helper()
 				elif self.eeprominfo[0] == "format":
 					ret = self.format_eeprom_helper(self.eeprominfo[1])
 		return ret
 
-	def do_exceptions(self):
-		ret = 1
-		if self.state == ECUSTATE.FLASH:
-			if self.writeinfo is not None:
-				return self.write_helper(nodiag=True)
-		return ret
-
 	def run(self):
 		while self.parent.run:
+			ret = 0
 			if not self.ready:
-				time.sleep(.001)
+				time.sleep(.002)
 			else:
 				try:
 					if self.state == ECUSTATE.UNKNOWN:
@@ -533,17 +531,33 @@ class KlineWorker(Thread):
 					elif self.state == ECUSTATE.OFF:
 						self.do_update_state()
 						if self.state  == ECUSTATE.OK:
-							if self.do_on_power() > 0:
-								self.do_update_state()
+							self.do_on_power()
+							self.do_update_state()
 					elif self.state == ECUSTATE.SECURE:
-						if self.do_secure() > 0:
-							self.do_update_state()
+						self.do_secure()
 					elif self.state == ECUSTATE.OK:
-						if self.do_connected() > 0:
+						if self.writeinfo is not None:
+							self.write_helper(init=True)
 							self.do_update_state()
+						else:
+							if self.do_idle_tasks() > 0:
+								self.do_update_state()
+					elif self.state == ECUSTATE.RECOVER_OLD:
+						self.do_basic_tasks()
+						if self.writeinfo is not None:
+							self.write_helper(init=True)
+							self.do_update_state()
+					elif self.state == ECUSTATE.RECOVER_NEW:
+						self.do_basic_tasks()
+						if self.writeinfo is not None:
+							self.write_helper(init=True, recover=True)
+							self.do_update_state()
+					elif self.state == ECUSTATE.FLASH:
+						if self.writeinfo is not None:
+							self.write_helper(nodiag=True)
+						self.do_update_state()
 					else:
-						if self.do_exceptions() > 0:
-							self.do_update_state()
+						time.sleep(.002)
 				except AttributeError:
 					pass
 				except OSError:

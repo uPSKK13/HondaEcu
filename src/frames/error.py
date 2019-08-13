@@ -66,7 +66,10 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
 				codes[code][1] = True
 			for code in value[hex(0x73)]:
 				if code not in codes:
-					codes[code] = [DTC[code],False,False]
+					if code in DTC:
+						codes[code] = [DTC[code],False,False]
+					else:
+						codes[code] = ["UNKNOWN",False,False]
 				codes[code][2] = True
 			for k,v in codes.items():
 				self.errorlist.Append([k, v[0], "X" if v[1] else "", "X" if v[2] else ""])

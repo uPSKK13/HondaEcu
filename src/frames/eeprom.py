@@ -13,6 +13,7 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
 
 	def Build(self):
 		self.wildcard = "EEPROM dump (*.bin)|*.bin"
+		self.byts = None
 		self.mainp = wx.Panel(self)
 
 		self.formatbox = wx.RadioBox(self.mainp, label="Fill byte", choices=["0x00","0xFF"])
@@ -82,7 +83,7 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
 		if self.modebox.GetSelection() == 0:
 			dispatcher.send(signal="eeprom", sender=self, cmd="read", data=self.readfpicker.GetPath())
 		elif self.modebox.GetSelection() == 1:
-			dispatcher.send(signal="eeprom", sender=self, cmd="write", data=self.writefpicker.GetPath())
+			dispatcher.send(signal="eeprom", sender=self, cmd="write", data=self.byts)
 		elif self.modebox.GetSelection() == 2:
 			dispatcher.send(signal="eeprom", sender=self, cmd="format", data=self.formatbox.GetSelection())
 
@@ -99,7 +100,13 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
 				if self.modebox.GetSelection() == 0:
 					enable = len(self.readfpicker.GetPath()) > 0
 				elif self.modebox.GetSelection() == 1:
-					enable = len(self.writefpicker.GetPath()) > 0
+					if len(self.writefpicker.GetPath()) > 0:
+						if os.path.isfile(self.writefpicker.GetPath()):
+							fbin = open(self.writefpicker.GetPath(), "rb")
+							nbyts = os.path.getsize(self.writefpicker.GetPath())
+							if nbyts in [256, 512]:
+								self.byts = bytearray(fbin.read(nbyts))
+								enable = True
 				elif self.modebox.GetSelection() == 2:
 					enable = True
 		if enable:
@@ -141,21 +148,32 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
 				self.progressboxp.Hide()
 				wx.MessageDialog(None, 'Read EEPROM interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progress_text.SetLabel("Reading EEPROM")
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "read_eeprom.result":
-			self.progress.SetValue(0)
 			wx.MessageDialog(None, 'Read EEPROM complete', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
-			self.progressboxp.Hide()
-			self.OnValidateMode(None)
+			self.progress_text.SetLabel("")
+			self.progress.SetValue(0)
+		elif info == "write_eeprom.progress":
+			if value[0]!= None and value[0] >= 0:
+				self.progress.SetValue(value[0])
+			if value[1] and value[1] == "interrupted":
+				self.progressboxp.Hide()
+				wx.MessageDialog(None, 'Write EEPROM interrupted', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
+			self.progress_text.SetLabel("Writing EEPROM")
+			wx.CallAfter(self.OnModeChange, None)
+		elif info == "write_eeprom.result":
+			wx.MessageDialog(None, 'Write EEPROM complete', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
+			self.progress_text.SetLabel("")
+			self.progress.SetValue(0)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "format_eeprom":
 			self.progress_text.SetLabel("")
 			self.progress.SetValue(0)
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "format_eeprom.result":
+			wx.MessageDialog(None, 'Format EEPROM complete', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
 			self.progress_text.SetLabel("")
 			self.progress.SetValue(0)
-			wx.MessageDialog(None, 'Format EEPROM complete', "", wx.CENTRE|wx.STAY_ON_TOP).ShowModal()
-			self.progressboxp.Hide()
-			self.OnValidateMode(None)
+			wx.CallAfter(self.OnModeChange, None)
 		elif info == "state":
-			wx.CallAfter(self.OnValidateMode, None)
+			wx.CallAfter(self.OnModeChange, None)

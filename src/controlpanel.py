@@ -531,7 +531,7 @@ class HondaECU_ControlPanel(wx.Frame):
 				self.statusicon.SetToolTip(wx.ToolTip("state: %s" % (str(value).split(".")[-1])))
 				if value in [ECUSTATE.OFF,ECUSTATE.UNKNOWN]: #BLACK
 					self.__clear_widgets()
-					# self.statusicon.SetBitmap(self.statusicons[0])
+					self.statusicon.SetBitmap(self.statusicons[0])
 				elif value in [ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD]: #YELLOW
 					self.statusicon.SetBitmap(self.statusicons[1])
 				elif value in [ECUSTATE.OK]: #GREEN
@@ -544,8 +544,6 @@ class HondaECU_ControlPanel(wx.Frame):
 					self.modell.SetLabel("Unknown Model")
 					self.ecupnl.SetLabel("~ Security Access Mode ~")
 					self.Layout()
-				# elif value in [ECUSTATE.POSTWRITEx00,ECUSTATE.POSTWRITEx12]: #RED
-				# 	self.statusicon.SetBitmap(self.statusicons[5])
 			elif info == "ecmid":
 				if len(value) > 0:
 					ecmid = " ".join(["%02x" % i for i in value])
