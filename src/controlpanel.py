@@ -1,6 +1,6 @@
 import configparser
 import time
-
+import platform
 import EnhancedStatusBar as ESB
 import usb.util
 import wx
