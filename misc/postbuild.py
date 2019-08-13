@@ -1,6 +1,7 @@
-import os
-import git
 import glob
+import os
+
+import git
 
 r = git.repo.Repo()
 v = r.git.describe("--tags")
@@ -9,4 +10,4 @@ for f in glob.glob("dist/*.exe"):
     fn[0] += "-"
     fn[0] += v
     fn = "".join(fn)
-    os.rename(f,fn)
+    os.rename(f, fn)

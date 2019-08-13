@@ -2,30 +2,32 @@ import wx
 
 from pydispatch import dispatcher
 
+
 class HondaECU_AppPanel(wx.Panel):
 
-	def __init__(self, parent, appid, appinfo, enablestates, *args, **kwargs):
-		wx.Panel.__init__(self, parent.labelbook, *args, **kwargs)
-		self.parent = parent
-		self.appid = appid
-		self.appinfo = appinfo
-		self.enablestates = enablestates
-		self.Build()
-		dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
-		dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
-		# self.Bind(wx.EVT_CLOSE, self.OnClose)
-		# self.Center()
-		# wx.CallAfter(self.Show)
+    def __init__(self, parent, appid, appinfo, enablestates, *args, **kwargs):
+        wx.Panel.__init__(self, parent.labelbook, *args, **kwargs)
+        self.parent = parent
+        self.appid = appid
+        self.appinfo = appinfo
+        self.enablestates = enablestates
+        self.Build()
+        dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
+        dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 
-	# def OnClose(self, event):
-	# 	dispatcher.send(signal="AppPanel", sender=self, appid=self.appid, action="close")
-	# 	self.Destroy()
+    # self.Bind(wx.EVT_CLOSE, self.OnClose)
+    # self.Center()
+    # wx.CallAfter(self.Show)
 
-	def KlineWorkerHandler(self, info, value):
-		pass
+    # def OnClose(self, event):
+    # 	dispatcher.send(signal="AppPanel", sender=self, appid=self.appid, action="close")
+    # 	self.Destroy()
 
-	def DeviceHandler(self, action, device, config):
-		pass
+    def KlineWorkerHandler(self, info, value):
+        pass
 
-	def Build(self):
-		pass
+    def DeviceHandler(self, action, device, config):
+        pass
+
+    def Build(self):
+        pass
