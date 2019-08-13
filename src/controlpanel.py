@@ -42,7 +42,7 @@ class CharValidator(wx.Validator):
         if keycode in [wx.WXK_BACK, wx.WXK_DELETE]:
             pass
         elif keycode < 256:
-            self.key = chr(keycode)
+            key = chr(keycode)
             if key not in string.hexdigits:
                 return
         event.Skip()
@@ -78,14 +78,14 @@ class PasswordDialog(wx.Dialog):
         self.passboxp.SetSizer(self.passboxsizer)
         self.password_chars = []
         for i, val in enumerate([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x48, 0x6f, 0x77, 0x41, 0x72, 0x65, 0x59, 0x6f, 0x75]):
-            H = "%2X" % val
+            h = "%2X" % val
             self.password_chars.append([
                 wx.StaticText(self.passp, size=(32, -1), label="%s" % chr(val), style=wx.ALIGN_CENTRE_HORIZONTAL),
-                wx.TextCtrl(self.passp, size=(32, 32), value=H, validator=CharValidator("hexdigits"))
+                wx.TextCtrl(self.passp, size=(32, 32), value=h, validator=CharValidator("hexdigits"))
             ])
             self.password_chars[-1][0].Disable()
             self.password_chars[-1][1].SetMaxLength(2)
-            self.password_chars[-1][1].SetHint(H)
+            self.password_chars[-1][1].SetHint(h)
             self.Bind(wx.EVT_TEXT, lambda x, index=i: self.OnPassByte(x, index), self.password_chars[-1][1])
             self.passpsizer.Add(self.password_chars[-1][1], pos=(0, i), flag=wx.LEFT | wx.RIGHT, border=1)
             self.passpsizer.Add(self.password_chars[-1][0], pos=(1, i), flag=wx.LEFT | wx.RIGHT, border=1)
@@ -109,13 +109,13 @@ class PasswordDialog(wx.Dialog):
 
         dispatcher.connect(self.kline_worker_handler, signal="KlineWorker", sender=dispatcher.Any)
 
-    def OnPassByte(self, event, i):
-        B = ""
+    def OnPassByte(self, _event, i):
+        b = ""
         try:
-            B = "%s" % chr(int(self.password_chars[i][1].GetValue(), 16))
+            b = "%s" % chr(int(self.password_chars[i][1].GetValue(), 16))
         except:
             pass
-        self.password_chars[i][0].SetLabel(B)
+        self.password_chars[i][0].SetLabel(b)
 
     def kline_worker_handler(self, info, value):
         if info == "state":
@@ -138,7 +138,7 @@ class PasswordDialog(wx.Dialog):
         self.Show()
         self.Layout()
 
-    def on_ok(self, event):
+    def on_ok(self, _event):
         self.secure = True
         self.passboxp.Hide()
         self.ok.Hide()
@@ -149,7 +149,7 @@ class PasswordDialog(wx.Dialog):
         passwd = [int(P[1].GetValue(), 16) for P in self.password_chars]
         dispatcher.send(signal="sendpassword", sender=self, passwd=passwd)
 
-    def on_cancel(self, event):
+    def on_cancel(self, _event):
         self.Hide()
 
 
@@ -206,14 +206,14 @@ class SettingsDialog(wx.Dialog):
         self.Center()
         self.Layout()
 
-    def on_ok(self, event):
+    def on_ok(self, _event):
         self.parent.config["DEFAULT"]["retries"] = self.retries.GetValue()
         self.parent.config["DEFAULT"]["timeout"] = self.timeout.GetValue()
         self.parent.config["DEFAULT"]["klinemethod"] = self.klinedetect.GetValue()
         dispatcher.send(signal="settings", sender=self, config=self.parent.config)
         self.Hide()
 
-    def on_cancel(self, event):
+    def on_cancel(self, _event):
         self.Hide()
 
 
@@ -235,10 +235,10 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
             if self.bmpSelected and not self.up:
                 bmp = self.bmpSelected
             bw, bh = bmp.GetWidth(), bmp.GetHeight()
-            hasMask = bmp.GetMask() is not None
+            hasmask = bmp.GetMask() is not None
         else:
             bw = bh = 0
-            hasMask = False
+            hasmask = False
 
         dc.SetFont(self.GetFont())
         if self.IsEnabled():
@@ -250,7 +250,7 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
         tw, th = dc.GetTextExtent(label)
 
         if bmp is not None:
-            dc.DrawBitmap(bmp, (width - bw) / 2, (height - bh - th - 4) / 2, hasMask)
+            dc.DrawBitmap(bmp, (width - bw) / 2, (height - bh - th - 4) / 2, hasmask)
         dc.DrawText(label, (width - tw) / 2, (height + bh - th + 4) / 2)
 
 
@@ -265,9 +265,9 @@ class HondaECU_LogPanel(wx.Frame):
         self.SetMenuBar(self.menubar)
         filemenu = wx.Menu()
         self.menubar.Append(filemenu, '&File')
-        saveItem = wx.MenuItem(filemenu, wx.ID_SAVEAS, '&Save As\tCtrl+S')
-        self.Bind(wx.EVT_MENU, self.OnSave, saveItem)
-        filemenu.Append(saveItem)
+        saveitem = wx.MenuItem(filemenu, wx.ID_SAVEAS, '&Save As\tCtrl+S')
+        self.Bind(wx.EVT_MENU, self.OnSave, saveitem)
+        filemenu.Append(saveitem)
         filemenu.AppendSeparator()
         quititem = wx.MenuItem(filemenu, wx.ID_EXIT, '&Quit\tCtrl+Q')
         self.Bind(wx.EVT_MENU, self.OnClose, quititem)
@@ -287,7 +287,7 @@ class HondaECU_LogPanel(wx.Frame):
         self.starttime = time.time()
         wx.CallAfter(dispatcher.connect, self.ECUDebugHandler, signal="ecu.debug", sender=dispatcher.Any)
 
-    def OnSave(self, event):
+    def OnSave(self, _event):
         with wx.FileDialog(self, "Save debug log", wildcard="Debug log files (*.txt)|*.txt",
                            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
@@ -299,7 +299,7 @@ class HondaECU_LogPanel(wx.Frame):
             except IOError:
                 print("Cannot save current data in file '%s'." % pathname)
 
-    def OnClose(self, event):
+    def OnClose(self, _event):
         self.Hide()
 
     def ECUDebugHandler(self, msg):
@@ -569,13 +569,13 @@ class HondaECU_ControlPanel(wx.Frame):
                 self.ecuinfo[info] = {}
             self.ecuinfo[info][value[0]] = value[1:]
 
-    def OnSecure(self, event):
+    def OnSecure(self, _event):
         self.passwordd._Show()
 
-    def OnSettings(self, event):
+    def OnSettings(self, _event):
         self.settings.Show()
 
-    def OnClose(self, event):
+    def OnClose(self, _event):
         with open(self.configfile, 'w') as configfile:
             self.config.write(configfile)
         self.run = False
@@ -584,7 +584,7 @@ class HondaECU_ControlPanel(wx.Frame):
         for w in wx.GetTopLevelWindows():
             w.Destroy()
 
-    def OnDetectMap(self, event):
+    def OnDetectMap(self, _event):
         with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin",
                            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
@@ -603,7 +603,7 @@ class HondaECU_ControlPanel(wx.Frame):
                     return
             wx.MessageDialog(None, "Map ID: unknown", "", wx.CENTRE | wx.STAY_ON_TOP).ShowModal()
 
-    def OnBinChecksum(self, event):
+    def OnBinChecksum(self, _event):
         with wx.FileDialog(self, "Open ECU dump file", wildcard="ECU dump (*.bin)|*.bin",
                            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
@@ -617,7 +617,7 @@ class HondaECU_ControlPanel(wx.Frame):
                              wx.CENTRE | wx.STAY_ON_TOP).ShowModal()
             return
 
-    def OnDebug(self, event):
+    def OnDebug(self, _event):
         self.debuglog.Show()
 
     def USBMonitorHandler(self, action, device, config):
@@ -659,7 +659,7 @@ class HondaECU_ControlPanel(wx.Frame):
             if self.active_ftdi_device:
                 self.adapterlist.SetSelection(list(self.ftdi_devices.keys()).index(self.active_ftdi_device))
 
-    def OnAdapterSelected(self, event):
+    def OnAdapterSelected(self, _event):
         device = list(self.ftdi_devices.keys())[self.adapterlist.GetSelection()]
         if device != self.active_ftdi_device:
             if self.active_ftdi_device is not None:

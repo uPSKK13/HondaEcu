@@ -81,7 +81,7 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
         self.modebox.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
         self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
 
-    def OnGo(self, event):
+    def OnGo(self, _event):
         self.gobutton.Disable()
         if self.modebox.GetSelection() == 0:
             dispatcher.send(signal="eeprom", sender=self, cmd="read", data=self.readfpicker.GetPath())
@@ -90,13 +90,13 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
         elif self.modebox.GetSelection() == 2:
             dispatcher.send(signal="eeprom", sender=self, cmd="format", data=self.formatbox.GetSelection())
 
-    def OnReadPicker(self, event):
+    def OnReadPicker(self, _event):
         self.OnValidateMode(None)
 
-    def OnWritePicker(self, event):
+    def OnWritePicker(self, _event):
         self.OnValidateMode(None)
 
-    def OnValidateMode(self, event):
+    def OnValidateMode(self, _event):
         enable = False
         if "state" in self.parent.ecuinfo:
             if self.parent.ecuinfo["state"] == ECUSTATE.SECURE:
@@ -118,7 +118,7 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
             self.gobutton.Disable()
         self.Layout()
 
-    def OnModeChange(self, event):
+    def OnModeChange(self, _event):
         if self.modebox.GetSelection() == 0:
             self.gobutton.SetLabel("Read")
             self.writefpicker.Hide()
@@ -145,7 +145,7 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
 
     def KlineWorkerHandler(self, info, value):
         if info == "read_eeprom.progress":
-            if value[0] != None and value[0] >= 0:
+            if value[0] is not None and value[0] >= 0:
                 self.progress.SetValue(value[0])
             if value[1] and value[1] == "interrupted":
                 self.progressboxp.Hide()
@@ -157,7 +157,7 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
             self.progress_text.SetLabel("")
             self.progress.SetValue(0)
         elif info == "write_eeprom.progress":
-            if value[0] != None and value[0] >= 0:
+            if value[0] is not None and value[0] >= 0:
                 self.progress.SetValue(value[0])
             if value[1] and value[1] == "interrupted":
                 self.progressboxp.Hide()

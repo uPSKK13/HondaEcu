@@ -209,9 +209,9 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
             s.SetHGap(5)
 
         at = []
-        for i, id in enumerate(self.fonts):
-            self.Bind(wx.EVT_MENU, self.OnBig, id=id)
-            at.append((wx.ACCEL_CTRL, ord('%s' % (i + 1)), id))
+        for i, iid in enumerate(self.fonts):
+            self.Bind(wx.EVT_MENU, self.OnBig, id=iid)
+            at.append((wx.ACCEL_CTRL, ord('%s' % (i + 1)), iid))
         accel_tbl = wx.AcceleratorTable(at)
         self.SetAcceleratorTable(accel_tbl)
 
@@ -221,8 +221,6 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
         for s in [self.d1psizer, self.d2psizer, self.d3psizer, self.d4psizer]:
             s.SetHGap(f[1])
         self.Layout()
-
-    # self.mainsizer.Fit(self)
 
     def OnClose(self, event):
         wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.off")
@@ -247,7 +245,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
                         if self.sensors[s][5]:
                             self.sensors[s][1].SetLabel(str(data[self.sensors[s][4]]))
                 if self.maintable is None:
-                    if not t in [0x11]:
+                    if t not in [0x11]:
                         for s in ["IACV pulse count", "IACV command"]:
                             self.sensors[s][0].Hide()
                             self.sensors[s][1].Hide()

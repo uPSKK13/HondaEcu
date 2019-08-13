@@ -6,9 +6,9 @@ from .base import HondaECU_AppPanel
 
 
 class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
-    def __init__(self, parent, ID, pos=wx.DefaultPosition,
+    def __init__(self, parent, iid, pos=wx.DefaultPosition,
                  size=wx.DefaultSize, style=0):
-        wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
+        wx.ListCtrl.__init__(self, parent, iid, pos, size, style)
         ListCtrlAutoWidthMixin.__init__(self)
         self.setResizeColumn(2)
 
@@ -48,7 +48,7 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
         wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.off")
         HondaECU_AppPanel.OnClose(self, event)
 
-    def OnClearCodes(self, event):
+    def OnClearCodes(self, _event):
         self.resetbutton.Disable()
         wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.clear")
 

@@ -99,7 +99,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
         self.gobutton.Bind(wx.EVT_BUTTON, self.OnGo)
         self.modebox.Bind(wx.EVT_RADIOBOX, self.OnModeChange)
 
-    def OnWriteFileSelected(self, event):
+    def OnWriteFileSelected(self, _event):
         self.htfoffset = None
         self.doHTF = False
         if len(self.writefpicker.GetPath()) > 0:
@@ -119,27 +119,27 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
             self.offset.Show()
         self.Layout()
 
-    def OnOffset(self, event):
+    def OnOffset(self, _event):
         self.OnValidateMode(None)
 
-    def OnChecksum(self, event):
+    def OnChecksum(self, _event):
         self.OnValidateMode(None)
 
-    def OnReadPicker(self, event):
+    def OnReadPicker(self, _event):
         self.OnValidateMode(None)
 
-    def OnWritePicker(self, event):
+    def OnWritePicker(self, _event):
         self.OnWriteFileSelected(None)
         self.OnValidateMode(None)
 
-    def OnFix(self, event):
+    def OnFix(self, _event):
         if self.fixchecksum.IsChecked():
             self.checksum.Enable()
         else:
             self.checksum.Disable()
         self.OnValidateMode(None)
 
-    def OnModeChange(self, event):
+    def OnModeChange(self, _event):
         if self.modebox.GetSelection() == 0:
             self.gobutton.SetLabel("Read")
             self.writefpicker.Hide()
@@ -163,7 +163,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
 
     def KlineWorkerHandler(self, info, value):
         if info == "read.progress":
-            if value[0] != None and value[0] >= 0:
+            if value[0] is not None and value[0] >= 0:
                 self.progress.SetValue(value[0])
             else:
                 pulse = time.time()
@@ -181,7 +181,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
             self.progressboxp.Hide()
             wx.CallAfter(self.OnModeChange, None)
         if info == "write.progress":
-            if value[0] != None and value[0] >= 0:
+            if value[0] is not None and value[0] >= 0:
                 self.progress.SetValue(value[0])
             else:
                 pulse = time.time()
@@ -197,7 +197,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
         elif info == "state":
             wx.CallAfter(self.OnModeChange, None)
 
-    def OnGo(self, event):
+    def OnGo(self, _event):
         self.gobutton.Disable()
         if self.modebox.GetSelection() == 0:
             offset = int(self.offset.GetValue(), 16)
@@ -223,7 +223,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
                         offset = int(self.offset.GetValue(), 16)
                     except:
                         pass
-                    enable = (len(self.readfpicker.GetPath()) > 0 and offset != None and offset >= 0)
+                    enable = (len(self.readfpicker.GetPath()) > 0 and offset is not None and offset >= 0)
             else:
                 if self.parent.ecuinfo["state"] in [ECUSTATE.OK, ECUSTATE.RECOVER_NEW, ECUSTATE.RECOVER_OLD,
                                                     ECUSTATE.FLASH]:
@@ -237,7 +237,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
             self.gobutton.Disable()
         self.Layout()
 
-    def OnValidateModeHTF(self, event):
+    def OnValidateModeHTF(self, _event):
         if len(self.writefpicker.GetPath()) > 0:
             if os.path.isfile(self.writefpicker.GetPath()):
                 tar = tarfile.open(self.writefpicker.GetPath(), "r:xz")
@@ -252,12 +252,12 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
                             x, y = os.path.splitext(b)
                             if y == ".mod":
                                 binmod = bytearray(tar.extractfile(f).read())
-                if binmod != None and metainfo != None:
+                if binmod is not None and metainfo is not None:
                     ea = int(metainfo["ecmidaddr"], 16)
                     ka = int(metainfo["keihinaddr"], 16)
                     if "offset" in metainfo:
                         self.htfoffset = metainfo["offset"]
-                    if "rid" in metainfo and metainfo["rid"] != None:
+                    if "rid" in metainfo and metainfo["rid"] is not None:
                         for i in range(5):
                             binmod[ea + i] ^= 0xFF
                         for i in range(7):
@@ -267,10 +267,10 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
                         return True
         return False
 
-    def OnValidateModeBin(self, event):
-        offset = None
+    def OnValidateModeBin(self, _event):
+        _offset = None
         try:
-            offset = int(self.offset.GetValue(), 16)
+            _offset = int(self.offset.GetValue(), 16)
         except:
             return False
         checksum = -1
