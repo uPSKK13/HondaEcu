@@ -313,6 +313,10 @@ class HondaECU_LogPanel(wx.Frame):
 class HondaECU_ControlPanel(wx.Frame):
 
     def __init__(self, version_full, nobins=False, restrictions=None, force_restrictions=False):
+        self.stats = {
+            "retries": 0,
+            "checksum_errors": 0,
+        }
         self.prefsdir = user_data_dir("HondaECU", "MCUInnovationsInc")
         if not os.path.exists(self.prefsdir):
             os.makedirs(self.prefsdir)
@@ -402,6 +406,9 @@ class HondaECU_ControlPanel(wx.Frame):
         checksumitem = wx.MenuItem(helpmenu, wx.ID_ANY, 'Validate bin checksum')
         self.Bind(wx.EVT_MENU, self.OnBinChecksum, checksumitem)
         helpmenu.Append(checksumitem)
+        statsitem = wx.MenuItem(helpmenu, wx.ID_ANY, 'Adapter stats')
+        self.Bind(wx.EVT_MENU, self.OnStats, statsitem)
+        helpmenu.Append(statsitem)
 
         self.statusicons = [
             wx.Image(os.path.join(self.basepath, "images/bullet_black.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap(),
@@ -493,6 +500,7 @@ class HondaECU_ControlPanel(wx.Frame):
 
         dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
         dispatcher.connect(self.kline_worker_handler, signal="KlineWorker", sender=dispatcher.Any)
+        dispatcher.connect(self.ecu_stats_handler, signal="ecu.stats", sender=dispatcher.Any)
 
         self.usbmonitor = USBMonitor(self)
         self.klineworker = KlineWorker(self)
@@ -518,6 +526,9 @@ class HondaECU_ControlPanel(wx.Frame):
         self.ecupnl.SetLabel("")
         self.statusicon.SetBitmap(self.statusicons[0])
         self.statusbar.OnSize(None)
+
+    def ecu_stats_handler(self, data):
+        self.stats = data
 
     def kline_worker_handler(self, info, value):
         if info in ["ecmid", "flashcount", "dtc", "dtccount", "state"]:
@@ -568,6 +579,9 @@ class HondaECU_ControlPanel(wx.Frame):
             if info not in self.ecuinfo:
                 self.ecuinfo[info] = {}
             self.ecuinfo[info][value[0]] = value[1:]
+
+    def OnStats(self, _event):
+        wx.MessageDialog(None, str(self.stats), "", wx.CENTRE | wx.STAY_ON_TOP).ShowModal()
 
     def OnSecure(self, _event):
         self.passwordd._Show()
