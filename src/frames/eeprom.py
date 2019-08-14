@@ -57,10 +57,10 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
                               border=10)
         self.eeprompsizer.Add(self.progressboxp, pos=(1, 0), span=(1, 6),
                               flag=wx.BOTTOM | wx.LEFT | wx.RIGHT | wx.EXPAND | wx.TOP, border=20)
-        self.eeprompsizer.Add(self.modebox, pos=(2, 0), span=(1, 2), flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.LEFT,
-                              border=10)
+        self.eeprompsizer.Add(self.modebox, pos=(2, 0), span=(1, 2), flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.LEFT | wx.TOP,
+                              border=30)
         self.eeprompsizer.Add(self.gobutton, pos=(3, 5), flag=wx.ALIGN_RIGHT | wx.ALIGN_BOTTOM | wx.RIGHT, border=10)
-        self.eeprompsizer.AddGrowableRow(2, 1)
+        self.eeprompsizer.AddGrowableRow(1, 1)
         self.eeprompsizer.AddGrowableCol(5, 1)
         self.mainp.SetSizer(self.eeprompsizer)
 
