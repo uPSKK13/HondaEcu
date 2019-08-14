@@ -129,6 +129,11 @@ class KlineWorker(Thread):
             else:
                 ret = "bad"
                 break
+        if self.ecu.dev.kline():
+            wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read_eeprom.progress",
+                         value=(offset / 256 * 100.0, None))
+        else:
+            return "interrupted"
         if ret == "good":
             end = 512
             if rom[:256] == rom[256:]:
@@ -140,7 +145,7 @@ class KlineWorker(Thread):
 
     def read_flash(self):
         readsize = 12
-        location = self.readinfo[1]
+        location = offset = self.readinfo[1]
         binfile = self.readinfo[0]
         status = "bad"
         with open(binfile, "wb") as fbin:
@@ -156,7 +161,7 @@ class KlineWorker(Thread):
                     fbin.flush()
                     location += readsize
                     n = time.time()
-                    v = (-1, "%.02fKB @ %s" % (location / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+                    v = (-1, "%.02fKB @ %s" % ((location-offset) / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
                     wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=v)
                     if n - t > 1:
                         rate = (location - size) / (n - t)
@@ -167,7 +172,7 @@ class KlineWorker(Thread):
                     if readsize < 1:
                         break
             if self.ecu.dev.kline():
-                v = (-1, "%.02fKB @ %s" % (location / 1024.0, "%.02fB/s" % rate if rate > 0 else "---"))
+                v = (-1, "%.02fKB @ %s" % ((location-offset) / 1024.0, "%.02fB/s" % rate if rate > 0 else "---"))
                 wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=v)
             else:
                 return "interrupted"
