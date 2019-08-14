@@ -67,13 +67,12 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
                              border=10)
         self.flashpsizer.Add(self.fpickerbox, pos=(0, 1), span=(1, 5), flag=wx.EXPAND | wx.RIGHT | wx.BOTTOM, border=10)
         self.flashpsizer.Add(self.optsp, pos=(1, 0), span=(1, 6))
-        # self.flashpsizer.Add(self.passboxp, pos=(2,0), span=(1,6), flag=wx.LEFT|wx.RIGHT|wx.TOP|wx.ALIGN_CENTRE_HORIZONTAL, border=20)
         self.flashpsizer.Add(self.progressboxp, pos=(3, 0), span=(1, 6),
                              flag=wx.BOTTOM | wx.LEFT | wx.RIGHT | wx.EXPAND | wx.TOP, border=20)
         self.flashpsizer.Add(self.modebox, pos=(4, 0), span=(1, 2), flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.TOP | wx.LEFT,
                              border=30)
         self.flashpsizer.Add(self.gobutton, pos=(5, 5), flag=wx.ALIGN_RIGHT | wx.ALIGN_BOTTOM | wx.RIGHT, border=10)
-        self.flashpsizer.AddGrowableRow(3, 1)
+        self.flashpsizer.AddGrowableRow(2, 1)
         self.flashpsizer.AddGrowableCol(5, 1)
         self.mainp.SetSizer(self.flashpsizer)
 
