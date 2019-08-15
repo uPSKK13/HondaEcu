@@ -62,6 +62,7 @@ class PasswordDialog(wx.Dialog):
 
         self.cancel = wx.Button(panel, label="Cancel")
         self.ok = wx.Button(panel, label="Ok")
+        self.ok.SetFocus()
 
         self.font2 = self.GetFont().Bold()
         self.font2.SetPointSize(self.font2.GetPointSize() * 1.5)
