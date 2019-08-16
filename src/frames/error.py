@@ -2,7 +2,7 @@ import wx
 from eculib.honda import *
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
-from .base import HondaECU_AppPanel
+from .base import HondaECUAppPanel
 
 
 class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
@@ -13,7 +13,7 @@ class ErrorListCtrl(wx.ListCtrl, ListCtrlAutoWidthMixin):
         self.setResizeColumn(2)
 
 
-class HondaECU_ErrorPanel(HondaECU_AppPanel):
+class HondaECUErrorPanel(HondaECUAppPanel):
 
     def Build(self):
         self.SetMinSize((400, 250))
@@ -43,10 +43,6 @@ class HondaECU_ErrorPanel(HondaECU_AppPanel):
         self.Bind(wx.EVT_BUTTON, self.OnClearCodes)
 
         wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.on")
-
-    def OnClose(self, event):
-        wx.CallAfter(dispatcher.send, signal="ErrorPanel", sender=self, action="dtc.off")
-        HondaECU_AppPanel.OnClose(self, event)
 
     def OnClearCodes(self, _event):
         self.resetbutton.Disable()

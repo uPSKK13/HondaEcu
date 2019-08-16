@@ -4,7 +4,7 @@ import argparse
 from wx import App
 
 from version import __VERSION__
-from controlpanel import HondaECU_ControlPanel
+from controlpanel import HondaECUControlPanel
 
 if __name__ == '__main__':
 
@@ -18,5 +18,5 @@ if __name__ == '__main__':
         sys.exit(0)
 
     app = App(redirect=not args.noredirect, useBestVisual=True)
-    gui = HondaECU_ControlPanel(__VERSION__)
+    gui = HondaECUControlPanel(__VERSION__)
     app.MainLoop()

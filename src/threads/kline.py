@@ -120,7 +120,7 @@ class KlineWorker(Thread):
         while self.eeprominfo is not None and offset <= 0xff:
             if not self.parent.run:
                 return "interrupted"
-            status, data = self.ecu._read_eeprom_word(offset)
+            status, data = self.ecu.pgmfi_read_eeprom_word(offset)
             if status:
                 rom += bytearray(data)
                 offset += 1
@@ -155,13 +155,13 @@ class KlineWorker(Thread):
             while self.readinfo is not None:
                 if not self.parent.run:
                     return "interrupted"
-                status, data = self.ecu._read_flash_bytes(location, readsize)
+                status, data = self.ecu.pgmfi_read_flash_bytes(location, readsize)
                 if status:
                     fbin.write(data)
                     fbin.flush()
                     location += readsize
                     n = time.time()
-                    v = (-1, "%.02fKB @ %s" % ((location-offset) / 1024.0, "%.02fB/s" % (rate) if rate > 0 else "---"))
+                    v = (-1, "%.02fKB @ %s" % ((location-offset) / 1024.0, "%.02fB/s" % rate if rate > 0 else "---"))
                     wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="read.progress", value=v)
                     if n - t > 1:
                         rate = (location - size) / (n - t)
@@ -187,7 +187,7 @@ class KlineWorker(Thread):
         maxi = len(byts) / 2
         i = 0
         while self.eeprominfo is not None and i < maxi:
-            status, data = self.ecu._write_eeprom_word(i, byts[i:(i + 2)])
+            status, data = self.ecu.pgmfi_write_eeprom_word(i, byts[i:(i + 2)])
             wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write_eeprom.progress",
                          value=(i / maxi * 100, None))
             if status:
@@ -358,9 +358,9 @@ class KlineWorker(Thread):
         self.do_update_state()
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="format_eeprom", value=None)
         if mode == 1:
-            status, _ = self.ecu._format_eeprom_FF()
+            status, _ = self.ecu.pgmfi_format_eeprom_FF()
         else:
-            status, _ = self.ecu._format_eeprom_00()
+            status, _ = self.ecu.pgmfi_format_eeprom_00()
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="format_eeprom.result", value=status)
         self.do_update_state()
         return not status

@@ -1,7 +1,7 @@
 import wx
 from eculib.honda import *
 
-from .base import HondaECU_AppPanel
+from .base import HondaECUAppPanel
 
 
 def changeFontInChildren(win, font):
@@ -13,7 +13,7 @@ def changeFontInChildren(win, font):
         changeFontInChildren(child, font)
 
 
-class HondaECU_DatalogPanel(HondaECU_AppPanel):
+class HondaECUDatalogPanel(HondaECUAppPanel):
 
     def __init__(self, parent, appid, appinfo, enablestates, *args, **kwargs):
         wx.Panel.__init__(self, parent.labelbook, size=(820, -1), *args, **kwargs)
@@ -25,7 +25,8 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
         dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
         dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
 
-    def prepare_data1(self, data, t):
+    @staticmethod
+    def prepare_data1(data, t):
         if t in [0x13, 0x17]:
             data = data[:9] + [0xff, 0xff] + data[9:]
         data[1] = round(data[1] / 0xff * 5.0, 2)
@@ -222,10 +223,6 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
             s.SetHGap(f[1])
         self.Layout()
 
-    def OnClose(self, event):
-        wx.CallAfter(dispatcher.send, signal="DatalogPanel", sender=self, action="data.off")
-        HondaECU_AppPanel.OnClose(self, event)
-
     def KlineWorkerHandler(self, info, value):
         if info == "data":
             t = value[0]
@@ -238,7 +235,7 @@ class HondaECU_DatalogPanel(HondaECU_AppPanel):
                         u += "BH"
                     elif t == 0x17:
                         u += "BB"
-                data = self.prepare_data1(list(struct.unpack(u, d)), t)
+                data = HondaECUDatalogPanel.prepare_data1(list(struct.unpack(u, d)), t)
                 ld = len(data)
                 for s in self.sensors:
                     if self.sensors[s][4] < ld:

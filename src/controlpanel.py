@@ -1,18 +1,19 @@
 import configparser
 import time
-import platform
-import EnhancedStatusBar as ESB
+import string
+
+import EnhancedStatusBar
 import usb.util
 import wx
-import wx.lib.agw.labelbook as LB
+import wx.lib.agw.labelbook as lb
 import wx.lib.buttons as buttons
 from appdirs import *
 from ecmids import ECM_IDs
 from eculib.honda import ECUSTATE, checksum8bitHonda
-from frames.data import HondaECU_DatalogPanel
-from frames.eeprom import HondaECU_EEPROMPanel
-from frames.error import HondaECU_ErrorPanel
-from frames.flash import HondaECU_FlashPanel
+from frames.data import HondaECUDatalogPanel
+from frames.eeprom import HondaECUEEPROMPanel
+from frames.error import HondaECUErrorPanel
+from frames.flash import HondaECUFlashPanel
 from pydispatch import dispatcher
 from threads.kline import KlineWorker
 from threads.usb import USBMonitor
@@ -23,7 +24,7 @@ class CharValidator(wx.Validator):
     def __init__(self, flag):
         wx.Validator.__init__(self)
         self.flag = flag
-        self.Bind(wx.EVT_CHAR, self.OnChar)
+        self.Bind(wx.EVT_CHAR, CharValidator.OnChar)
 
     def Clone(self):
         return CharValidator(self.flag)
@@ -37,7 +38,8 @@ class CharValidator(wx.Validator):
     def TransferFromWindow(self):
         return True
 
-    def OnChar(self, event):
+    @staticmethod
+    def OnChar(event):
         keycode = int(event.GetKeyCode())
         if keycode in [wx.WXK_BACK, wx.WXK_DELETE]:
             pass
@@ -218,7 +220,7 @@ class SettingsDialog(wx.Dialog):
         self.Hide()
 
 
-class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
+class HondaECUAppButton(buttons.ThemedGenBitmapTextButton):
 
     def __init__(self, appid, enablestates, *args, **kwargs):
         self.appid = appid
@@ -255,7 +257,7 @@ class HondaECU_AppButton(buttons.ThemedGenBitmapTextButton):
         dc.DrawText(label, (width - tw) / 2, (height + bh - th + 4) / 2)
 
 
-class HondaECU_LogPanel(wx.Frame):
+class HondaECULogPanel(wx.Frame):
 
     def __init__(self, parent):
         self.auto = True
@@ -311,7 +313,9 @@ class HondaECU_LogPanel(wx.Frame):
             wx.CallAfter(self.logText.WriteText, msg)
 
 
-class HondaECU_ControlPanel(wx.Frame):
+class HondaECUControlPanel(wx.Frame):
+
+    lbstyle = lb.INB_FIT_LABELTEXT | lb.INB_LEFT | lb.INB_DRAW_SHADOW | lb.INB_GRADIENT_BACKGROUND
 
     def __init__(self, version_full, nobins=False, restrictions=None, force_restrictions=False):
         self.stats = {
@@ -356,23 +360,23 @@ class HondaECU_ControlPanel(wx.Frame):
         self.apps = {
             "flash": {
                 "label": "Flash",
-                "panel": HondaECU_FlashPanel,
+                "panel": HondaECUFlashPanel,
             },
             "eeprom": {
                 "label": "EEPROM",
-                "panel": HondaECU_EEPROMPanel,
+                "panel": HondaECUEEPROMPanel,
             },
             # "hrc": {
             # 	"label":"HRC Data Settings",
-            # 	"panel":HondaECU_HRCDataSettingsPanel,
+            # 	"panel":HondaECUHRCDataSettingsPanel,
             # },
             "data": {
                 "label": "Data Logging",
-                "panel": HondaECU_DatalogPanel,
+                "panel": HondaECUDatalogPanel,
             },
             "dtc": {
                 "label": "Trouble Codes",
-                "panel": HondaECU_ErrorPanel,
+                "panel": HondaECUErrorPanel,
             },
         }
         self.appanels = {}
@@ -420,7 +424,7 @@ class HondaECU_ControlPanel(wx.Frame):
             wx.Image(os.path.join(self.basepath, "images/bullet_red.png"), wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         ]
 
-        self.statusbar = ESB.EnhancedStatusBar(self, -1)
+        self.statusbar = EnhancedStatusBar.EnhancedStatusBar(self, -1)
         self.SetStatusBar(self.statusbar)
         self.statusbar.SetSize((-1, 28))
         self.statusicon = wx.StaticBitmap(self.statusbar)
@@ -431,9 +435,9 @@ class HondaECU_ControlPanel(wx.Frame):
         self.statusbar.SetFieldsCount(4)
         self.statusbar.SetStatusWidths([32, 170, 130, 110])
         self.statusbar.AddWidget(self.statusicon, pos=0)
-        self.statusbar.AddWidget(self.ecmidl, pos=1, horizontalalignment=ESB.ESB_ALIGN_LEFT)
-        self.statusbar.AddWidget(self.flashcountl, pos=2, horizontalalignment=ESB.ESB_ALIGN_LEFT)
-        self.statusbar.AddWidget(self.dtccountl, pos=3, horizontalalignment=ESB.ESB_ALIGN_LEFT)
+        self.statusbar.AddWidget(self.ecmidl, pos=1, horizontalalignment=EnhancedStatusBar.ESB_ALIGN_LEFT)
+        self.statusbar.AddWidget(self.flashcountl, pos=2, horizontalalignment=EnhancedStatusBar.ESB_ALIGN_LEFT)
+        self.statusbar.AddWidget(self.dtccountl, pos=3, horizontalalignment=EnhancedStatusBar.ESB_ALIGN_LEFT)
         self.statusbar.SetStatusStyles([wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN, wx.SB_SUNKEN])
 
         self.outerp = wx.Panel(self)
@@ -447,8 +451,7 @@ class HondaECU_ControlPanel(wx.Frame):
         self.adapterboxsizer.Add(self.adapterlist, 1, wx.ALL | wx.EXPAND, border=5)
         self.adapterboxsizer.Add(self.securebutton, 0, wx.ALL, border=5)
 
-        self.labelbook = LB.LabelBook(self.outerp,
-                                      agwStyle=LB.INB_FIT_LABELTEXT | LB.INB_LEFT | LB.INB_DRAW_SHADOW | LB.INB_GRADIENT_BACKGROUND)
+        self.labelbook = lb.LabelBook(self.outerp, agwStyle=self.lbstyle)
 
         self.bookpages = {}
         maxdims = [0, 0]
@@ -497,7 +500,7 @@ class HondaECU_ControlPanel(wx.Frame):
         self.adapterlist.Bind(wx.EVT_CHOICE, self.OnAdapterSelected)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-        self.debuglog = HondaECU_LogPanel(self)
+        self.debuglog = HondaECULogPanel(self)
 
         dispatcher.connect(self.USBMonitorHandler, signal="USBMonitor", sender=dispatcher.Any)
         dispatcher.connect(self.kline_worker_handler, signal="KlineWorker", sender=dispatcher.Any)

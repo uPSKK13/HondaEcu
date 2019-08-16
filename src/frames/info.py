@@ -2,10 +2,10 @@ import wx
 from ecmids import ECM_IDs
 from eculib.honda import ECUSTATE
 
-from .base import HondaECU_AppPanel
+from .base import HondaECUAppPanel
 
 
-class HondaECU_InfoPanel(HondaECU_AppPanel):
+class HondaECUInfoPanel(HondaECUAppPanel):
 
     def Build(self):
         self.outerp = wx.Panel(self)

@@ -5,24 +5,26 @@ import tarfile
 import wx
 from eculib.honda import *
 
-from .base import HondaECU_AppPanel
+from .base import HondaECUAppPanel
 
 
-class HondaECU_FlashPanel(HondaECU_AppPanel):
+class HondaECUFlashPanel(HondaECUAppPanel):
 
     def Build(self):
         if self.parent.nobins:
             self.wildcard = "HondaECU tune file (*.htf)|*.htf"
         else:
-            self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin|HondaECU tune file (*.htf)|*.htf|ECU dump (*.bin)|*.bin"
+            self.wildcard = "HondaECU supported files (*.htf,*.bin)|*.htf;*.bin" \
+                            "|HondaECU tune file (*.htf)|*.htf" \
+                            "|ECU dump (*.bin)|*.bin"
         self.byts = None
 
         self.mainp = wx.Panel(self)
         self.wfilel = wx.StaticText(self.mainp, label="File")
         self.readfpicker = wx.FilePickerCtrl(self.mainp, wildcard="ECU dump (*.bin)|*.bin",
-                                             style=wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL)
+                                             style=wx.FLP_SAVE | self.HONDAECU_FILE_STYLE)
         self.writefpicker = wx.FilePickerCtrl(self.mainp, wildcard=self.wildcard,
-                                              style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL)
+                                              style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | self.HONDAECU_FILE_STYLE)
         self.optsp = wx.Panel(self.mainp)
         self.wchecksuml = wx.StaticText(self.optsp, label="Checksum Location")
         self.fixchecksum = wx.CheckBox(self.optsp, label="Fix")
@@ -69,8 +71,8 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
         self.flashpsizer.Add(self.optsp, pos=(1, 0), span=(1, 6))
         self.flashpsizer.Add(self.progressboxp, pos=(3, 0), span=(1, 6),
                              flag=wx.BOTTOM | wx.LEFT | wx.RIGHT | wx.EXPAND | wx.TOP, border=20)
-        self.flashpsizer.Add(self.modebox, pos=(4, 0), span=(1, 2), flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.TOP | wx.LEFT,
-                             border=30)
+        self.flashpsizer.Add(self.modebox, pos=(4, 0), span=(1, 2),
+                             flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.TOP | wx.LEFT, border=30)
         self.flashpsizer.Add(self.gobutton, pos=(5, 5), flag=wx.ALIGN_RIGHT | wx.ALIGN_BOTTOM | wx.RIGHT, border=10)
         self.flashpsizer.AddGrowableRow(2, 1)
         self.flashpsizer.AddGrowableCol(5, 1)
@@ -205,7 +207,7 @@ class HondaECU_FlashPanel(HondaECU_AppPanel):
             self.Layout()
             dispatcher.send(signal="ReadPanel", sender=self, data=data, offset=offset)
         else:
-            if self.htfoffset != None:
+            if self.htfoffset is not None:
                 offset = int(self.htfoffset, 16)
             else:
                 offset = int(self.offset.GetValue(), 16)

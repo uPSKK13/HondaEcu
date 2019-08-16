@@ -3,10 +3,10 @@ import os
 import wx
 from eculib.honda import *
 
-from .base import HondaECU_AppPanel
+from .base import HondaECUAppPanel
 
 
-class HondaECU_EEPROMPanel(HondaECU_AppPanel):
+class HondaECUEEPROMPanel(HondaECUAppPanel):
 
     def Build(self):
         self.wildcard = "EEPROM dump (*.bin)|*.bin"
@@ -21,9 +21,9 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
         self.fpickerbox.Add(self.formatbox, 0)
 
         self.readfpicker = wx.FilePickerCtrl(self.mainp, wildcard=self.wildcard,
-                                             style=wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL)
+                                             style=wx.FLP_SAVE | self.HONDAECU_FILE_STYLE)
         self.writefpicker = wx.FilePickerCtrl(self.mainp, wildcard=self.wildcard,
-                                              style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL)
+                                              style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | self.HONDAECU_FILE_STYLE)
 
         self.progressboxp = wx.Panel(self.mainp)
         self.progressbox = wx.BoxSizer(wx.VERTICAL)
@@ -57,8 +57,8 @@ class HondaECU_EEPROMPanel(HondaECU_AppPanel):
                               border=10)
         self.eeprompsizer.Add(self.progressboxp, pos=(3, 0), span=(1, 6),
                               flag=wx.BOTTOM | wx.LEFT | wx.RIGHT | wx.EXPAND | wx.TOP, border=20)
-        self.eeprompsizer.Add(self.modebox, pos=(4, 0), span=(1, 2), flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.LEFT | wx.TOP,
-                              border=30)
+        self.eeprompsizer.Add(self.modebox, pos=(4, 0), span=(1, 2),
+                              flag=wx.ALIGN_LEFT | wx.ALIGN_BOTTOM | wx.LEFT | wx.TOP, border=30)
         self.eeprompsizer.Add(self.gobutton, pos=(5, 5), flag=wx.ALIGN_RIGHT | wx.ALIGN_BOTTOM | wx.RIGHT, border=10)
         self.eeprompsizer.AddGrowableRow(2, 1)
         self.eeprompsizer.AddGrowableCol(5, 1)

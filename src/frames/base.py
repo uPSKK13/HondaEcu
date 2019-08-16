@@ -3,7 +3,9 @@ import wx
 from pydispatch import dispatcher
 
 
-class HondaECU_AppPanel(wx.Panel):
+class HondaECUAppPanel(wx.Panel):
+
+    HONDAECU_FILE_STYLE = wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL
 
     def __init__(self, parent, appid, appinfo, enablestates, *args, **kwargs):
         wx.Panel.__init__(self, parent.labelbook, *args, **kwargs)

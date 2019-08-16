@@ -82,7 +82,7 @@ class EnhancedStatusBarItem(object):
 
 class EnhancedStatusBar(wx.StatusBar):
 
-    def __init__(self, parent, id=wx.ID_ANY, style=wx.STB_SIZEGRIP,
+    def __init__(self, parent, iid=wx.ID_ANY, style=wx.STB_SIZEGRIP,
                  name="EnhancedStatusBar"):
         """Default Class Constructor.
 
@@ -91,7 +91,7 @@ class EnhancedStatusBar(wx.StatusBar):
                                    name="EnhancedStatusBar")
         """
 
-        wx.StatusBar.__init__(self, parent, id, style, name)
+        wx.StatusBar.__init__(self, parent, iid, style, name)
 
         self._items = {}
         self._curPos = 0
@@ -220,19 +220,19 @@ class EnhancedStatusBar(wx.StatusBar):
 
         if self.GetFieldsCount() <= pos:
             raise "\nERROR: EnhancedStatusBar has a max of %d items, you tried to set item #%d" % (
-            self.GetFieldsCount(), pos)
+                self.GetFieldsCount(), pos)
 
         if horizontalalignment not in [ESB_ALIGN_CENTER_HORIZONTAL, ESB_EXACT_FIT,
                                        ESB_ALIGN_LEFT, ESB_ALIGN_RIGHT]:
-            raise '\nERROR: Parameter "horizontalalignment" Should Be One Of ' \
-                  '"ESB_ALIGN_CENTER_HORIZONTAL", "ESB_ALIGN_LEFT", "ESB_ALIGN_RIGHT"' \
-                  '"ESB_EXACT_FIT"'
+            raise Exception('ERROR: Parameter "horizontalalignment" Should Be One Of '
+                            '"ESB_ALIGN_CENTER_HORIZONTAL", "ESB_ALIGN_LEFT", "ESB_ALIGN_RIGHT"'
+                            '"ESB_EXACT_FIT"')
 
         if verticalalignment not in [ESB_ALIGN_CENTER_VERTICAL, ESB_EXACT_FIT,
                                      ESB_ALIGN_TOP, ESB_ALIGN_BOTTOM]:
-            raise '\nERROR: Parameter "verticalalignment" Should Be One Of ' \
-                  '"ESB_ALIGN_CENTER_VERTICAL", "ESB_ALIGN_TOP", "ESB_ALIGN_BOTTOM"' \
-                  '"ESB_EXACT_FIT"'
+            raise Exception('ERROR: Parameter "verticalalignment" Should Be One Of '
+                            '"ESB_ALIGN_CENTER_VERTICAL", "ESB_ALIGN_TOP", "ESB_ALIGN_BOTTOM"'
+                            '"ESB_EXACT_FIT"')
 
         try:
             self.RemoveChild(self._items[pos].widget)

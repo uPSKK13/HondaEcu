@@ -3,10 +3,10 @@ import os
 import wx
 from eculib.honda import *
 
-from .base import HondaECU_AppPanel
+from .base import HondaECUAppPanel
 
 
-class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
+class HondaECUHRCDataSettingsPanel(HondaECUAppPanel):
 
     def Build(self):
         self.wildcard = "HRC Data Settings File (*.Fsd;*.fsd)|*.Fsd;*.fsd"
@@ -17,9 +17,9 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
         self.mainp = wx.Panel(self.outerp)
         self.wfilel = wx.StaticText(self.mainp, label="File")
         self.readfpicker = wx.FilePickerCtrl(self.mainp, wildcard=self.wildcard,
-                                             style=wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL)
+                                             style=wx.FLP_SAVE | self.HONDAECU_FILE_STYLE)
         self.writefpicker = wx.FilePickerCtrl(self.mainp, wildcard=self.wildcard,
-                                              style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | wx.FLP_USE_TEXTCTRL | wx.FLP_SMALL)
+                                              style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | self.HONDAECU_FILE_STYLE)
         self.optsp = wx.Panel(self.mainp)
         self.optsp.SetSizeHints((500, 32))
         self.namel = wx.StaticText(self.optsp, label="Data Name")
@@ -87,14 +87,14 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
                     else:
                         self.parent.powercycle.ShowPowerOn("Preparing to write HRC data settings...")
         elif info == "hrc.read.progress":
-            if value[0] != None and value[0] >= 0:
+            if value[0] is not None and value[0] >= 0:
                 self.progress.SetValue(value[0])
                 print(value[1], 0)
         elif info == "hrc.read.result":
             self.progress.SetValue(0)
             self.parent.powercycle.ShowPowerOff("Read: complete (result=%s)" % value)
 
-    def OnGo(self, event):
+    def OnGo(self, _event):
         self.gobutton.Disable()
         self.bootwait = True
         if self.modebox.GetSelection() == 0:
@@ -105,7 +105,7 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
             self.parent.powercycle.ShowPowerOff("Preparing to write HRC data settings...")
             dispatcher.send(signal="HRCSettingsPanel", sender=self, mode="write", data=None)
 
-    def OnModeChange(self, event):
+    def OnModeChange(self, _event):
         if self.modebox.GetSelection() == 0:
             self.gobutton.SetLabel("Read")
             self.writefpicker.Hide()
@@ -116,7 +116,7 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
             self.readfpicker.Hide()
         self.Layout()
 
-    def OnValidateMode(self, event):
+    def OnValidateMode(self, _event):
         if self.modebox.GetSelection() == 0:
             if len(self.readfpicker.GetPath()) > 0 and len(self.name.GetValue()) > 0 and len(
                     self.name.GetValue()) <= 25:
@@ -125,6 +125,6 @@ class HondaECU_HRCDataSettingsPanel(HondaECU_AppPanel):
                 self.gobutton.Disable()
         else:
             if len(self.writefpicker.GetPath()) > 0:
-                fbin = open(self.writefpicker.GetPath(), "rb")
+                #fbin = open(self.writefpicker.GetPath(), "rb")
                 nbyts = os.path.getsize(self.writefpicker.GetPath())
                 print(nbyts)
