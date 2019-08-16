@@ -222,7 +222,9 @@ class HondaECUFlashPanel(HondaECUAppPanel):
                     offset = None
                     try:
                         offset = int(self.offset.GetValue(), 16)
-                    except:
+                    except TypeError:
+                        pass
+                    except ValueError:
                         pass
                     enable = (len(self.readfpicker.GetPath()) > 0 and offset is not None and offset >= 0)
             else:
@@ -272,14 +274,18 @@ class HondaECUFlashPanel(HondaECUAppPanel):
         _offset = None
         try:
             _offset = int(self.offset.GetValue(), 16)
-        except:
-            return False
+        except TypeError:
+            pass
+        except ValueError:
+            pass
         checksum = -1
         if self.fixchecksum.IsChecked():
             try:
                 checksum = int(self.checksum.GetValue(), 16)
-            except:
-                return False
+            except TypeError:
+                pass
+            except ValueError:
+                pass
         if len(self.writefpicker.GetPath()) > 0:
             if os.path.isfile(self.writefpicker.GetPath()):
                 fbin = open(self.writefpicker.GetPath(), "rb")

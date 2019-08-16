@@ -555,7 +555,8 @@ class KlineWorker(Thread):
             if not self.ready:
                 time.sleep(.002)
             else:
-                try:
+                # try:
+                if True:
                     if self.state == ECUSTATE.UNKNOWN:
                         self.do_update_state()
                     elif self.state == ECUSTATE.OFF:
@@ -589,7 +590,7 @@ class KlineWorker(Thread):
                         self.do_update_state()
                     else:
                         time.sleep(.002)
-                except AttributeError:
-                    pass
-                except OSError:
-                    pass
+                # except AttributeError:
+                #     pass
+                # except OSError:
+                #     pass

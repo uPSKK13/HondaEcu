@@ -120,7 +120,9 @@ class PasswordDialog(wx.Dialog):
         b = ""
         try:
             b = "%s" % chr(int(self.password_chars[i][1].GetValue(), 16))
-        except:
+        except TypeError:
+            pass
+        except ValueError:
             pass
         self.password_chars[i][0].SetLabel(b)
 
