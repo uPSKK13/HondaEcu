@@ -1,13 +1,15 @@
 import configparser
 import time
 import string
+import os
+import sys
 
 import EnhancedStatusBar
 import usb.util
 import wx
 import wx.lib.agw.labelbook as lb
 import wx.lib.buttons as buttons
-from appdirs import *
+from appdirs import AppDirs
 from ecmids import ECM_IDs
 from eculib.honda import ECUSTATE, checksum8bitHonda
 from frames.data import HondaECUDatalogPanel
@@ -17,6 +19,8 @@ from frames.flash import HondaECUFlashPanel
 from pydispatch import dispatcher
 from threads.kline import KlineWorker
 from threads.usb import USBMonitor
+
+from version import __VERSION__
 
 
 class CharValidator(wx.Validator):
@@ -181,6 +185,21 @@ class SettingsDialog(wx.Dialog):
         self.klinedetect = wx.ComboBox(panel, value="loopback_ping", choices=self.klinemethods, style=wx.CB_READONLY)
         self.klinedetect.SetValue(self.parent.config["DEFAULT"]["klinemethod"])
 
+        self.kltimeoutl = wx.StaticText(panel, label="Kline Timeout:", style=wx.ALIGN_RIGHT)
+        self.kltimeout = wx.TextCtrl(panel)
+        self.kltimeoutu = wx.StaticText(panel, label="seconds", style=wx.ALIGN_LEFT)
+        self.kltimeout.SetValue(self.parent.config["DEFAULT"]["kline_timeout"])
+
+        self.klwaitl = wx.StaticText(panel, label="Timeout:", style=wx.ALIGN_RIGHT)
+        self.klwait = wx.TextCtrl(panel)
+        self.klwaitu = wx.StaticText(panel, label="seconds", style=wx.ALIGN_LEFT)
+        self.klwait.SetValue(self.parent.config["DEFAULT"]["kline_wait"])
+
+        self.kltestbytesl = wx.StaticText(panel, label="Kline # Test Bytes:", style=wx.ALIGN_RIGHT)
+        self.kltestbytes = wx.TextCtrl(panel)
+        self.kltestbytesu = wx.StaticText(panel, label="", style=wx.ALIGN_LEFT)
+        self.kltestbytes.SetValue(self.parent.config["DEFAULT"]["kline_testbytes"])
+
         self.cancel = wx.Button(panel, label="Cancel")
         self.ok = wx.Button(panel, label="Ok")
 
@@ -195,8 +214,20 @@ class SettingsDialog(wx.Dialog):
         g_sizer.Add(self.klinedetectl, span=(1, 2), pos=(2, 1), flag=wx.EXPAND)
         g_sizer.Add(self.klinedetect, pos=(2, 3), flag=wx.LEFT | wx.RIGHT, border=5)
 
-        g_sizer.Add(self.cancel, span=(1, 2), pos=(3, 0), flag=wx.ALL, border=10)
-        g_sizer.Add(self.ok, span=(1, 2), pos=(3, 4), flag=wx.ALL, border=10)
+        g_sizer.Add(self.kltimeoutl, span=(1, 2), pos=(3, 1), flag=wx.EXPAND)
+        g_sizer.Add(self.kltimeout, pos=(3, 3), flag=wx.LEFT | wx.RIGHT, border=5)
+        g_sizer.Add(self.kltimeoutu, span=(1, 2), pos=(3, 4), flag=wx.EXPAND)
+
+        g_sizer.Add(self.klwaitl, span=(1, 2), pos=(4, 1), flag=wx.EXPAND)
+        g_sizer.Add(self.klwait, pos=(4, 3), flag=wx.LEFT | wx.RIGHT, border=5)
+        g_sizer.Add(self.klwaitu, span=(1, 2), pos=(4, 4), flag=wx.EXPAND)
+
+        g_sizer.Add(self.kltestbytesl, span=(1, 2), pos=(5, 1), flag=wx.EXPAND)
+        g_sizer.Add(self.kltestbytes, pos=(5, 3), flag=wx.LEFT | wx.RIGHT, border=5)
+        g_sizer.Add(self.kltestbytesu, span=(1, 2), pos=(5, 4), flag=wx.EXPAND)
+
+        g_sizer.Add(self.cancel, span=(1, 2), pos=(6, 0), flag=wx.ALL, border=10)
+        g_sizer.Add(self.ok, span=(1, 2), pos=(6, 4), flag=wx.ALL, border=10)
 
         mainsizer = wx.BoxSizer(wx.VERTICAL)
         mainsizer.Add(g_sizer, 1, wx.EXPAND)
@@ -213,6 +244,9 @@ class SettingsDialog(wx.Dialog):
         self.parent.config["DEFAULT"]["retries"] = self.retries.GetValue()
         self.parent.config["DEFAULT"]["timeout"] = self.timeout.GetValue()
         self.parent.config["DEFAULT"]["klinemethod"] = self.klinedetect.GetValue()
+        self.parent.config["DEFAULT"]["kline_timeout"] = self.kltimeout.GetValue()
+        self.parent.config["DEFAULT"]["kline_wait"] = self.klwait.GetValue()
+        self.parent.config["DEFAULT"]["kline_testbytes"] = self.kltestbytes.GetValue()
         dispatcher.send(signal="settings", sender=self, config=self.parent.config)
         self.Hide()
 
@@ -322,7 +356,8 @@ class HondaECUControlPanel(wx.Frame):
             "retries": 0,
             "checksum_errors": 0,
         }
-        self.prefsdir = user_data_dir("HondaECU", "MCUInnovationsInc")
+        adirs = AppDirs("HondaECU", "MCUInnovationsInc", version=__VERSION__)
+        self.prefsdir = adirs.user_config_dir
         if not os.path.exists(self.prefsdir):
             os.makedirs(self.prefsdir)
         self.configfile = os.path.join(self.prefsdir, 'hondaecu.ini')
@@ -330,14 +365,20 @@ class HondaECUControlPanel(wx.Frame):
         if os.path.isfile(self.configfile):
             self.config.read(self.configfile)
         if "retries" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['retries'] = "1"
+            self.config['DEFAULT']['retries'] = "10"
         if "timeout" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['timeout'] = "0.1"
+            self.config['DEFAULT']['timeout'] = "0.2"
         if "klinemethod" not in self.config['DEFAULT']:
             self.config['DEFAULT']['klinemethod'] = "loopback_ping"
         else:
             if self.config['DEFAULT']['klinemethod'] == "poll_modem_status":
                 self.config['DEFAULT']['klinemethod'] = "loopback_ping"
+        if "kline_timeout" not in self.config['DEFAULT']:
+            self.config['DEFAULT']['kline_timeout'] = "0.2"
+        if "kline_wait" not in self.config['DEFAULT']:
+            self.config['DEFAULT']['kline_wait'] = "0.002"
+        if "kline_testbytes" not in self.config['DEFAULT']:
+            self.config['DEFAULT']['kline_testbytes'] = "2"
         with open(self.configfile, 'w') as configfile:
             self.config.write(configfile)
         self.nobins = nobins

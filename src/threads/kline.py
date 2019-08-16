@@ -68,6 +68,9 @@ class KlineWorker(Thread):
             self.ecu.dev.kline = self.ecu.dev.kline_poll_modem_status
         else:
             self.ecu.dev.kline = self.ecu.dev.kline_loopback_ping
+        self.ecu.dev.kline_timeout = float(config["DEFAULT"]["kline_timeout"])
+        self.ecu.dev.kline_wait = float(config["DEFAULT"]["kline_wait"])
+        self.ecu.dev.kline_testbytes = int(config["DEFAULT"]["kline_testbytes"])
 
     def HRCSettingsPanelHandler(self, mode, data):
         self.hrcmode = (mode, data)
