@@ -16,6 +16,11 @@ class HondaECUAppPanel(wx.Panel):
         self.Build()
         dispatcher.connect(self.KlineWorkerHandler, signal="KlineWorker", sender=dispatcher.Any)
         dispatcher.connect(self.DeviceHandler, signal="FTDIDevice", sender=dispatcher.Any)
+        dispatcher.connect(self.USBErrorHandler, signal="usberror", sender=dispatcher.Any)
+        dispatcher.connect(self.USBErrorHandler, signal="ftdierror", sender=dispatcher.Any)
+
+    def USBErrorHandler(self, errno, strerror):
+        pass
 
     def KlineWorkerHandler(self, info, value):
         pass

@@ -2,7 +2,8 @@ import os
 from threading import Thread
 
 import numpy as np
-import pyftdi.ftdi
+from pyftdi.ftdi import FtdiError
+from usb.core import USBError
 import wx
 from eculib import KlineAdapter
 from eculib.honda import *
@@ -28,7 +29,7 @@ class KlineWorker(Thread):
         if self.ecu:
             try:
                 self.ecu.dev.close()
-            except pyftdi.ftdi.FtdiError:
+            except FtdiError:
                 pass
             del self.ecu
         self.__clear_data()
@@ -60,6 +61,7 @@ class KlineWorker(Thread):
         self.tables = None
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="ecmid", value=bytes(self.ecmid))
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="flashcount", value=self.flashcount)
+        wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="state", value=self.state)
 
     def SettingsHandler(self, config):
         self.ecu.dev.timeout = float(config["DEFAULT"]["timeout"])
@@ -555,8 +557,7 @@ class KlineWorker(Thread):
             if not self.ready:
                 time.sleep(.002)
             else:
-                # try:
-                if True:
+                try:
                     if self.state == ECUSTATE.UNKNOWN:
                         self.do_update_state()
                     elif self.state == ECUSTATE.OFF:
@@ -590,7 +591,11 @@ class KlineWorker(Thread):
                         self.do_update_state()
                     else:
                         time.sleep(.002)
-                # except AttributeError:
-                #     pass
-                # except OSError:
-                #     pass
+                except USBError as e:
+                    self.__clear_data()
+                except FtdiError as e:
+                    self.__clear_data()
+                except AttributeError:
+                    self.__clear_data()
+                except OSError:
+                    self.__clear_data()

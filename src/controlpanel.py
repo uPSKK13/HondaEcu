@@ -3,7 +3,7 @@ import time
 import string
 import os
 import sys
-
+import platform
 import EnhancedStatusBar
 import usb.util
 import wx
@@ -367,20 +367,20 @@ class HondaECUControlPanel(wx.Frame):
         if os.path.isfile(self.configfile):
             self.config.read(self.configfile)
         if "retries" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['retries'] = "10"
+            self.config['DEFAULT']['retries'] = "1"
         if "timeout" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['timeout'] = "0.2"
+            self.config['DEFAULT']['timeout'] = "0.1"
         if "klinemethod" not in self.config['DEFAULT']:
             self.config['DEFAULT']['klinemethod'] = "loopback_ping"
         else:
             if self.config['DEFAULT']['klinemethod'] == "poll_modem_status":
                 self.config['DEFAULT']['klinemethod'] = "loopback_ping"
         if "kline_timeout" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['kline_timeout'] = "0.2"
+            self.config['DEFAULT']['kline_timeout'] = "0.1"
         if "kline_wait" not in self.config['DEFAULT']:
             self.config['DEFAULT']['kline_wait'] = "0.002"
         if "kline_testbytes" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['kline_testbytes'] = "2"
+            self.config['DEFAULT']['kline_testbytes'] = "1"
         with open(self.configfile, 'w') as configfile:
             self.config.write(configfile)
         self.nobins = nobins

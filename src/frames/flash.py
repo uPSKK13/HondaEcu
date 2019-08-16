@@ -162,6 +162,12 @@ class HondaECUFlashPanel(HondaECUAppPanel):
         self.OnValidateMode(None)
         self.Layout()
 
+    def USBErrorHandler(self, errno, strerror):
+        if errno is not None and strerror is not None:
+            self.progress.SetValue(0)
+            self.progress_text.SetLabel("USB Interrupted")
+            wx.CallAfter(self.OnModeChange, None)
+
     def KlineWorkerHandler(self, info, value):
         if info == "read.progress":
             if value[0] is not None and value[0] >= 0:
@@ -172,14 +178,14 @@ class HondaECUFlashPanel(HondaECUAppPanel):
                     self.progress.Pulse()
                     self.lastpulse = pulse
             if value[1] and value[1] == "interrupted":
-                self.progressboxp.Hide()
+                # self.progressboxp.Hide()
                 wx.MessageDialog(None, 'Read interrupted', "", wx.CENTRE | wx.STAY_ON_TOP).ShowModal()
             self.progress_text.SetLabel("Read: " + value[1])
             wx.CallAfter(self.OnModeChange, None)
         elif info == "read.result":
             self.progress.SetValue(0)
             wx.MessageDialog(None, 'Read: complete (result=%s)' % value, "", wx.CENTRE | wx.STAY_ON_TOP).ShowModal()
-            self.progressboxp.Hide()
+            # self.progressboxp.Hide()
             wx.CallAfter(self.OnModeChange, None)
         if info == "write.progress":
             if value[0] is not None and value[0] >= 0:
