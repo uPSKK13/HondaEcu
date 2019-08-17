@@ -564,9 +564,7 @@ class KlineWorker(Thread):
                 time.sleep(.002)
             else:
                 try:
-                    if self.state == ECUSTATE.UNKNOWN:
-                        self.do_update_state()
-                    elif self.state == ECUSTATE.OFF:
+                    if self.state in  [ECUSTATE.UNKNOWN, ECUSTATE.OFF]:
                         self.do_update_state()
                         if self.state == ECUSTATE.OK:
                             self.do_on_power()
