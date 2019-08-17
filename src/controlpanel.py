@@ -424,7 +424,7 @@ class HondaECUControlPanel(wx.Frame):
         }
         self.appanels = {}
 
-        wx.Frame.__init__(self, None, title="HondaECU %s" % self.version_short,
+        wx.Frame.__init__(self, None, title="HondaECU %s" % self.version_full,
                           style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER, size=(500, 300))
 
         ib = wx.IconBundle()
