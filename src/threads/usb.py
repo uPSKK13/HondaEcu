@@ -38,6 +38,8 @@ class USBMonitor(Thread):
                                      config=cfg)
                 except ValueError as e:
                     pass
+                except NotImplementedError as e:
+                    pass
                     # wx.CallAfter(dispatcher.send, signal="USBMonitor", sender=self, action="error", device=device,
                     #              config=cfg)
             for device in self.ftdi_devices:
