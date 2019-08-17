@@ -210,12 +210,11 @@ class KlineWorker(Thread):
         z = int(writesize / 16)
         maxi = int(ossize / writesize)
         i = 0
-        w = 0
+        w = (i * writesize)
         t = time.time()
         rate = 0
         size = 0
         while self.writeinfo is not None and i < maxi:
-            w = (i * writesize)
             bytstart = [s for s in struct.pack(">H", offseti + (z * i))]
             if i + 1 == maxi:
                 bytend = [s for s in struct.pack(">H", 0)]
@@ -266,6 +265,7 @@ class KlineWorker(Thread):
                 if writesize == 64:
                     self.ecu.send_command([0x7e], [0x01, 0x07])
                     time.sleep(.200)
+            w = (i * writesize)
         r = rate if rate > 0 else "---"
         v = (i / maxi * 100, "%.02fKB of %.02fKB @ %s" % ((w - offset) / 1024.0, ossize / 1024.0, "%.02fB/s" % r))
         wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="progress", value=v)
