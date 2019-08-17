@@ -228,10 +228,16 @@ class KlineWorker(Thread):
             x = [0x01, 0x06] + x + [c1, c2]
             info = self.ecu.send_command([0x7e], x)
             if info is not None:
-                if ord(info[1]) != 5:
-                    wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress",
-                                 value=(0, "interrupted"))
-                    return 1
+                ilen = ord(info[1])
+                if ilen != 5:
+                    if ilen == 7:
+                        if struct.unpack(">H",info[2][2:4])[0] != offseti + (z * (i+1)):
+                            wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress",
+                                         value=(0, "unexpected return"))
+                            return 1
+                        else:
+                            self.ecu.dev.stats["unneeded_retry"] += 1
+                            dispatcher.send(signal="ecu.stats", sender=self, data=self.ecu.dev.stats)
             else:
                 if i == 0:
                     if writesize == 128:
@@ -245,7 +251,7 @@ class KlineWorker(Thread):
                         return 2
                 else:
                     wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress",
-                                 value=(0, "interrupted"))
+                                 value=(0, "max retries"))
                     return 3
             n = time.time()
             wx.CallAfter(dispatcher.send, signal="KlineWorker", sender=self, info="write.progress", value=(
