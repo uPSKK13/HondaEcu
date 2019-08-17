@@ -58,6 +58,7 @@ class HondaECUFlashPanel(HondaECUAppPanel):
         self.progress.SetRange(100)
         self.progressboxp.Hide()
         self.progress_text = wx.StaticText(self.progressboxp, size=(32, -1), style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.progress_text.SetDoubleBuffered(True)
         self.progressbox.Add(self.progress, 1, flag=wx.EXPAND)
         self.progressbox.Add(self.progress_text, 0, flag=wx.EXPAND | wx.TOP, border=10)
         self.progressboxp.SetSizer(self.progressbox)
