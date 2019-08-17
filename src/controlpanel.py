@@ -367,9 +367,9 @@ class HondaECUControlPanel(wx.Frame):
         if os.path.isfile(self.configfile):
             self.config.read(self.configfile)
         if "retries" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['retries'] = "2"
+            self.config['DEFAULT']['retries'] = "3"
         if "timeout" not in self.config['DEFAULT']:
-            self.config['DEFAULT']['timeout'] = "0.1"
+            self.config['DEFAULT']['timeout'] = "0.2"
         if "klinemethod" not in self.config['DEFAULT']:
             self.config['DEFAULT']['klinemethod'] = "loopback_ping"
         else:
